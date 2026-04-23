@@ -13,6 +13,13 @@ class Issue(BaseModel):
         PUBLISHED = "published", "Publié"
         REFUSED = "refused", "Refusé"
 
+    ACTIVE_STATES = [
+        State.UNDER_REVIEW,
+        State.ACCEPTED,
+        State.IN_PRODUCTION,
+        State.SENT_TO_PUBLISHER,
+    ]
+
     journal = models.ForeignKey(
         "journals.Journal",
         on_delete=models.CASCADE,
@@ -57,6 +64,10 @@ class Issue(BaseModel):
 
     def __str__(self):
         return f"N°{self.number} — {self.thematic_title}"
+
+    def get_badge_tone(self) -> str:
+        from apps.core.display import ISSUE_TONES
+        return ISSUE_TONES.get(self.state, "neutral")
 
     @property
     def progress(self) -> int:

@@ -65,6 +65,10 @@ class Article(BaseModel):
     def __str__(self):
         return self.title
 
+    def get_badge_tone(self) -> str:
+        from apps.core.display import ARTICLE_TONES
+        return ARTICLE_TONES.get(self.state, "neutral")
+
     @property
     def displayed_author_name(self) -> str:
         if self.author_name_override:
