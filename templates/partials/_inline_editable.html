@@ -1,7 +1,6 @@
 <span x-data="inlineEdit('{{ value|escapejs }}', '{{ url }}', '{{ field_name }}', '{{ type }}')"
       class="inline-edit-wrap">
 
-  {# Display mode #}
   <span x-show="!editing"
         class="editable-display"
         :class="{'empty': !draft, 'just-saved': justSaved}"
@@ -15,39 +14,39 @@
     <span x-show="justSaved" class="saved-tick" aria-hidden="true">&nbsp;✓</span>
   </span>
 
-  {# text / date #}
-  <input x-show="editing && (type === 'text' || type === 'date')"
-         x-ref="inputText"
-         :type="type === 'date' ? 'date' : 'text'"
-         x-model="draft"
-         class="editable-input"
-         @blur="commit()"
-         @keydown.enter.prevent="commit()"
-         @keydown.escape.prevent="cancel()">
+  <template x-if="editing && (type === 'text' || type === 'date')">
+    <input x-ref="inputText"
+           :type="type === 'date' ? 'date' : 'text'"
+           x-model="draft"
+           class="editable-input"
+           @blur="commit()"
+           @keydown.enter.prevent="commit()"
+           @keydown.escape.prevent="cancel()">
+  </template>
 
-  {# textarea #}
-  <textarea x-show="editing && type === 'textarea'"
-            x-ref="inputTextarea"
+  <template x-if="editing && type === 'textarea'">
+    <textarea x-ref="inputTextarea"
+              x-model="draft"
+              class="editable-input textarea"
+              rows="4"
+              @blur="commit()"
+              @keydown.meta.enter.prevent="commit()"
+              @keydown.ctrl.enter.prevent="commit()"
+              @keydown.escape.prevent="cancel()"></textarea>
+  </template>
+
+  <template x-if="editing && type === 'select'">
+    <select x-ref="inputSelect"
             x-model="draft"
-            class="editable-input textarea"
-            rows="4"
-            @blur="commit()"
-            @keydown.meta.enter.prevent="commit()"
-            @keydown.ctrl.enter.prevent="commit()"
-            @keydown.escape.prevent="cancel()"></textarea>
-
-  {# select #}
-  <select x-show="editing && type === 'select'"
-          x-ref="inputSelect"
-          x-model="draft"
-          class="editable-input select"
-          @change="commit()"
-          @blur="cancel()"
-          @keydown.escape.prevent="cancel()">
-    {% for val, label in options %}
-      <option value="{{ val }}">{{ label }}</option>
-    {% endfor %}
-  </select>
+            class="editable-input select"
+            @change="commit()"
+            @blur="cancel()"
+            @keydown.escape.prevent="cancel()">
+      {% for val, label in options %}
+        <option value="{{ val }}">{{ label }}</option>
+      {% endfor %}
+    </select>
+  </template>
 
   <span x-show="error" class="inline-edit-error small muted" x-text="error"></span>
 </span>

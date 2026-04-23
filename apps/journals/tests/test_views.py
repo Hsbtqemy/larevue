@@ -98,18 +98,118 @@ class TestJournalDashboardView:
         )
         assert issue.thematic_title not in response.content.decode()
 
-    def test_back_link_visible_with_multiple_journals(self, client, user, membership, db):
+    def test_switcher_link_visible_with_multiple_journals(self, client, user, membership, db):
+        # New design: sidebar switcher is an <a href="/"> when user has > 1 journal.
         second_journal = Journal.objects.create(name="Troisième revue", slug="troisieme-revue")
         Membership.objects.create(user=user, journal=second_journal)
         client.force_login(user)
         response = client.get(
             reverse("journal_dashboard", kwargs={"slug": membership.journal.slug})
         )
-        assert "Mes revues" in response.content.decode()
+        assert 'href="/"' in response.content.decode()
 
-    def test_back_link_hidden_with_single_journal(self, client, user, membership):
+    def test_switcher_not_a_link_with_single_journal(self, client, user, membership):
+        # New design: sidebar switcher is a static <div> (no href) when user has 1 journal.
         client.force_login(user)
         response = client.get(
             reverse("journal_dashboard", kwargs={"slug": membership.journal.slug})
         )
-        assert "Mes revues" not in response.content.decode()
+        assert 'href="/"' not in response.content.decode()
+
+
+# ------------------------------------------------------------------ #
+# JournalDashboardView — contexte enrichi                             #
+# ------------------------------------------------------------------ #
+
+
+@pytest.mark.django_db
+class TestDashboardContext:
+    def test_context_has_expected_keys(self, client, user, membership, issue):
+        client.force_login(user)
+        response = client.get(
+            reverse("journal_dashboard", kwargs={"slug": membership.journal.slug})
+        )
+        ctx = response.context
+        assert "active_issues" in ctx
+        assert "late_reviews" in ctx
+        assert "upcoming_deadlines" in ctx
+
+    def test_article_count_annotation(self, client, user, membership, issue, article):
+        client.force_login(user)
+        response = client.get(
+            reverse("journal_dashboard", kwargs={"slug": membership.journal.slug})
+        )
+        issues = response.context["active_issues"]
+        assert len(issues) == 1
+        assert issues[0].article_count == 1
+        assert issues[0].validated_count == 0
+        assert issues[0].pct == 0
+
+    def test_late_review_appears_in_watch_list(self, client, user, membership, issue, article):
+        import datetime
+
+        from apps.articles.models import ArticleVersion
+        from apps.reviews.models import ReviewRequest
+
+        version = ArticleVersion.objects.create(
+            article=article,
+            file="test.pdf",
+            uploaded_by=user,
+        )
+        past_date = datetime.date.today() - datetime.timedelta(days=5)
+        ReviewRequest.objects.create(
+            article=article,
+            article_version=version,
+            reviewer=article.author,
+            reviewer_name_snapshot="Jean Dupont",
+            deadline=past_date,
+        )
+
+        client.force_login(user)
+        response = client.get(
+            reverse("journal_dashboard", kwargs={"slug": membership.journal.slug})
+        )
+        late = response.context["late_reviews"]
+        assert len(late) == 1
+        assert late[0]["days_overdue"] == 5
+
+    def test_upcoming_deadline_publication_date(self, client, user, membership, issue):
+        import datetime
+
+        from apps.issues.models import Issue as IssueModel
+
+        future_date = datetime.date.today() + datetime.timedelta(days=30)
+        IssueModel.objects.filter(pk=issue.pk).update(planned_publication_date=future_date)
+
+        client.force_login(user)
+        response = client.get(
+            reverse("journal_dashboard", kwargs={"slug": membership.journal.slug})
+        )
+        deadlines = response.context["upcoming_deadlines"]
+        assert any(d["type"] == "issue" for d in deadlines)
+        issue_deadline = next(d for d in deadlines if d["type"] == "issue")
+        assert issue_deadline["date"] == future_date
+
+    def test_other_journal_issues_not_in_context(self, client, db):
+        from apps.accounts.models import User
+        from apps.issues.models import Issue as IssueModel
+        from apps.journals.models import Journal, Membership
+
+        user1 = User.objects.create_user(email="u1@test.com", password="pass")
+        journal1 = Journal.objects.create(name="Revue 1", slug="revue-1")
+        journal2 = Journal.objects.create(name="Revue 2", slug="revue-2")
+        Membership.objects.create(user=user1, journal=journal1)
+
+        IssueModel.objects.create(
+            journal=journal2,
+            number="99",
+            thematic_title="Numéro de l'autre revue",
+            editor_name="Editor",
+        )
+
+        client.force_login(user1)
+        response = client.get(
+            reverse("journal_dashboard", kwargs={"slug": journal1.slug})
+        )
+        active_issues = response.context["active_issues"]
+        assert all(i.journal_id == journal1.pk for i in active_issues)

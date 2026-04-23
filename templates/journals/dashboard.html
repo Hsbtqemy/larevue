@@ -1,57 +1,256 @@
 {% extends "base.html" %}
+{% load static edito %}
 
-{% block title %}{{ journal.name }} — Outil éditorial{% endblock %}
+{% block title %}{{ journal.name }} — Tableau de bord{% endblock %}
+
+{% block body_class %}{% endblock %}
+
+{% block extra_head %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter+Tight:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{% static 'css/edito.css' %}">
+<style>
+  :root {
+    --accent: {{ journal.accent_color }};
+    --accent-soft: color-mix(in srgb, {{ journal.accent_color }} 25%, #fbf8f1);
+    --accent-tint: color-mix(in srgb, {{ journal.accent_color }} 10%, #fbf8f1);
+  }
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="mx-auto max-w-2xl px-4 py-12 space-y-8">
+<div class="app-shell" data-theme="chaleureuse">
 
-  <div class="flex items-start justify-between gap-4">
-    <div>
-      {% if user_journal_count > 1 %}
-        <a href="{% url 'home' %}" class="text-sm text-gray-500 underline hover:text-gray-700">
-          ← Mes revues
-        </a>
-      {% endif %}
-      <h1 class="mt-2 text-3xl font-bold text-gray-900">{{ journal.name }}</h1>
-      <p class="mt-1 text-gray-500">Bienvenue sur le dashboard de {{ journal.name }}.</p>
+  {# ===== SIDEBAR ===== #}
+  <aside class="sidebar">
+
+    <div class="sidebar-brand">
+      <div class="brand-mark">É</div>
+      <div class="brand-name">Edito</div>
     </div>
-    <form method="post" action="{% url 'account_logout' %}">
-      {% csrf_token %}
-      <button type="submit" class="shrink-0 text-sm text-gray-500 underline hover:text-gray-700">
-        Se déconnecter
+
+    <div class="revue-switcher">
+      <div class="revue-switcher-label">Revue courante</div>
+      {% if user_journal_count > 1 %}
+        <a href="{% url 'home' %}" class="revue-switcher-current" style="text-decoration:none">
+          <span class="revue-dot" style="background:var(--accent)"></span>
+          <span class="revue-name">{{ journal.name }}</span>
+          <span class="chev">{% icon "chevron" 14 %}</span>
+        </a>
+      {% else %}
+        <div class="revue-switcher-current" style="cursor:default">
+          <span class="revue-dot" style="background:var(--accent)"></span>
+          <span class="revue-name">{{ journal.name }}</span>
+        </div>
+      {% endif %}
+    </div>
+
+    <nav class="nav">
+      <button class="nav-item active" type="button">
+        {% icon "home" 17 cls="icon" %}
+        Tableau de bord
       </button>
-    </form>
-  </div>
+      {# TODO: replace with {% url 'issue_list' slug=journal.slug %} when view exists #}
+      <a href="#" class="nav-item" style="text-decoration:none">
+        {% icon "file" 17 cls="icon" %}
+        Numéros en cours
+      </a>
+      {# TODO: replace with {% url 'contact_list' slug=journal.slug %} when view exists #}
+      <a href="#" class="nav-item" style="text-decoration:none">
+        {% icon "users" 17 cls="icon" %}
+        Contacts
+      </a>
+      {# TODO: replace with {% url 'archive_list' slug=journal.slug %} when view exists #}
+      <a href="#" class="nav-item" style="text-decoration:none">
+        {% icon "archive" 17 cls="icon" %}
+        Archives
+      </a>
+    </nav>
 
-  <section>
-    <h2 class="text-lg font-semibold text-gray-800 mb-3">Numéros en cours</h2>
-    {% if active_issues %}
-      <table class="w-full text-sm border-collapse">
-        <thead>
-          <tr class="border-b border-gray-200 text-left text-gray-500">
-            <th class="pb-2 pr-4 font-medium">N°</th>
-            <th class="pb-2 pr-4 font-medium">Titre thématique</th>
-            <th class="pb-2 pr-4 font-medium">État</th>
-            <th class="pb-2 font-medium">Parution prévue</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for issue in active_issues %}
-            <tr class="border-b border-gray-100 hover:bg-gray-50">
-              <td class="py-2 pr-4 font-mono text-gray-700">{{ issue.number }}</td>
-              <td class="py-2 pr-4 text-gray-900">{{ issue.thematic_title }}</td>
-              <td class="py-2 pr-4 text-gray-600">{{ issue.get_state_display }}</td>
-              <td class="py-2 text-gray-600">
-                {{ issue.planned_publication_date|default:"—" }}
-              </td>
-            </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    {% else %}
-      <p class="text-gray-500">Aucun numéro en cours.</p>
-    {% endif %}
-  </section>
+    <div class="sidebar-user">
+      <div class="avatar">{{ request.user.first_name|slice:":1" }}{{ request.user.last_name|slice:":1" }}</div>
+      <div class="sidebar-user-info">
+        <div class="n">{{ request.user.get_full_name }}</div>
+        <div class="e">{{ request.user.email }}</div>
+      </div>
+      <form method="post" action="{% url 'account_logout' %}" style="margin-left:auto;flex-shrink:0">
+        {% csrf_token %}
+        <button type="submit" class="btn ghost sm" title="Se déconnecter">
+          {% icon "back" 14 %}
+        </button>
+      </form>
+    </div>
 
-</div>
+  </aside>
+
+  {# ===== MAIN ===== #}
+  <main class="main">
+
+    <div class="accent-strip" style="background:var(--accent)"></div>
+
+    <div class="accent-bandeau">
+      <div class="eyebrow">Tableau de bord</div>
+      <h1 style="font-size:32px;letter-spacing:-0.02em">{{ journal.name }}</h1>
+      {% if journal.description %}
+        <div class="muted" style="max-width:620px;margin-top:4px">{{ journal.description }}</div>
+      {% endif %}
+    </div>
+
+    <div class="main-content">
+
+      {# ===== Actions rapides ===== #}
+      <div class="section">
+        <div class="quick-actions">
+          {# TODO: replace with {% url 'issue_create' slug=journal.slug %} when view exists #}
+          <a href="#" class="qa-btn" style="text-decoration:none">
+            <div class="qa-icon">{% icon "plus" 16 %}</div>
+            <div>
+              <div style="font-weight:500;color:var(--ink)">Nouveau projet de numéro</div>
+              <div class="tiny muted">Proposer un numéro thématique</div>
+            </div>
+          </a>
+          {# TODO: replace with {% url 'article_create' slug=journal.slug %} when view exists #}
+          <a href="#" class="qa-btn" style="text-decoration:none">
+            <div class="qa-icon">{% icon "file" 16 %}</div>
+            <div>
+              <div style="font-weight:500;color:var(--ink)">Nouvel article</div>
+              <div class="tiny muted">Importer un article reçu par mail</div>
+            </div>
+          </a>
+          {# TODO: replace with {% url 'contact_create' slug=journal.slug %} when view exists #}
+          <a href="#" class="qa-btn" style="text-decoration:none">
+            <div class="qa-icon">{% icon "users" 16 %}</div>
+            <div>
+              <div style="font-weight:500;color:var(--ink)">Nouveau contact</div>
+              <div class="tiny muted">Ajouter un auteur ou un relecteur</div>
+            </div>
+          </a>
+        </div>
+      </div>
+
+      {# ===== Numéros en cours ===== #}
+      <div class="section">
+        <div class="section-head">
+          <h2>Numéros en cours</h2>
+          <span class="meta">{{ active_issues|length }} actif{{ active_issues|length|pluralize }}</span>
+        </div>
+
+        {% if active_issues %}
+          <div class="issue-grid">
+            {% for issue in active_issues %}
+              {# TODO: replace with {% url 'issue_detail' slug=journal.slug pk=issue.pk %} when view exists #}
+              <a href="#" class="issue-card" style="text-decoration:none">
+                <div class="issue-card-head">
+                  <div>
+                    <div class="issue-card-num">
+                      N°{{ issue.number }}{% if issue.planned_publication_date %}&nbsp;· parution {{ issue.planned_publication_date|date:"d/m/Y" }}{% endif %}
+                    </div>
+                    <h3>{{ issue.thematic_title }}</h3>
+                  </div>
+                  <span class="badge {{ issue.get_badge_tone }}">{{ issue.get_state_display }}</span>
+                </div>
+                <div class="issue-card-meta">
+                  <span>Responsable&nbsp;: <strong style="color:var(--ink);font-weight:500">{{ issue.editor_name }}</strong></span>
+                </div>
+                {% if issue.article_count > 0 %}
+                  <div class="issue-card-progress">
+                    <div class="row">
+                      <div class="progress grow">
+                        <div class="progress-fill" style="width:{{ issue.pct }}%"></div>
+                      </div>
+                    </div>
+                    <div class="row">
+                      <span class="small muted">{{ issue.validated_count }} sur {{ issue.article_count }} articles validés</span>
+                      <span class="grow"></span>
+                      <span class="small mono faint">{{ issue.pct }}%</span>
+                    </div>
+                  </div>
+                {% else %}
+                  <div class="small muted" style="font-style:italic">Aucun article importé pour l'instant</div>
+                {% endif %}
+              </a>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="empty">
+            <h4>Aucun numéro en cours</h4>
+            <p>Les numéros actifs apparaîtront ici dès qu'ils seront créés.</p>
+          </div>
+        {% endif %}
+      </div>
+
+      {# ===== Grille bas de page ===== #}
+      <div class="dash-grid">
+
+        {# À surveiller #}
+        <div>
+          <div class="section">
+            <div class="section-head">
+              <h2>À surveiller</h2>
+              <span class="meta">{{ late_reviews|length }} retard{{ late_reviews|length|pluralize }}</span>
+            </div>
+            {% if not late_reviews %}
+              <div class="empty">
+                <h4>Rien à signaler 👌</h4>
+                <p>Toutes les relectures sont dans les temps.</p>
+              </div>
+            {% else %}
+              {% for item in late_reviews %}
+                {# TODO: replace with {% url 'article_detail' … %} when view exists #}
+                <div class="watch-item">
+                  <div class="watch-icon">{% icon "clock" 15 %}</div>
+                  <div class="watch-body">
+                    <div class="t">{{ item.review.reviewer_name_snapshot }} n'a pas encore renvoyé sa relecture</div>
+                    <div class="s">« {{ item.article.title }} » — deadline {{ item.review.deadline|date:"d/m/Y" }}</div>
+                  </div>
+                  <div class="watch-late">+{{ item.days_overdue }}&nbsp;j</div>
+                </div>
+              {% endfor %}
+            {% endif %}
+          </div>
+        </div>
+
+        {# Prochaines échéances #}
+        <div>
+          <div class="section">
+            <div class="section-head">
+              <h2>Prochaines échéances</h2>
+            </div>
+            {% if not upcoming_deadlines %}
+              <div class="empty">
+                <p>Aucune échéance dans les semaines à venir.</p>
+              </div>
+            {% else %}
+              <div class="calendar">
+                {% for item in upcoming_deadlines %}
+                  {# TODO: link to issue/article detail when views exist #}
+                  <div class="cal-row">
+                    <div class="cal-date">
+                      <span class="d">{{ item.day }}</span>
+                      <span class="m">{{ item.month }}</span>
+                    </div>
+                    <div class="label">
+                      {% if item.type == "issue" %}
+                        <strong>Parution N°{{ item.issue.number }}</strong><br>
+                        <span class="small muted">{{ item.issue.thematic_title }}</span>
+                      {% else %}
+                        <strong>Relecture attendue</strong><br>
+                        <span class="small muted">{{ item.review.reviewer_name_snapshot }} — {{ item.article.title }}</span>
+                      {% endif %}
+                    </div>
+                    {% icon "chevronR" 14 cls="faint" %}
+                  </div>
+                {% endfor %}
+              </div>
+            {% endif %}
+          </div>
+        </div>
+
+      </div>{# /dash-grid #}
+
+    </div>{# /main-content #}
+  </main>
+
+</div>{# /app-shell #}
 {% endblock %}

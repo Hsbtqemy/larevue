@@ -22,10 +22,9 @@ class TestIssueTones:
     def test_tone(self, state, expected_tone):
         assert ISSUE_TONES[state] == expected_tone
 
-    @pytest.mark.django_db
     @pytest.mark.parametrize("state", list(Issue.State))
-    def test_get_badge_tone_on_instance(self, state, journal):
-        issue = Issue(journal=journal, number="1", thematic_title="T", editor_name="E", state=state)
+    def test_get_badge_tone_on_instance(self, state):
+        issue = Issue(journal_id=1, number="1", thematic_title="T", editor_name="E", state=state)
         assert issue.get_badge_tone() == ISSUE_TONES[state]
 
 
@@ -45,10 +44,9 @@ class TestArticleTones:
     def test_tone(self, state, expected_tone):
         assert ARTICLE_TONES[state] == expected_tone
 
-    @pytest.mark.django_db
     @pytest.mark.parametrize("state", list(Article.State))
-    def test_get_badge_tone_on_instance(self, state, issue):
-        article = Article(issue=issue, title="T", state=state)
+    def test_get_badge_tone_on_instance(self, state):
+        article = Article(issue_id=1, title="T", state=state)
         assert article.get_badge_tone() == ARTICLE_TONES[state]
 
 

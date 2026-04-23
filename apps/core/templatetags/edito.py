@@ -1,10 +1,8 @@
-import datetime
-
 from django import template
 from django.utils.html import mark_safe
 from django.utils import timezone
 
-from apps.core.display import VERDICT_LABELS, VERDICT_TONES
+from apps.core.display import MONTH_ABBR, MONTH_SHORT, VERDICT_LABELS, VERDICT_TONES
 from apps.core.icons import ICONS
 
 register = template.Library()
@@ -14,22 +12,21 @@ _SVG_ATTRS = (
     'stroke-linecap="round" stroke-linejoin="round"'
 )
 
-_MONTH_SHORT = [
-    "janv.", "févr.", "mars", "avr.", "mai", "juin",
-    "juil.", "août", "sept.", "oct.", "nov.", "déc.",
-]
 
+def _infer_input_type(field_obj):
+    if field_obj.choices:
+        return "select"
+    ft = field_obj.get_internal_type()
+    if ft == "DateField":
+        return "date"
+    if ft == "TextField":
+        return "textarea"
+    return "text"
 
-# ------------------------------------------------------------------ #
-# Inclusion tags                                                       #
-# ------------------------------------------------------------------ #
 
 @register.inclusion_tag("partials/_badge.html")
 def state_badge(obj):
-    return {
-        "label": obj.get_state_display(),
-        "tone": obj.get_badge_tone(),
-    }
+    return {"label": obj.get_state_display(), "tone": obj.get_badge_tone()}
 
 
 @register.inclusion_tag("partials/_badge.html")
@@ -42,48 +39,30 @@ def verdict_badge(verdict):
 
 @register.inclusion_tag("partials/_inline_editable.html")
 def inline_editable(field, instance, url, input_type=None, options=None):
-    value = getattr(instance, field, "")
-    if value is None:
-        value = ""
+    import datetime
+    value = getattr(instance, field, "") or ""
+    resolved_options = list(options) if options else []
 
-    resolved_type = input_type
-    resolved_options = options or []
-
-    if resolved_type is None:
+    if input_type is None:
         try:
             f = instance._meta.get_field(field)
-        except Exception:
-            f = None
-
-        if f is not None:
-            if f.choices:
-                resolved_type = "select"
+            input_type = _infer_input_type(f)
+            if input_type == "select" and not resolved_options:
                 resolved_options = list(f.choices)
-            elif f.get_internal_type() == "DateField":
-                resolved_type = "date"
-            elif f.get_internal_type() == "TextField":
-                resolved_type = "textarea"
+        except Exception:
+            input_type = "text"
 
-    if resolved_type is None:
-        resolved_type = "text"
-
-    # Format date value for HTML date input
-    display_value = value
     if isinstance(value, datetime.date):
-        display_value = value.isoformat()
+        value = value.isoformat()
 
     return {
         "field_name": field,
-        "value": display_value,
+        "value": value,
         "url": url,
-        "type": resolved_type,
+        "type": input_type,
         "options": resolved_options,
     }
 
-
-# ------------------------------------------------------------------ #
-# Simple tags                                                          #
-# ------------------------------------------------------------------ #
 
 @register.simple_tag
 def icon(name, size=16, cls=""):
@@ -91,29 +70,21 @@ def icon(name, size=16, cls=""):
     if not paths:
         return ""
     class_attr = f' class="{cls}"' if cls else ""
-    svg = (
+    return mark_safe(
         f'<svg width="{size}" height="{size}" viewBox="0 0 24 24" {_SVG_ATTRS}{class_attr}>'
-        f"{paths}"
-        f"</svg>"
+        f"{paths}</svg>"
     )
-    return mark_safe(svg)
 
-
-# ------------------------------------------------------------------ #
-# Filters                                                              #
-# ------------------------------------------------------------------ #
 
 @register.filter
 def date_short(value):
-    """14 janv. 2026"""
     if not value:
         return ""
-    return f"{value.day} {_MONTH_SHORT[value.month - 1]} {value.year}"
+    return f"{value.day} {MONTH_SHORT[value.month - 1]} {value.year}"
 
 
 @register.filter
 def date_compact(value):
-    """14/01/26"""
     if not value:
         return ""
     return value.strftime("%d/%m/%y")
@@ -121,19 +92,13 @@ def date_compact(value):
 
 @register.filter
 def date_calendar(value):
-    """{'day': 14, 'month': 'janv'} — for dashboard calendar pills."""
     if not value:
         return {}
-    return {
-        "day": value.day,
-        "month": _MONTH_SHORT[value.month - 1].rstrip("."),
-    }
+    return {"day": value.day, "month": MONTH_ABBR[value.month - 1]}
 
 
 @register.filter
 def days_late(value):
-    """Days elapsed since value (positive = past, negative = future)."""
     if not value:
         return 0
-    today = timezone.now().date()
-    return (today - value).days
+    return (timezone.now().date() - value).days

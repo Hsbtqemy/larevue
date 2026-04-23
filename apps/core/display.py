@@ -1,3 +1,9 @@
+MONTH_SHORT: list[str] = [
+    "janv.", "févr.", "mars", "avr.", "mai", "juin",
+    "juil.", "août", "sept.", "oct.", "nov.", "déc.",
+]
+MONTH_ABBR: list[str] = [m.rstrip(".") for m in MONTH_SHORT]
+
 ISSUE_TONES: dict[str, str] = {
     "under_review": "neutral",
     "accepted": "info",
