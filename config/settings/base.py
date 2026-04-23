@@ -24,7 +24,8 @@ THIRD_PARTY_APPS = [
     "allauth",
     "allauth.account",
     "django_htmx",
-    "fsm_admin",  # admin mixins embarqués dans django-fsm-2
+    "django_fsm",   # nécessaire pour que ses templates soient découverts
+    "fsm_admin",
 ]
 
 LOCAL_APPS = [
