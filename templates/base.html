@@ -5,8 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{% block title %}Outil éditorial{% endblock %}</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  {% load static %}
+  <script defer src="{% static 'js/edito.js' %}"></script>
+  {% block extra_head %}{% endblock %}
 </head>
-<body class="min-h-screen bg-gray-50 text-gray-900">
+<body class="{% block body_class %}min-h-screen bg-gray-50 text-gray-900{% endblock %}">
+  {% include "partials/_saved_banner.html" %}
   {% block content %}{% endblock %}
 </body>
 </html>
