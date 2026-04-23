@@ -1,16 +1,14 @@
+import re
+
 from django.utils.functional import SimpleLazyObject
 
+# Correspond à /revues/<slug>/ et à tous les sous-chemins de la revue.
+_JOURNAL_URL_RE = re.compile(r"^/revues/(?P<slug>[a-zA-Z0-9_-]+)/")
 
-def _get_current_journal(request):
-    """
-    Résout la revue active à partir du slug injecté par le routeur d'URL.
-    Retourne None sur les pages sans contexte de revue (admin, auth).
-    """
+
+def _get_journal_by_slug(slug):
     from apps.journals.models import Journal
 
-    slug = getattr(request, "_journal_slug", None)
-    if not slug:
-        return None
     try:
         return Journal.objects.get(slug=slug)
     except Journal.DoesNotExist:
@@ -19,14 +17,21 @@ def _get_current_journal(request):
 
 class CurrentJournalMiddleware:
     """
-    Injecte `request.journal` (évalué paresseusement) depuis le slug d'URL.
-    Les vues URL doivent peupler `request._journal_slug` via un convertisseur
-    de chemin ou un middleware de routage avant que ce middleware ne s'exécute.
+    Injecte `request.journal` à partir du slug présent dans l'URL.
+    - URLs hors revue (/admin/, /accounts/, /) → request.journal = None directement.
+    - URLs /revues/<slug>/... → request.journal = SimpleLazyObject (évalué à la demande).
+    Retourne None sans lever d'exception si le slug ne correspond à aucune revue.
     """
 
     def __init__(self, get_response):
         self.get_response = get_response
 
     def __call__(self, request):
-        request.journal = SimpleLazyObject(lambda: _get_current_journal(request))
+        match = _JOURNAL_URL_RE.match(request.path)
+        if match:
+            slug = match.group("slug")
+            request.journal = SimpleLazyObject(lambda: _get_journal_by_slug(slug))
+        else:
+            # Pas de slug dans l'URL : on sait immédiatement qu'il n'y a pas de revue active.
+            request.journal = None
         return self.get_response(request)
