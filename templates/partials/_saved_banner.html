@@ -1,0 +1,16 @@
+{# Global saved-state banner. Mount once on <body> (see base.html).
+   Listens for a 'saved' custom event dispatched by Alpine components on success.
+   Event detail: { label: "Enregistré" } (optional, falls back to default). #}
+<div x-data="savedBanner()"
+     @saved.window="show($event.detail?.label)"
+     x-show="visible"
+     x-transition.opacity
+     class="saved-banner"
+     style="position:fixed;top:20px;left:50%;transform:translateX(-50%);z-index:300"
+     role="status"
+     aria-live="polite">
+  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M5 13l4 4 10-10"/>
+  </svg>
+  <span x-text="message"></span>
+</div>

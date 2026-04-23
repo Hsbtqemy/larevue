@@ -1,0 +1,55 @@
+<div x-data="imageUpload('{{ current_url|default:''|escapejs }}', '{{ upload_url }}', '{{ field_name }}')"
+     class="image-upload"
+     :class="preview ? 'has-image' : 'empty'"
+     :style="'aspect-ratio: {{ aspect_ratio|default:'3 / 2' }}'"
+     @dragover.prevent="dragOver = true"
+     @dragleave="dragOver = false"
+     @drop.prevent="onDrop($event)"
+     :class="[preview ? 'has-image' : 'empty', dragOver ? 'drag-over' : '', '{{ compact|yesno:'compact,' }}']"
+     @click="!preview && $refs.fileInput.click()"
+     role="button"
+     tabindex="0"
+     @keydown.enter.prevent="$refs.fileInput.click()"
+     @keydown.space.prevent="$refs.fileInput.click()">
+
+  {# Empty state #}
+  <template x-if="!preview">
+    <div class="image-upload-prompt">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 20h16"/>
+      </svg>
+      <div class="image-upload-label">{{ label|default:"Ajouter une image" }}</div>
+      <div class="image-upload-hint">Glisser-déposer ou cliquer — JPG, PNG · 5 Mo max</div>
+    </div>
+  </template>
+
+  {# Preview state #}
+  <template x-if="preview">
+    <div style="position:relative;width:100%;height:100%">
+      <img :src="preview" alt="" class="image-upload-preview">
+      <div class="image-upload-overlay">
+        <button type="button" class="btn sm" @click.stop="$refs.fileInput.click()">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 20h16"/>
+          </svg>
+          Remplacer
+        </button>
+        <button type="button" class="btn sm danger" @click.stop="remove()">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M6 6l12 12M18 6L6 18"/>
+          </svg>
+          Retirer
+        </button>
+      </div>
+    </div>
+  </template>
+
+  <div x-show="err" class="image-upload-err" x-text="err"></div>
+  <div x-show="uploading" class="image-upload-err muted" style="font-style:italic">Envoi en cours…</div>
+
+  <input x-ref="fileInput"
+         type="file"
+         accept="image/*"
+         style="display:none"
+         @change="handleFile($event.target.files[0])">
+</div>

@@ -1,0 +1,62 @@
+{# Confirm-delete modal.
+   Context: delete_url, title (opt), message (opt),
+   confirm_label (opt), require_typing (opt).
+   Server contract: returns JSON {"redirect_url": "..."} on success. #}
+{% if require_typing %}
+<div x-data="confirmDelete('{{ delete_url }}', '{{ require_typing|escapejs }}')">
+{% else %}
+<div x-data="confirmDelete('{{ delete_url }}')">
+{% endif %}
+
+  {% block trigger %}
+    <button type="button" class="btn danger sm" @click="openModal()">
+      {{ confirm_label|default:"Supprimer" }}
+    </button>
+  {% endblock %}
+
+  <template x-teleport="body">
+    <div x-show="open"
+         class="modal-backdrop"
+         @click.self="close()"
+         @keydown.escape.window="close()"
+         x-transition.opacity>
+      <div class="modal" role="dialog" aria-modal="true">
+        <div class="modal-head">
+          <h3>{{ title|default:"Supprimer cet élément ?" }}</h3>
+          <div class="sub">Cette action est définitive. Les données associées seront perdues.</div>
+        </div>
+        <div class="modal-body">
+          {% if message %}
+            <p style="color:var(--ink-muted);font-size:14px;{% if require_typing %}margin-bottom:16px{% endif %}">
+              {{ message }}
+            </p>
+          {% endif %}
+          {% if require_typing %}
+            <div style="display:flex;flex-direction:column;gap:6px">
+              <label style="font-size:12px;color:var(--ink-faint);text-transform:uppercase;letter-spacing:.06em;font-weight:500">
+                Pour confirmer, tapez
+                <code style="background:var(--bg-sunken);padding:1px 6px;border-radius:3px;font-size:11px">{{ require_typing }}</code>
+                ci-dessous :
+              </label>
+              <input type="text"
+                     class="text-input"
+                     x-model="typed"
+                     placeholder="{{ require_typing }}"
+                     :autofocus="open">
+            </div>
+          {% endif %}
+        </div>
+        <div class="modal-foot">
+          <button type="button" class="btn ghost" @click="close()">Annuler</button>
+          <button type="button"
+                  class="btn danger"
+                  :disabled="deleting || isDisabled"
+                  @click="confirm()">
+            <span x-show="!deleting">{{ confirm_label|default:"Supprimer" }}</span>
+            <span x-show="deleting">Suppression…</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </template>
+</div>

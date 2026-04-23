@@ -1,0 +1,26 @@
+{# Generic modal shell.
+   Expected context: modal_id (str), title (str), subtitle (str, optional),
+   large (bool, optional). Body content via {% block modal_body %}.
+   Controlled by x-data on parent: open state referenced as 'open'. #}
+<template x-teleport="body">
+  <div x-show="open"
+       class="modal-backdrop"
+       @click.self="open = false"
+       @keydown.escape.window="open = false"
+       x-transition.opacity>
+    <div class="modal{% if large %} lg{% endif %}" role="dialog" aria-modal="true" aria-labelledby="modal-title-{{ modal_id }}">
+      <div class="modal-head">
+        <h3 id="modal-title-{{ modal_id }}">{{ title }}</h3>
+        {% if subtitle %}<div class="sub">{{ subtitle }}</div>{% endif %}
+      </div>
+      <div class="modal-body">
+        {% block modal_body %}{% endblock %}
+      </div>
+      <div class="modal-foot">
+        {% block modal_foot %}
+          <button type="button" class="btn ghost" @click="open = false">Fermer</button>
+        {% endblock %}
+      </div>
+    </div>
+  </div>
+</template>
