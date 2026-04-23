@@ -325,8 +325,7 @@
               <div></div>
             </div>
             {% for article in articles %}
-              {# TODO: replace href with {% url 'articles:detail' slug=journal.slug article_id=article.pk %} #}
-              <a href="#" class="article-row" style="text-decoration:none">
+              <a href="{% url 'articles:detail' slug=journal.slug issue_id=issue.pk article_id=article.pk %}" class="article-row" style="text-decoration:none">
                 <div class="order-col">
                   <span class="order-num">{{ article.order }}</span>
                 </div>

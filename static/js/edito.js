@@ -14,13 +14,21 @@ function getCsrfToken() {
 
 document.addEventListener("alpine:init", () => {
 
-  Alpine.data("inlineEdit", (value, patchUrl, fieldName, inputType = "text") => ({
+  Alpine.data("inlineEdit", (value, patchUrl, fieldName, inputType = "text", options = []) => ({
     editing: false,
     draft: value,
     type: inputType,
     saving: false,
     justSaved: false,
     error: null,
+
+    get displayDraft() {
+      if (options.length) {
+        const match = options.find(o => String(o[0]) === String(this.draft));
+        return match ? match[1] : this.draft;
+      }
+      return this.draft;
+    },
 
     startEdit() {
       this.editing = true;

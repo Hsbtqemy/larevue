@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load static edito %}
 
-{% block title %}{{ object.title }} — {{ journal.name }}{% endblock %}
+{% block title %}{{ article.title }} — N°{{ issue.number }} — {{ journal.name }}{% endblock %}
 
 {% block body_class %}{% endblock %}
 
@@ -10,6 +10,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter+Tight:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="{% static 'css/edito.css' %}">
+<script src="https://unpkg.com/htmx.org@2.0.4/dist/htmx.min.js"></script>
 <style>
   :root {
     --accent: {{ journal.accent_color }};
@@ -19,43 +20,312 @@
 </style>
 {% endblock %}
 
+{% url 'articles:patch' slug=journal.slug issue_id=issue.pk article_id=article.pk as patch_url %}
+{% url 'articles:edit' slug=journal.slug issue_id=issue.pk article_id=article.pk as edit_url %}
+{% url 'articles:delete' slug=journal.slug issue_id=issue.pk article_id=article.pk as delete_url %}
+{% url 'articles:note_create' slug=journal.slug issue_id=issue.pk article_id=article.pk as note_create_url %}
+
 {% block content %}
 <div class="app-shell" data-theme="chaleureuse">
+
+  {# ===== SIDEBAR ===== #}
   <aside class="sidebar">
+
     <div class="sidebar-brand">
       <div class="brand-mark">É</div>
       <div class="brand-name">Edito</div>
     </div>
+
+    <div class="revue-switcher">
+      <div class="revue-switcher-label">Revue courante</div>
+      {% if user_journal_count > 1 %}
+        <a href="{% url 'home' %}" class="revue-switcher-current" style="text-decoration:none">
+          <span class="revue-dot" style="background:var(--accent)"></span>
+          <span class="revue-name">{{ journal.name }}</span>
+          <span class="chev">{% icon "chevron" 14 %}</span>
+        </a>
+      {% else %}
+        <div class="revue-switcher-current" style="cursor:default">
+          <span class="revue-dot" style="background:var(--accent)"></span>
+          <span class="revue-name">{{ journal.name }}</span>
+        </div>
+      {% endif %}
+    </div>
+
     <nav class="nav">
       <a href="{% url 'journal_dashboard' slug=journal.slug %}" class="nav-item" style="text-decoration:none">
         {% icon "home" 17 cls="icon" %}
         Tableau de bord
       </a>
+      <a href="{% url 'issues:detail' slug=journal.slug issue_id=issue.pk %}" class="nav-item active" style="text-decoration:none">
+        {% icon "file" 17 cls="icon" %}
+        Numéros en cours
+      </a>
+      <a href="#" class="nav-item" style="text-decoration:none">
+        {% icon "users" 17 cls="icon" %}
+        Contacts
+      </a>
+      <a href="#" class="nav-item" style="text-decoration:none">
+        {% icon "archive" 17 cls="icon" %}
+        Archives
+      </a>
     </nav>
+
+    <div class="sidebar-user">
+      <div class="avatar">{{ request.user.first_name|slice:":1" }}{{ request.user.last_name|slice:":1" }}</div>
+      <div class="sidebar-user-info">
+        <div class="n">{{ request.user.get_full_name }}</div>
+        <div class="e">{{ request.user.email }}</div>
+      </div>
+      <form method="post" action="{% url 'account_logout' %}" style="margin-left:auto;flex-shrink:0">
+        {% csrf_token %}
+        <button type="submit" class="btn ghost sm" title="Se déconnecter">
+          {% icon "back" 14 %}
+        </button>
+      </form>
+    </div>
+
   </aside>
 
+  {# ===== MAIN ===== #}
   <main class="main">
+
     <div class="accent-strip" style="background:var(--accent)"></div>
+
+    {# ===== Article header ===== #}
+    <div x-data="editModal('{{ edit_url|escapejs }}')">
     <div class="article-detail-header">
+
       <div class="article-breadcrumb">
         <a href="{% url 'journal_dashboard' slug=journal.slug %}">{{ journal.name }}</a>
         <span class="sep">{% icon "chevronR" 12 %}</span>
-        <a href="{% url 'issues:detail' slug=journal.slug issue_id=object.issue_id %}">N°{{ object.issue.number }}</a>
+        <a href="{% url 'issues:detail' slug=journal.slug issue_id=issue.pk %}">N°{{ issue.number }} — {{ issue.thematic_title }}</a>
         <span class="sep">{% icon "chevronR" 12 %}</span>
         <span style="color:var(--ink)">Article</span>
       </div>
-      <h1>{{ object.title }}</h1>
-      <div class="article-meta-row">
-        <span>{{ object.displayed_author_name|default:"Auteur inconnu" }}</span>
-        <span>{% state_badge object %}</span>
+
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:24px">
+
+        <div style="flex:1;min-width:0">
+          <h1 class="editable-h1">
+            {% if not is_archived %}
+              {% inline_editable "title" article patch_url %}
+            {% else %}
+              {{ article.title }}
+            {% endif %}
+          </h1>
+
+          <div class="article-meta-row">
+            <div>
+              <span class="muted">Auteur·ice : </span>
+              <strong>
+                {% if not is_archived %}
+                  {% inline_editable "author" article patch_url input_type="select" options=author_options %}
+                {% else %}
+                  {{ article.displayed_author_name|default:"—" }}
+                {% endif %}
+              </strong>
+            </div>
+            <div>
+              <span class="muted">Type : </span>
+              <strong>
+                {% if not is_archived %}
+                  {% inline_editable "article_type" article patch_url %}
+                {% else %}
+                  {{ article.get_article_type_display }}
+                {% endif %}
+              </strong>
+            </div>
+            <div>{% state_badge article %}</div>
+            <div class="faint mono" style="font-size:12px">
+              {{ version_count }} version{{ version_count|pluralize }}
+              &nbsp;·&nbsp;
+              {{ reviews_received }}/{{ review_request_count }} relecture{{ review_request_count|pluralize }}
+            </div>
+          </div>
+        </div>
+
+        {# Action buttons #}
+        <div style="display:flex;gap:8px;align-items:flex-start;flex-shrink:0">
+          {% if not is_archived %}
+            <button type="button" class="btn ghost sm" @click="openModal()">
+              {% icon "edit" 14 cls="icon" %} Modifier
+            </button>
+            {% include "partials/_confirm_delete.html" with delete_url=delete_url title="Supprimer cet article ?" require_typing=article.title message="L'article, ses versions et ses relectures seront supprimés définitivement du numéro." trigger_label="" trigger_cls="btn danger-ghost sm" confirm_label="Supprimer l'article" %}
+          {% endif %}
+          {# TODO E_FSM : bouton de transition d'état #}
+        </div>
+
+      </div>
+    </div>{# /article-detail-header #}
+
+    {# Edit metadata modal #}
+    {% if not is_archived %}
+    <div x-show="open"
+         class="modal-backdrop"
+         @click.self="close()"
+         @keydown.escape.window="close()"
+         style="display:none">
+      <div class="modal">
+        <div class="modal-head">
+          <h3>Modifier les métadonnées</h3>
+          <div class="sub">{{ article.title }}</div>
+        </div>
+        <div class="modal-body">
+          <form x-ref="editForm" @submit.prevent="submit($refs.editForm)">
+            {% csrf_token %}
+            <div class="edit-meta-form">
+              <div class="field full">
+                <label for="em-title">Titre</label>
+                <input type="text" id="em-title" name="title" class="text-input" value="{{ article.title }}" required>
+                <template x-if="fieldErrors('title').length">
+                  <div class="form-msg err" x-text="fieldErrors('title').join(' ')"></div>
+                </template>
+              </div>
+              <div class="field">
+                <label for="em-author">Auteur·ice</label>
+                <select id="em-author" name="author" class="text-input">
+                  <option value="">— Aucun —</option>
+                  {% for pk, name in author_options %}
+                    <option value="{{ pk }}"{% if article.author_id == pk %} selected{% endif %}>{{ name }}</option>
+                  {% endfor %}
+                </select>
+                <template x-if="fieldErrors('author').length">
+                  <div class="form-msg err" x-text="fieldErrors('author').join(' ')"></div>
+                </template>
+              </div>
+              <div class="field">
+                <label for="em-type">Type</label>
+                <select id="em-type" name="article_type" class="text-input">
+                  {% for val, label in article.Type.choices %}
+                    <option value="{{ val }}"{% if article.article_type == val %} selected{% endif %}>{{ label }}</option>
+                  {% endfor %}
+                </select>
+                <template x-if="fieldErrors('article_type').length">
+                  <div class="form-msg err" x-text="fieldErrors('article_type').join(' ')"></div>
+                </template>
+              </div>
+              <template x-if="fieldErrors('__all__').length">
+                <div class="field full">
+                  <div class="form-msg err" x-text="fieldErrors('__all__').join(' ')"></div>
+                </div>
+              </template>
+            </div>
+          </form>
+        </div>
+        <div class="modal-foot">
+          <button type="button" class="btn ghost" @click="close()">Annuler</button>
+          <button type="button" class="btn primary" @click="submit($refs.editForm)" :disabled="saving">
+            <span x-text="saving ? 'Enregistrement…' : 'Enregistrer'">Enregistrer</span>
+          </button>
+        </div>
       </div>
     </div>
-    <div class="main-content">
-      <div class="empty" style="margin-top:60px;text-align:center">
-        <h4>Vue article à venir</h4>
-        <p>Cette page sera développée prochainement.</p>
+    {% endif %}
+
+    </div>{# /editModal wrapper #}
+
+    {# ===== Zones principales ===== #}
+    <div class="article-zones">
+
+      {# ===== Colonne principale ===== #}
+      <div style="min-width:0;display:flex;flex-direction:column;gap:24px">
+
+        {# Placeholder Versions #}
+        <div class="zone">
+          <div class="zone-head">
+            <h3>Versions du manuscrit</h3>
+            <span class="faint mono small">{{ version_count }} version{{ version_count|pluralize }} déposée{{ version_count|pluralize }}</span>
+          </div>
+          <div class="empty" style="padding:24px 0">
+            <h4>Gestion des versions</h4>
+            <p>Le dépôt et le téléchargement des versions seront disponibles prochainement.</p>
+          </div>
+        </div>
+
+        {# Placeholder Relectures #}
+        <div class="zone">
+          <div class="zone-head">
+            <h3>Relectures</h3>
+            <span class="faint mono small">{{ reviews_received }}/{{ review_request_count }} reçue{{ reviews_received|pluralize }}</span>
+          </div>
+          <div class="empty" style="padding:24px 0">
+            <h4>Gestion des relectures</h4>
+            <p>La création et le suivi des demandes de relecture seront disponibles prochainement.</p>
+          </div>
+        </div>
+
       </div>
-    </div>
+
+      {# ===== Sidebar ===== #}
+      <div style="display:flex;flex-direction:column;gap:24px">
+
+        {# Notes internes #}
+        <div class="zone">
+          <div class="zone-head">
+            <h3>Notes internes</h3>
+            <span class="faint mono small">Équipe uniquement</span>
+          </div>
+
+          <div id="notes-list">
+            {% for note in internal_notes %}
+              {% include "articles/_note.html" with note=note %}
+            {% empty %}
+              <div id="notes-empty" class="empty" style="padding:18px 12px">
+                <p style="font-size:12.5px">Aucune note pour l'instant.</p>
+              </div>
+            {% endfor %}
+          </div>
+
+          {% if not is_archived %}
+            <div class="note-composer">
+              <form hx-post="{{ note_create_url }}"
+                    hx-target="#notes-list"
+                    hx-swap="afterbegin"
+                    hx-on::after-request="if(event.detail.successful) { this.reset(); const empty = document.getElementById('notes-empty'); if (empty) empty.remove(); }">
+                {% csrf_token %}
+                <textarea name="content" placeholder="Ajouter une note pour l'équipe…" rows="3"></textarea>
+                <div class="actions">
+                  <button type="submit" class="btn sm primary">Publier la note</button>
+                </div>
+              </form>
+            </div>
+          {% else %}
+            <div class="small muted" style="padding:12px 0;font-style:italic">
+              Les notes ne sont plus modifiables sur les articles archivés.
+            </div>
+          {% endif %}
+        </div>
+
+        {# Infos rapides #}
+        <div class="zone">
+          <div class="zone-head">
+            <h3 style="font-size:14px">Infos rapides</h3>
+          </div>
+          <div style="background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:10px;font-size:13px">
+            <div>
+              <div class="tiny muted">Numéro</div>
+              <div>N°{{ issue.number }} — {{ issue.thematic_title }}</div>
+            </div>
+            <div>
+              <div class="tiny muted">Position</div>
+              <div class="mono">Article {{ article.order }} sur {{ article_count_in_issue }}</div>
+            </div>
+            <div>
+              <div class="tiny muted">Dernière version</div>
+              <div class="mono">{% if latest_version_number %}v{{ latest_version_number }}{% else %}—{% endif %}</div>
+            </div>
+            <div>
+              <div class="tiny muted">Responsable éditorial·e</div>
+              <div>{{ issue.editor_name }}</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>{# /article-zones #}
+
   </main>
-</div>
+
+</div>{# /app-shell #}
 {% endblock %}

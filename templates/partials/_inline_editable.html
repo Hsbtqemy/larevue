@@ -1,4 +1,4 @@
-<span x-data="inlineEdit('{{ value|escapejs }}', '{{ url }}', '{{ field_name }}', '{{ type }}')"
+{% load edito %}<span x-data="inlineEdit('{{ value|escapejs }}', '{{ url }}', '{{ field_name }}', '{{ type }}', {{ options|to_json }})"
       class="inline-edit-wrap">
 
   <span x-show="!editing"
@@ -10,7 +10,7 @@
         @click="startEdit()"
         @keydown.enter.prevent="startEdit()"
         @keydown.space.prevent="startEdit()">
-    <span x-text="draft || '—'"></span>
+    <span x-text="displayDraft || '—'"></span>
     <span x-show="justSaved" class="saved-tick" aria-hidden="true">&nbsp;✓</span>
   </span>
 

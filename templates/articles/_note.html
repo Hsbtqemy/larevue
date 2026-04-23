@@ -1,0 +1,10 @@
+{% load edito %}
+<div class="note-item{% if note.is_automatic %} automatic{% endif %}">
+  <div class="head">
+    <div class="avatar sm">{{ note.author.first_name|slice:":1" }}{{ note.author.last_name|slice:":1" }}</div>
+    <span class="n">{{ note.author.get_full_name }}</span>
+    <span class="d">· {{ note.created_at|timesince_short }}</span>
+    {% if note.is_automatic %}<span class="badge neutral" style="margin-left:4px;font-size:10px">Auto</span>{% endif %}
+  </div>
+  <div class="text">{{ note.content|linebreaksbr }}</div>
+</div>

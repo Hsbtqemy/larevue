@@ -8,7 +8,7 @@ urlpatterns = [
     path("accounts/", include("allauth.urls")),
     path("", include("apps.journals.urls")),
     path("revues/<slug:slug>/numeros/", include("apps.issues.urls")),
-    path("revues/<slug:slug>/articles/", include("apps.articles.urls")),
+    path("revues/<slug:slug>/numeros/<int:issue_id>/articles/", include("apps.articles.urls")),
 ]
 
 if settings.DEBUG:

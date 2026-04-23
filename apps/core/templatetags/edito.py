@@ -110,3 +110,37 @@ def days_late(value):
     if not value:
         return 0
     return (timezone.now().date() - value).days
+
+
+@register.filter
+def timesince_short(value):
+    """Relative time in French: 'il y a 2 h', 'il y a 3 jours', etc."""
+    if not value:
+        return ""
+    now = timezone.now()
+    if timezone.is_naive(value):
+        value = timezone.make_aware(value)
+    seconds = max(0, int((now - value).total_seconds()))
+    days = seconds // 86400
+    if seconds < 60:
+        return "à l'instant"
+    if seconds < 3600:
+        return f"il y a {seconds // 60} min"
+    if seconds < 86400:
+        return f"il y a {seconds // 3600} h"
+    if days < 7:
+        return f"il y a {days} jour{'s' if days > 1 else ''}"
+    if days < 30:
+        n = days // 7
+        return f"il y a {n} semaine{'s' if n > 1 else ''}"
+    if days < 365:
+        n = days // 30
+        return f"il y a {n} mois"
+    return value.strftime("le %d/%m/%Y")
+
+
+@register.filter
+def to_json(value):
+    """Serialize a Python value to a safe JSON string for use in Alpine.js data attributes."""
+    import json as _json
+    return mark_safe(_json.dumps(value))
