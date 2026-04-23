@@ -2,6 +2,7 @@ from django.db import models
 from django.utils import timezone
 
 from apps.core.models import BaseModel
+from apps.core.storage import VersionedUploadTo
 
 
 class ReviewRequest(BaseModel):
@@ -43,7 +44,7 @@ class ReviewRequest(BaseModel):
         verbose_name="État",
     )
     received_file = models.FileField(
-        upload_to="reviews/files/",
+        upload_to=VersionedUploadTo("reviews/files"),
         blank=True,
         null=True,
         verbose_name="Fichier de relecture",

@@ -3,6 +3,7 @@ from django.db import models
 from django_fsm import FSMField, transition
 
 from apps.core.models import BaseModel, TimestampedModel
+from apps.core.storage import VersionedUploadTo
 
 
 class Article(BaseModel):
@@ -125,7 +126,7 @@ class ArticleVersion(TimestampedModel):
         verbose_name="Article",
     )
     version_number = models.PositiveIntegerField(verbose_name="Numéro de version")
-    file = models.FileField(upload_to="articles/versions/", verbose_name="Fichier")
+    file = models.FileField(upload_to=VersionedUploadTo("articles/versions"), verbose_name="Fichier")
     uploaded_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
