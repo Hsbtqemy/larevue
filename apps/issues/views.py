@@ -10,8 +10,6 @@ from apps.issues.forms import IssueEditForm
 from apps.issues.models import Issue
 from apps.reviews.models import ReviewRequest
 
-_ARCHIVED_STATES = frozenset({Issue.State.PUBLISHED, Issue.State.REFUSED})
-
 
 class IssueDetailView(JournalMemberRequiredMixin, DetailView):
     model = Issue
@@ -61,7 +59,7 @@ class IssueDetailView(JournalMemberRequiredMixin, DetailView):
         if issue.editor_name and issue.editor_name not in member_names:
             member_names = [issue.editor_name] + member_names
 
-        is_editable = issue.state not in _ARCHIVED_STATES
+        is_editable = issue.state not in Issue.ARCHIVED_STATES
 
         ctx.update({
             "journal": journal,
@@ -82,7 +80,7 @@ class IssuePatchView(JournalOwnedPatchView):
     FULL_CLEAN_EXCLUDE = ["state", "cover_image", "final_pdf"]
 
     def check_editable(self, obj):
-        if obj.state in _ARCHIVED_STATES:
+        if obj.state in Issue.ARCHIVED_STATES:
             return JsonResponse({"error": "Ce numéro ne peut plus être modifié."}, status=403)
         return None
 
@@ -101,7 +99,7 @@ class IssueImageUploadView(JournalOwnedObjectMixin, JournalMemberRequiredMixin, 
 
     def post(self, request, issue_id, **kwargs):
         issue = self.get_object_or_404()
-        if issue.state in _ARCHIVED_STATES:
+        if issue.state in Issue.ARCHIVED_STATES:
             return JsonResponse({"error": "Ce numéro ne peut plus être modifié."}, status=403)
 
         file = request.FILES.get("cover_image")
@@ -119,7 +117,7 @@ class IssueImageUploadView(JournalOwnedObjectMixin, JournalMemberRequiredMixin, 
 
     def patch(self, request, issue_id, **kwargs):
         issue = self.get_object_or_404()
-        if issue.state in _ARCHIVED_STATES:
+        if issue.state in Issue.ARCHIVED_STATES:
             return JsonResponse({"error": "Ce numéro ne peut plus être modifié."}, status=403)
 
         if issue.cover_image:
@@ -136,7 +134,7 @@ class IssueEditView(JournalOwnedObjectMixin, JournalMemberRequiredMixin, View):
     def post(self, request, issue_id, **kwargs):
         issue = self.get_object_or_404()
 
-        if issue.state in _ARCHIVED_STATES:
+        if issue.state in Issue.ARCHIVED_STATES:
             return JsonResponse({"error": "Ce numéro ne peut plus être modifié."}, status=403)
 
         form = IssueEditForm(request.POST, instance=issue)

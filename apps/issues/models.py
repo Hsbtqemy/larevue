@@ -20,6 +20,8 @@ class Issue(BaseModel):
         State.SENT_TO_PUBLISHER,
     ]
 
+    ARCHIVED_STATES = frozenset({State.PUBLISHED, State.REFUSED})
+
     journal = models.ForeignKey(
         "journals.Journal",
         on_delete=models.CASCADE,

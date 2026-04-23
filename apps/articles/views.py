@@ -1,9 +1,11 @@
+from django.db.models import Prefetch
 from django.http import Http404, JsonResponse
 from django.shortcuts import render
 from django.urls import reverse
 from django.views import View
 from django.views.generic import DetailView
 
+from apps.articles.forms import ArticleEditForm
 from apps.articles.models import Article, InternalNote
 from apps.contacts.models import Contact
 from apps.core.mixins import JournalMemberRequiredMixin, JournalOwnedObjectMixin
@@ -11,12 +13,8 @@ from apps.core.views import JournalOwnedPatchView
 from apps.issues.models import Issue
 from apps.reviews.models import ReviewRequest
 
-_ARCHIVED_STATES = frozenset({Issue.State.PUBLISHED, Issue.State.REFUSED})
-
 
 class _ArticleJournalMixin(JournalOwnedObjectMixin):
-    """Shared lookup for all article action views."""
-
     model = Article
     pk_url_kwarg = "article_id"
     journal_field_path = "issue__journal"
@@ -31,6 +29,11 @@ class _ArticleJournalMixin(JournalOwnedObjectMixin):
         except Article.DoesNotExist:
             raise Http404
 
+    def _check_archived(self, article):
+        if article.issue.state in Issue.ARCHIVED_STATES:
+            return JsonResponse({"error": "Cet article ne peut plus être modifié."}, status=403)
+        return None
+
 
 class ArticleDetailView(JournalMemberRequiredMixin, DetailView):
     model = Article
@@ -41,7 +44,12 @@ class ArticleDetailView(JournalMemberRequiredMixin, DetailView):
         return Article.objects.select_related(
             "issue", "issue__journal", "author"
         ).prefetch_related(
-            "versions", "review_requests", "internal_notes__author"
+            "versions",
+            "review_requests",
+            Prefetch(
+                "internal_notes",
+                queryset=InternalNote.objects.order_by("-created_at").select_related("author"),
+            ),
         )
 
     def get_object(self, queryset=None):
@@ -64,9 +72,7 @@ class ArticleDetailView(JournalMemberRequiredMixin, DetailView):
             1 for rr in review_requests if rr.state == ReviewRequest.State.RECEIVED
         )
 
-        internal_notes = list(
-            article.internal_notes.order_by("-created_at").select_related("author")
-        )
+        internal_notes = list(article.internal_notes.all())
 
         author_options = [
             (c.pk, c.full_name)
@@ -75,7 +81,7 @@ class ArticleDetailView(JournalMemberRequiredMixin, DetailView):
         if article.author and (article.author_id, article.author.full_name) not in author_options:
             author_options = [(article.author_id, article.author.full_name)] + author_options
 
-        is_archived = issue.state in _ARCHIVED_STATES
+        is_archived = issue.state in Issue.ARCHIVED_STATES
         latest_version_number = versions[-1].version_number if versions else None
 
         ctx.update({
@@ -100,9 +106,7 @@ class ArticlePatchView(_ArticleJournalMixin, JournalOwnedPatchView):
     FULL_CLEAN_EXCLUDE = ["state"]
 
     def check_editable(self, obj):
-        if obj.issue.state in _ARCHIVED_STATES:
-            return JsonResponse({"error": "Cet article ne peut plus être modifié."}, status=403)
-        return None
+        return self._check_archived(obj)
 
     def resolve_field_value(self, field_name, raw_value, field_obj):
         if field_name == "author":
@@ -125,12 +129,11 @@ class ArticlePatchView(_ArticleJournalMixin, JournalOwnedPatchView):
 
 class ArticleEditView(_ArticleJournalMixin, JournalMemberRequiredMixin, View):
     def post(self, request, issue_id, article_id, **kwargs):
-        from apps.articles.forms import ArticleEditForm
-
         article = self.get_object_or_404()
 
-        if article.issue.state in _ARCHIVED_STATES:
-            return JsonResponse({"error": "Cet article ne peut plus être modifié."}, status=403)
+        guard = self._check_archived(article)
+        if guard:
+            return guard
 
         form = ArticleEditForm(request.POST, instance=article, journal=request.journal)
         if form.is_valid():
@@ -156,8 +159,9 @@ class ArticleDeleteView(_ArticleJournalMixin, JournalMemberRequiredMixin, View):
     def delete(self, request, issue_id, article_id, **kwargs):
         article = self.get_object_or_404()
 
-        if article.issue.state in _ARCHIVED_STATES:
-            return JsonResponse({"error": "Cet article ne peut plus être supprimé."}, status=403)
+        guard = self._check_archived(article)
+        if guard:
+            return guard
 
         article.delete()
         url = reverse(
@@ -171,8 +175,9 @@ class ArticleNoteCreateView(_ArticleJournalMixin, JournalMemberRequiredMixin, Vi
     def post(self, request, issue_id, article_id, **kwargs):
         article = self.get_object_or_404()
 
-        if article.issue.state in _ARCHIVED_STATES:
-            return JsonResponse({"error": "Cet article est archivé."}, status=403)
+        guard = self._check_archived(article)
+        if guard:
+            return guard
 
         content = request.POST.get("content", "").strip()
         if not content:

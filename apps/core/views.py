@@ -8,21 +8,6 @@ from apps.core.mixins import JournalMemberRequiredMixin, JournalOwnedObjectMixin
 
 
 class JournalOwnedPatchView(JournalOwnedObjectMixin, JournalMemberRequiredMixin, View):
-    """Base class for inline-patch views operating on a journal-owned object.
-
-    Subclasses define:
-    - model, pk_url_kwarg, journal_field_path  (from JournalOwnedObjectMixin)
-    - ALLOWED_FIELDS: set of field names that may be patched
-    - AUDIT_FIELDS: subset of ALLOWED_FIELDS that trigger create_audit_note
-    - FULL_CLEAN_EXCLUDE: list of field names to skip during full_clean
-
-    Override:
-    - check_editable(obj): return a JsonResponse 403 if not editable, else None
-    - resolve_field_value(field_name, raw_value, field_obj): convert the raw
-      string from the request body to the appropriate Python value
-    - create_audit_note(obj, field_name, old_value, new_value, field_obj):
-      persist an audit record for the change
-    """
 
     ALLOWED_FIELDS: set = set()
     AUDIT_FIELDS: set = set()

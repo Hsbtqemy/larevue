@@ -1,3 +1,6 @@
+import datetime
+import json
+
 from django import template
 from django.utils.html import mark_safe
 from django.utils import timezone
@@ -39,7 +42,6 @@ def verdict_badge(verdict):
 
 @register.inclusion_tag("partials/_inline_editable.html")
 def inline_editable(field, instance, url, input_type=None, options=None, datalist_id=None, datalist_options=None):
-    import datetime
     value = getattr(instance, field, "") or ""
     resolved_options = list(options) if options else []
 
@@ -142,5 +144,4 @@ def timesince_short(value):
 @register.filter
 def to_json(value):
     """Serialize a Python value to a safe JSON string for use in Alpine.js data attributes."""
-    import json as _json
-    return mark_safe(_json.dumps(value))
+    return mark_safe(json.dumps(value))
