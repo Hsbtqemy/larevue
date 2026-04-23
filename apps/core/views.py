@@ -16,6 +16,9 @@ class JournalOwnedPatchView(JournalOwnedObjectMixin, JournalMemberRequiredMixin,
     def check_editable(self, obj):
         return None
 
+    def get_allowed_fields(self, obj):
+        return self.ALLOWED_FIELDS
+
     def resolve_field_value(self, field_name, raw_value, field_obj):
         if field_obj.null and raw_value == "":
             return None
@@ -38,7 +41,7 @@ class JournalOwnedPatchView(JournalOwnedObjectMixin, JournalMemberRequiredMixin,
         except (json.JSONDecodeError, KeyError, TypeError):
             return JsonResponse({"error": "Requête invalide."}, status=400)
 
-        if field_name not in self.ALLOWED_FIELDS:
+        if field_name not in self.get_allowed_fields(obj):
             return JsonResponse({"error": "Champ non modifiable."}, status=400)
 
         field_obj = obj._meta.get_field(field_name)

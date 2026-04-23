@@ -111,7 +111,7 @@ def date_calendar(value):
 def days_late(value):
     if not value:
         return 0
-    return (timezone.now().date() - value).days
+    return (datetime.date.today() - value).days
 
 
 @register.filter
