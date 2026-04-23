@@ -1,6 +1,3 @@
-import json
-
-from django.core.exceptions import ValidationError
 from django.http import Http404, JsonResponse
 from django.urls import reverse
 from django.views import View
@@ -8,11 +5,11 @@ from django.views.generic import DetailView
 
 from apps.articles.models import Article, InternalNote
 from apps.core.mixins import JournalMemberRequiredMixin, JournalOwnedObjectMixin
+from apps.core.views import JournalOwnedPatchView
 from apps.issues.forms import IssueEditForm
 from apps.issues.models import Issue
 from apps.reviews.models import ReviewRequest
 
-_PATCHABLE_FIELDS = {"number", "thematic_title", "editor_name", "planned_publication_date", "description"}
 _ARCHIVED_STATES = frozenset({Issue.State.PUBLISHED, Issue.State.REFUSED})
 
 
@@ -77,44 +74,25 @@ class IssueDetailView(JournalMemberRequiredMixin, DetailView):
         return ctx
 
 
-class IssuePatchView(JournalOwnedObjectMixin, JournalMemberRequiredMixin, View):
+class IssuePatchView(JournalOwnedPatchView):
     model = Issue
     pk_url_kwarg = "issue_id"
+    ALLOWED_FIELDS = {"number", "thematic_title", "editor_name", "planned_publication_date", "description"}
+    AUDIT_FIELDS = {"number", "thematic_title", "editor_name", "planned_publication_date", "description"}
+    FULL_CLEAN_EXCLUDE = ["state", "cover_image", "final_pdf"]
 
-    def post(self, request, issue_id, **kwargs):
-        issue = self.get_object_or_404()
-
-        if issue.state in _ARCHIVED_STATES:
+    def check_editable(self, obj):
+        if obj.state in _ARCHIVED_STATES:
             return JsonResponse({"error": "Ce numéro ne peut plus être modifié."}, status=403)
+        return None
 
-        try:
-            data = json.loads(request.body)
-            field = data["field"]
-            value = data.get("value", "")
-        except (json.JSONDecodeError, KeyError, TypeError):
-            return JsonResponse({"error": "Requête invalide."}, status=400)
-
-        if field not in _PATCHABLE_FIELDS:
-            return JsonResponse({"error": "Champ non modifiable."}, status=400)
-
-        old_value = getattr(issue, field)
-        field_obj = issue._meta.get_field(field)
-        setattr(issue, field, None if (field_obj.null and value == "") else value)
-
-        try:
-            issue.full_clean(exclude=["state", "cover_image", "final_pdf"])
-            issue.save(update_fields=[field])
-        except ValidationError as e:
-            return JsonResponse({"error": " ".join(e.messages)}, status=400)
-
+    def create_audit_note(self, obj, field_name, old_value, new_value, field_obj):
         InternalNote.objects.create(
-            issue=issue,
-            author=request.user,
-            content=f"{field_obj.verbose_name} modifié·e : « {old_value} » → « {value} »",
+            issue=obj,
+            author=self.request.user,
+            content=f"{field_obj.verbose_name} modifié·e : « {old_value} » → « {new_value} »",
             is_automatic=True,
         )
-
-        return JsonResponse({"ok": True})
 
 
 class IssueImageUploadView(JournalOwnedObjectMixin, JournalMemberRequiredMixin, View):
