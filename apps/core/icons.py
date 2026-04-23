@@ -36,4 +36,5 @@ ICONS: dict[str, str] = {
     "lock":     '<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/>',
     "history":  '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/><path d="M3 12H1"/>',
     "grip":     '<circle cx="9" cy="6" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="9" cy="18" r="1"/><circle cx="15" cy="6" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="18" r="1"/>',
+    "trash":    '<path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/>',
 }

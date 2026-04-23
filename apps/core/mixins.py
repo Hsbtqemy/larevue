@@ -1,5 +1,30 @@
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import PermissionDenied
+from django.http import Http404
+
+
+class JournalOwnedObjectMixin:
+    """Mixin for views that operate on a single object belonging to the current journal.
+
+    Subclasses set:
+    - model: the Django model class
+    - pk_url_kwarg: URL kwarg name for the object PK
+    - journal_field_path: ORM lookup path to the journal (e.g. "journal" for Issue,
+      "issue__journal" for Article)
+    """
+
+    model = None
+    pk_url_kwarg = "pk"
+    journal_field_path = "journal"
+
+    def get_object_or_404(self):
+        try:
+            return self.model.objects.get(
+                pk=self.kwargs[self.pk_url_kwarg],
+                **{self.journal_field_path: self.request.journal},
+            )
+        except self.model.DoesNotExist:
+            raise Http404
 
 
 class JournalMemberRequiredMixin(LoginRequiredMixin):
@@ -8,18 +33,20 @@ class JournalMemberRequiredMixin(LoginRequiredMixin):
     revue active. Nécessite CurrentJournalMiddleware sur les URLs /revues/<slug>/.
 
     Ordre des contrôles :
-    1. Non connecté·e → redirect login (via handle_no_permission)
-    2. Revue active mais non membre → 403
-    3. Sinon → vue exécutée normalement
+    1. Revue inexistante → 404 (évite de divulguer une 403 sur un slug inconnu)
+    2. Non connecté·e → redirect login (via handle_no_permission)
+    3. Revue active mais non membre → 403
+    4. Sinon → vue exécutée normalement
 
-    Note : `if journal` (et non `is not None`) pour évaluer correctement un
-    SimpleLazyObject wrappant None — le ORM n'accepte pas ce type brut.
+    Note : `if not request.journal` évalue correctement un SimpleLazyObject
+    wrappant None — le ORM n'accepte pas ce type brut.
     """
 
     def dispatch(self, request, *args, **kwargs):
+        if not request.journal:
+            raise Http404
         if not request.user.is_authenticated:
             return self.handle_no_permission()
-        journal = getattr(request, "journal", None)
-        if journal and not request.user.memberships.filter(journal=journal).exists():
+        if not request.user.memberships.filter(journal=request.journal).exists():
             raise PermissionDenied
         return super().dispatch(request, *args, **kwargs)

@@ -1,6 +1,6 @@
 {# Confirm-delete modal.
-   Context: delete_url, title (opt), message (opt),
-   confirm_label (opt), require_typing (opt).
+   Context: delete_url, title (opt), message (opt), confirm_label (opt),
+   require_typing (opt), trigger_label (opt), trigger_cls (opt).
    Server contract: returns JSON {"redirect_url": "..."} on success. #}
 {% if require_typing %}
 <div x-data="confirmDelete('{{ delete_url }}', '{{ require_typing|escapejs }}')">
@@ -8,11 +8,9 @@
 <div x-data="confirmDelete('{{ delete_url }}')">
 {% endif %}
 
-  {% block trigger %}
-    <button type="button" class="btn danger sm" @click="openModal()">
-      {{ confirm_label|default:"Supprimer" }}
-    </button>
-  {% endblock %}
+  <button type="button" class="{{ trigger_cls|default:'btn danger sm' }}" @click="openModal()">
+    {{ trigger_label|default:"Supprimer" }}
+  </button>
 
   <template x-teleport="body">
     <div x-show="open"

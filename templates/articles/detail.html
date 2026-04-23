@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% load static edito %}
+
+{% block title %}{{ object.title }} — {{ journal.name }}{% endblock %}
+
+{% block body_class %}{% endblock %}
+
+{% block extra_head %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter+Tight:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{% static 'css/edito.css' %}">
+<style>
+  :root {
+    --accent: {{ journal.accent_color }};
+    --accent-soft: color-mix(in srgb, {{ journal.accent_color }} 25%, #fbf8f1);
+    --accent-tint: color-mix(in srgb, {{ journal.accent_color }} 10%, #fbf8f1);
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="app-shell" data-theme="chaleureuse">
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-mark">É</div>
+      <div class="brand-name">Edito</div>
+    </div>
+    <nav class="nav">
+      <a href="{% url 'journal_dashboard' slug=journal.slug %}" class="nav-item" style="text-decoration:none">
+        {% icon "home" 17 cls="icon" %}
+        Tableau de bord
+      </a>
+    </nav>
+  </aside>
+
+  <main class="main">
+    <div class="accent-strip" style="background:var(--accent)"></div>
+    <div class="article-detail-header">
+      <div class="article-breadcrumb">
+        <a href="{% url 'journal_dashboard' slug=journal.slug %}">{{ journal.name }}</a>
+        <span class="sep">{% icon "chevronR" 12 %}</span>
+        <a href="{% url 'issues:detail' slug=journal.slug issue_id=object.issue_id %}">N°{{ object.issue.number }}</a>
+        <span class="sep">{% icon "chevronR" 12 %}</span>
+        <span style="color:var(--ink)">Article</span>
+      </div>
+      <h1>{{ object.title }}</h1>
+      <div class="article-meta-row">
+        <span>{{ object.displayed_author_name|default:"Auteur inconnu" }}</span>
+        <span>{% state_badge object %}</span>
+      </div>
+    </div>
+    <div class="main-content">
+      <div class="empty" style="margin-top:60px;text-align:center">
+        <h4>Vue article à venir</h4>
+        <p>Cette page sera développée prochainement.</p>
+      </div>
+    </div>
+  </main>
+</div>
+{% endblock %}

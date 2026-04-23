@@ -164,8 +164,18 @@ class InternalNote(TimestampedModel):
     article = models.ForeignKey(
         Article,
         on_delete=models.CASCADE,
+        null=True,
+        blank=True,
         related_name="internal_notes",
         verbose_name="Article",
+    )
+    issue = models.ForeignKey(
+        "issues.Issue",
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="internal_notes",
+        verbose_name="Numéro",
     )
     author = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -184,7 +194,17 @@ class InternalNote(TimestampedModel):
         verbose_name = "Note interne"
         verbose_name_plural = "Notes internes"
         ordering = ["created_at"]
+        constraints = [
+            models.CheckConstraint(
+                condition=(
+                    models.Q(article__isnull=False, issue__isnull=True)
+                    | models.Q(article__isnull=True, issue__isnull=False)
+                ),
+                name="internalnote_article_xor_issue",
+            ),
+        ]
 
     def __str__(self):
         prefix = "[auto] " if self.is_automatic else ""
-        return f"{prefix}Note sur « {self.article} »"
+        subject = self.article or self.issue
+        return f"{prefix}Note sur « {subject} »"

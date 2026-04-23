@@ -38,7 +38,7 @@ def verdict_badge(verdict):
 
 
 @register.inclusion_tag("partials/_inline_editable.html")
-def inline_editable(field, instance, url, input_type=None, options=None):
+def inline_editable(field, instance, url, input_type=None, options=None, datalist_id=None, datalist_options=None):
     import datetime
     value = getattr(instance, field, "") or ""
     resolved_options = list(options) if options else []
@@ -61,6 +61,8 @@ def inline_editable(field, instance, url, input_type=None, options=None):
         "url": url,
         "type": input_type,
         "options": resolved_options,
+        "datalist_id": datalist_id,
+        "datalist_options": datalist_options or [],
     }
 
 
@@ -74,6 +76,12 @@ def icon(name, size=16, cls=""):
         f'<svg width="{size}" height="{size}" viewBox="0 0 24 24" {_SVG_ATTRS}{class_attr}>'
         f"{paths}</svg>"
     )
+
+
+@register.filter
+def image_url(value):
+    """Return the URL for a FileField/ImageField, or '' if the field is empty."""
+    return value.url if value else ""
 
 
 @register.filter

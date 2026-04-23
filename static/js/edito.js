@@ -45,20 +45,24 @@ document.addEventListener("alpine:init", () => {
       this.error = null;
       try {
         const res = await fetch(patchUrl, {
-          method: "PATCH",
+          method: "POST",
           headers: { "Content-Type": "application/json", "X-CSRFToken": getCsrfToken() },
-          body: JSON.stringify({ [fieldName]: this.draft }),
+          body: JSON.stringify({ field: fieldName, value: this.draft }),
         });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        value = this.draft;
-        this.justSaved = true;
-        setTimeout(() => { this.justSaved = false; }, 1200);
-        this.$dispatch("saved", { label: "Enregistré" });
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          this.error = data.error || "Erreur lors de l'enregistrement.";
+        } else {
+          value = this.draft;
+          this.justSaved = true;
+          setTimeout(() => { this.justSaved = false; }, 1200);
+          this.$dispatch("saved", { label: "Enregistré" });
+          this.editing = false;
+        }
       } catch (e) {
         this.error = "Erreur lors de l'enregistrement.";
       } finally {
         this.saving = false;
-        this.editing = false;
       }
     },
   }));
@@ -157,6 +161,40 @@ document.addEventListener("alpine:init", () => {
       } catch (e) {
         this.deleting = false;
         this.open = false;
+      }
+    },
+  }));
+
+
+  Alpine.data("editModal", (editUrl) => ({
+    open: false,
+    errors: {},
+    saving: false,
+
+    openModal() { this.errors = {}; this.open = true; },
+    close() { this.open = false; this.errors = {}; },
+
+    fieldErrors(name) { return this.errors[name] || []; },
+
+    async submit(form) {
+      this.saving = true;
+      this.errors = {};
+      try {
+        const res = await fetch(editUrl, {
+          method: "POST",
+          headers: { "X-CSRFToken": getCsrfToken() },
+          body: new FormData(form),
+        });
+        const data = await res.json();
+        if (res.ok) {
+          window.location.href = data.redirect_url;
+        } else {
+          this.errors = data.errors || {};
+        }
+      } catch (e) {
+        this.errors = { __all__: ["Erreur lors de l'enregistrement."] };
+      } finally {
+        this.saving = false;
       }
     },
   }));

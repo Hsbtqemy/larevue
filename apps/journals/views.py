@@ -38,13 +38,6 @@ class HomeView(LoginRequiredMixin, TemplateView):
 class JournalDashboardView(JournalMemberRequiredMixin, TemplateView):
     template_name = "journals/dashboard.html"
 
-    def dispatch(self, request, *args, **kwargs):
-        # Raise Http404 before the membership check to avoid leaking a 403
-        # on a journal that does not exist.
-        if not request.journal:
-            raise Http404
-        return super().dispatch(request, *args, **kwargs)
-
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         journal = self.request.journal

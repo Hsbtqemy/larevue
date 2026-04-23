@@ -1,0 +1,367 @@
+{% extends "base.html" %}
+{% load static edito %}
+
+{% block title %}N°{{ issue.number }} — {{ issue.thematic_title }} — {{ journal.name }}{% endblock %}
+
+{% block body_class %}{% endblock %}
+
+{% block extra_head %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter+Tight:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{% static 'css/edito.css' %}">
+<style>
+  :root {
+    --accent: {{ journal.accent_color }};
+    --accent-soft: color-mix(in srgb, {{ journal.accent_color }} 25%, #fbf8f1);
+    --accent-tint: color-mix(in srgb, {{ journal.accent_color }} 10%, #fbf8f1);
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="app-shell" data-theme="chaleureuse">
+
+  {# ===== SIDEBAR ===== #}
+  <aside class="sidebar">
+
+    <div class="sidebar-brand">
+      <div class="brand-mark">É</div>
+      <div class="brand-name">Edito</div>
+    </div>
+
+    <div class="revue-switcher">
+      <div class="revue-switcher-label">Revue courante</div>
+      {% if user_journal_count > 1 %}
+        <a href="{% url 'home' %}" class="revue-switcher-current" style="text-decoration:none">
+          <span class="revue-dot" style="background:var(--accent)"></span>
+          <span class="revue-name">{{ journal.name }}</span>
+          <span class="chev">{% icon "chevron" 14 %}</span>
+        </a>
+      {% else %}
+        <div class="revue-switcher-current" style="cursor:default">
+          <span class="revue-dot" style="background:var(--accent)"></span>
+          <span class="revue-name">{{ journal.name }}</span>
+        </div>
+      {% endif %}
+    </div>
+
+    <nav class="nav">
+      <a href="{% url 'journal_dashboard' slug=journal.slug %}" class="nav-item" style="text-decoration:none">
+        {% icon "home" 17 cls="icon" %}
+        Tableau de bord
+      </a>
+      <button class="nav-item active" type="button">
+        {% icon "file" 17 cls="icon" %}
+        Numéros en cours
+      </button>
+      <a href="#" class="nav-item" style="text-decoration:none">
+        {% icon "users" 17 cls="icon" %}
+        Contacts
+      </a>
+      <a href="#" class="nav-item" style="text-decoration:none">
+        {% icon "archive" 17 cls="icon" %}
+        Archives
+      </a>
+    </nav>
+
+    <div class="sidebar-user">
+      <div class="avatar">{{ request.user.first_name|slice:":1" }}{{ request.user.last_name|slice:":1" }}</div>
+      <div class="sidebar-user-info">
+        <div class="n">{{ request.user.get_full_name }}</div>
+        <div class="e">{{ request.user.email }}</div>
+      </div>
+      <form method="post" action="{% url 'account_logout' %}" style="margin-left:auto;flex-shrink:0">
+        {% csrf_token %}
+        <button type="submit" class="btn ghost sm" title="Se déconnecter">
+          {% icon "back" 14 %}
+        </button>
+      </form>
+    </div>
+
+  </aside>
+
+  {# ===== MAIN ===== #}
+  <main class="main">
+
+    <div class="accent-strip" style="background:var(--accent)"></div>
+
+    {# Breadcrumb #}
+    <div style="padding:10px 40px;background:var(--surface);border-bottom:1px solid var(--line);font-size:12.5px;color:var(--ink-faint);display:flex;align-items:center;gap:6px">
+      <a href="{% url 'journal_dashboard' slug=journal.slug %}" style="color:var(--ink-muted);text-decoration:none">{{ journal.name }}</a>
+      {% icon "chevronR" 12 %}
+      <span>Numéros</span>
+      {% icon "chevronR" 12 %}
+      <span style="color:var(--ink)">N°{{ issue.number }}</span>
+    </div>
+
+    {# ===== Issue header ===== #}
+    {% url 'issues:patch' slug=journal.slug issue_id=issue.pk as patch_url %}
+    {% url 'issues:edit' slug=journal.slug issue_id=issue.pk as edit_url %}
+    {% url 'issues:delete' slug=journal.slug issue_id=issue.pk as delete_url %}
+    <div x-data="editModal('{{ edit_url|escapejs }}')">
+    <div class="issue-header">
+
+      <div class="issue-header-left">
+        <div style="display:flex;gap:20px;align-items:flex-start">
+
+          {# Cover image #}
+          <div style="flex-shrink:0;width:90px">
+            {% if is_editable %}
+              {% url 'issues:cover' slug=journal.slug issue_id=issue.pk as cover_url %}
+              {% include "partials/_image_upload.html" with current_url=issue.cover_image|image_url upload_url=cover_url field_name="cover_image" compact=True aspect_ratio="3 / 4" label="Couverture" %}
+            {% elif issue.cover_image %}
+              <img src="{{ issue.cover_image.url }}" style="width:90px;height:120px;object-fit:cover;border-radius:var(--radius-md);border:1px solid var(--line)" alt="">
+            {% else %}
+              <div style="width:90px;height:120px;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-md);display:grid;place-items:center;color:var(--ink-faint)">
+                {% icon "file" 28 %}
+              </div>
+            {% endif %}
+          </div>
+
+          <div style="flex:1;min-width:0">
+            <div class="eyebrow">
+              N°{% if is_editable %}{% inline_editable "number" issue patch_url %}{% else %}{{ issue.number }}{% endif %}
+            </div>
+            <h1 class="editable-h1">
+              {% if is_editable %}{% inline_editable "thematic_title" issue patch_url %}{% else %}{{ issue.thematic_title }}{% endif %}
+            </h1>
+
+            <div class="issue-header-meta">
+              <div>
+                <div class="tiny muted" style="margin-bottom:2px">Responsable</div>
+                <strong>
+                  {% if is_editable %}
+                    {% inline_editable "editor_name" issue patch_url datalist_id="editor-names" datalist_options=member_names %}
+                  {% else %}
+                    {{ issue.editor_name }}
+                  {% endif %}
+                </strong>
+              </div>
+              <div>
+                <div class="tiny muted" style="margin-bottom:2px">Parution prévue</div>
+                <strong>
+                  {% if is_editable %}
+                    {% inline_editable "planned_publication_date" issue patch_url %}
+                  {% else %}
+                    {{ issue.planned_publication_date|date_short|default:"—" }}
+                  {% endif %}
+                </strong>
+              </div>
+              <div>
+                <div class="tiny muted" style="margin-bottom:2px">État</div>
+                {% state_badge issue %}
+              </div>
+            </div>
+
+            <div style="margin-top:12px;font-size:14px;max-width:560px">
+              {% if is_editable %}
+                {% inline_editable "description" issue patch_url %}
+              {% else %}
+                <span class="muted" style="line-height:1.5">{{ issue.description|default:"—" }}</span>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="issue-header-right">
+        {% if is_editable %}
+          {% if primary_action.type == "review" %}
+            <button type="button" class="btn primary">Accepter le projet</button>
+            <button type="button" class="btn danger-ghost">Refuser</button>
+          {% elif primary_action.type == "send" %}
+            <button type="button" class="btn primary"{% if not primary_action.enabled %} disabled{% endif %}>
+              Envoyer à l'éditeur
+            </button>
+          {% elif primary_action.type == "publish" %}
+            <button type="button" class="btn primary">Marquer comme publié</button>
+          {% endif %}
+          <button type="button" class="btn ghost sm" @click="openModal()">
+            {% icon "edit" 14 cls="icon" %} Modifier les métadonnées
+          </button>
+          <div x-data="confirmDelete('{{ delete_url|escapejs }}', '{{ issue.thematic_title|escapejs }}')">
+            <button type="button" class="btn danger-ghost sm" @click="openModal()">
+              {% icon "trash" 14 cls="icon" %} Supprimer
+            </button>
+            <template x-teleport="body">
+              <div x-show="open"
+                   class="modal-backdrop"
+                   @click.self="close()"
+                   @keydown.escape.window="close()"
+                   x-transition.opacity>
+                <div class="modal" role="dialog" aria-modal="true">
+                  <div class="modal-head">
+                    <h3>Supprimer ce numéro ?</h3>
+                    <div class="sub">Cette action est définitive. Les articles et relectures associés seront perdus.</div>
+                  </div>
+                  <div class="modal-body">
+                    <p style="color:var(--ink-muted);font-size:14px;margin-bottom:16px">
+                      Vous êtes sur le point de supprimer <strong>N°{{ issue.number }} — {{ issue.thematic_title }}</strong>.
+                    </p>
+                    <div style="display:flex;flex-direction:column;gap:6px">
+                      <label style="font-size:12px;color:var(--ink-faint);text-transform:uppercase;letter-spacing:.06em;font-weight:500">
+                        Pour confirmer, tapez
+                        <code style="background:var(--bg-sunken);padding:1px 6px;border-radius:3px;font-size:11px">{{ issue.thematic_title }}</code>
+                        ci-dessous :
+                      </label>
+                      <input type="text"
+                             class="text-input"
+                             x-model="typed"
+                             placeholder="{{ issue.thematic_title }}"
+                             :autofocus="open">
+                    </div>
+                  </div>
+                  <div class="modal-foot">
+                    <button type="button" class="btn ghost" @click="close()">Annuler</button>
+                    <button type="button"
+                            class="btn danger"
+                            :disabled="deleting || isDisabled"
+                            @click="confirm()">
+                      <span x-show="!deleting">Supprimer définitivement</span>
+                      <span x-show="deleting">Suppression…</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </template>
+          </div>
+        {% endif %}
+      </div>
+
+    </div>{# /issue-header #}
+
+    {# Edit metadata modal #}
+    {% if is_editable %}
+    <div x-show="open"
+         class="modal-backdrop"
+         @click.self="close()"
+         @keydown.escape.window="close()"
+         style="display:none">
+      <div class="modal">
+        <div class="modal-head">
+          <h3>Modifier les métadonnées</h3>
+          <div class="sub">N°{{ issue.number }} — {{ issue.thematic_title }}</div>
+        </div>
+        <div class="modal-body">
+          <form x-ref="editForm" @submit.prevent="submit($refs.editForm)">
+            {% csrf_token %}
+            <div class="edit-meta-form">
+              <div class="field">
+                <label for="em-number">Numéro</label>
+                <input type="text" id="em-number" name="number" class="text-input" value="{{ issue.number }}" required>
+                <template x-if="fieldErrors('number').length">
+                  <div class="form-msg err" x-text="fieldErrors('number').join(' ')"></div>
+                </template>
+              </div>
+              <div class="field">
+                <label for="em-editor">Responsable éditorial·e</label>
+                <input type="text" id="em-editor" name="editor_name" class="text-input" list="em-editor-names" value="{{ issue.editor_name }}" required>
+                <datalist id="em-editor-names">
+                  {% for name in member_names %}<option value="{{ name }}">{% endfor %}
+                </datalist>
+                <template x-if="fieldErrors('editor_name').length">
+                  <div class="form-msg err" x-text="fieldErrors('editor_name').join(' ')"></div>
+                </template>
+              </div>
+              <div class="field full">
+                <label for="em-title">Titre thématique</label>
+                <input type="text" id="em-title" name="thematic_title" class="text-input" value="{{ issue.thematic_title }}" required>
+                <template x-if="fieldErrors('thematic_title').length">
+                  <div class="form-msg err" x-text="fieldErrors('thematic_title').join(' ')"></div>
+                </template>
+              </div>
+              <div class="field">
+                <label for="em-date">Parution prévue</label>
+                <input type="date" id="em-date" name="planned_publication_date" class="text-input" value="{{ issue.planned_publication_date|date:'Y-m-d'|default:'' }}">
+                <template x-if="fieldErrors('planned_publication_date').length">
+                  <div class="form-msg err" x-text="fieldErrors('planned_publication_date').join(' ')"></div>
+                </template>
+              </div>
+              <div class="field full">
+                <label for="em-desc">Description</label>
+                <textarea id="em-desc" name="description" class="text-input" rows="4">{{ issue.description }}</textarea>
+                <template x-if="fieldErrors('description').length">
+                  <div class="form-msg err" x-text="fieldErrors('description').join(' ')"></div>
+                </template>
+              </div>
+              <template x-if="fieldErrors('__all__').length">
+                <div class="field full">
+                  <div class="form-msg err" x-text="fieldErrors('__all__').join(' ')"></div>
+                </div>
+              </template>
+            </div>
+          </form>
+        </div>
+        <div class="modal-foot">
+          <button type="button" class="btn ghost" @click="close()">Annuler</button>
+          <button type="button" class="btn primary" @click="submit($refs.editForm)" :disabled="saving">
+            <span x-text="saving ? 'Enregistrement…' : 'Enregistrer'">Enregistrer</span>
+          </button>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    </div>{# /editModal wrapper #}
+
+    {# ===== Articles ===== #}
+    <div class="main-content">
+      <div class="section">
+        <div class="section-head">
+          <h2>Articles</h2>
+          <span class="meta">{{ articles|length }} article{{ articles|length|pluralize }}</span>
+        </div>
+
+        {% if articles %}
+          <div class="article-list">
+            <div class="article-list-head">
+              <div></div>
+              <div>Titre</div>
+              <div>Type</div>
+              <div class="t-center">Version</div>
+              <div class="t-center">Relectures</div>
+              <div class="t-right">État</div>
+              <div></div>
+            </div>
+            {% for article in articles %}
+              {# TODO: replace href with {% url 'articles:detail' slug=journal.slug article_id=article.pk %} #}
+              <a href="#" class="article-row" style="text-decoration:none">
+                <div class="order-col">
+                  <span class="order-num">{{ article.order }}</span>
+                </div>
+                <div class="title-col">
+                  <div class="t">{{ article.title }}</div>
+                  <div class="s">{{ article.displayed_author_name|default:"—" }}</div>
+                </div>
+                <div class="type-col">{{ article.get_article_type_display }}</div>
+                <div class="num-col">
+                  {% if article.latest_version %}
+                    <strong>v{{ article.latest_version.version_number }}</strong>
+                  {% else %}
+                    <strong>—</strong>
+                  {% endif %}
+                  <div class="lbl">Fichier</div>
+                </div>
+                <div class="num-col">
+                  <strong>{{ article.reviews_received }}/{{ article.reviews_total }}</strong>
+                  <div class="lbl">Reçues</div>
+                </div>
+                <div class="state-col">{% state_badge article %}</div>
+                <div class="chev">{% icon "chevronR" 14 %}</div>
+              </a>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="empty">
+            <h4>Aucun article</h4>
+            <p>Les articles importés pour ce numéro apparaîtront ici.</p>
+          </div>
+        {% endif %}
+      </div>
+    </div>{# /main-content #}
+
+  </main>
+
+</div>{# /app-shell #}
+{% endblock %}

@@ -139,8 +139,7 @@
         {% if active_issues %}
           <div class="issue-grid">
             {% for issue in active_issues %}
-              {# TODO: replace with {% url 'issue_detail' slug=journal.slug pk=issue.pk %} when view exists #}
-              <a href="#" class="issue-card" style="text-decoration:none">
+              <a href="{% url 'issues:detail' slug=journal.slug issue_id=issue.pk %}" class="issue-card" style="text-decoration:none">
                 <div class="issue-card-head">
                   <div>
                     <div class="issue-card-num">

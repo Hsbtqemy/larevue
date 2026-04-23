@@ -17,12 +17,19 @@
   <template x-if="editing && (type === 'text' || type === 'date')">
     <input x-ref="inputText"
            :type="type === 'date' ? 'date' : 'text'"
+           {% if datalist_id %}list="{{ datalist_id }}"{% endif %}
            x-model="draft"
            class="editable-input"
            @blur="commit()"
            @keydown.enter.prevent="commit()"
            @keydown.escape.prevent="cancel()">
   </template>
+
+  {% if datalist_id %}
+  <datalist id="{{ datalist_id }}">
+    {% for opt in datalist_options %}<option value="{{ opt }}">{% endfor %}
+  </datalist>
+  {% endif %}
 
   <template x-if="editing && type === 'textarea'">
     <textarea x-ref="inputTextarea"

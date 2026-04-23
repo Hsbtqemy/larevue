@@ -65,3 +65,28 @@ class TestInternalNote:
     def test_str_includes_article_title(self, article, user):
         note = InternalNote.objects.create(article=article, author=user, content="OK")
         assert "Article de test" in str(note)
+
+    def test_str_includes_issue_title(self, issue, user):
+        note = InternalNote.objects.create(issue=issue, author=user, content="Note sur numéro")
+        assert "Numéro de test" in str(note)
+
+
+@pytest.mark.django_db
+class TestInternalNoteConstraint:
+    def test_article_only_ok(self, article):
+        note = InternalNote.objects.create(article=article, issue=None, content="ok")
+        assert note.pk is not None
+
+    def test_issue_only_ok(self, issue):
+        note = InternalNote.objects.create(article=None, issue=issue, content="ok")
+        assert note.pk is not None
+
+    def test_both_null_raises(self):
+        from django.db import IntegrityError
+        with pytest.raises(IntegrityError):
+            InternalNote.objects.create(article=None, issue=None, content="bad")
+
+    def test_both_set_raises(self, article, issue):
+        from django.db import IntegrityError
+        with pytest.raises(IntegrityError):
+            InternalNote.objects.create(article=article, issue=issue, content="bad")
