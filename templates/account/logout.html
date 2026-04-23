@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block title %}Déconnexion — Outil éditorial{% endblock %}
+
+{% block content %}
+<div class="flex min-h-screen items-center justify-center">
+  <div class="w-full max-w-sm space-y-6 rounded-xl bg-white p-8 shadow text-center">
+
+    <h1 class="text-2xl font-semibold text-gray-900">Déconnexion</h1>
+    <p class="text-sm text-gray-600">Voulez-vous vraiment vous déconnecter ?</p>
+
+    <form method="post" action="{% url 'account_logout' %}">
+      {% csrf_token %}
+      <button
+        type="submit"
+        class="w-full rounded-md bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-700 focus:outline-none"
+      >
+        Se déconnecter
+      </button>
+    </form>
+
+    <a href="javascript:history.back()" class="block text-xs text-gray-500 underline hover:text-gray-700">
+      Annuler
+    </a>
+
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+
+{% block title %}Connexion — Outil éditorial{% endblock %}
+
+{% block content %}
+<div class="flex min-h-screen items-center justify-center">
+  <div class="w-full max-w-sm space-y-6 rounded-xl bg-white p-8 shadow">
+
+    <h1 class="text-2xl font-semibold text-gray-900">Connexion</h1>
+
+    <form method="post" action="{% url 'account_login' %}" class="space-y-4">
+      {% csrf_token %}
+
+      {% if form.non_field_errors %}
+        <div class="rounded bg-red-50 p-3 text-sm text-red-700">
+          {% for error in form.non_field_errors %}{{ error }}{% endfor %}
+        </div>
+      {% endif %}
+
+      <div>
+        <label for="{{ form.login.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">
+          Adresse e-mail
+        </label>
+        <input
+          type="email"
+          name="{{ form.login.html_name }}"
+          id="{{ form.login.id_for_label }}"
+          value="{{ form.login.value|default:'' }}"
+          autocomplete="email"
+          required
+          class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-gray-500 focus:outline-none"
+        >
+        {% if form.login.errors %}
+          <p class="mt-1 text-xs text-red-600">{{ form.login.errors|join:", " }}</p>
+        {% endif %}
+      </div>
+
+      <div>
+        <label for="{{ form.password.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">
+          Mot de passe
+        </label>
+        <input
+          type="password"
+          name="{{ form.password.html_name }}"
+          id="{{ form.password.id_for_label }}"
+          autocomplete="current-password"
+          required
+          class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-gray-500 focus:outline-none"
+        >
+        {% if form.password.errors %}
+          <p class="mt-1 text-xs text-red-600">{{ form.password.errors|join:", " }}</p>
+        {% endif %}
+      </div>
+
+      <button
+        type="submit"
+        class="w-full rounded-md bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-700 focus:outline-none"
+      >
+        Se connecter
+      </button>
+    </form>
+
+    <p class="text-center text-xs text-gray-500">
+      <a href="{% url 'account_reset_password' %}" class="underline hover:text-gray-700">
+        Mot de passe oublié ?
+      </a>
+    </p>
+
+  </div>
+</div>
+{% endblock %}

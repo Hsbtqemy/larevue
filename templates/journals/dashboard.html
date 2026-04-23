@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block title %}{{ journal.name }} — Outil éditorial{% endblock %}
+
+{% block content %}
+<div class="mx-auto max-w-2xl px-4 py-12 space-y-8">
+
+  <div class="flex items-start justify-between gap-4">
+    <div>
+      {% if user_journal_count > 1 %}
+        <a href="{% url 'home' %}" class="text-sm text-gray-500 underline hover:text-gray-700">
+          ← Mes revues
+        </a>
+      {% endif %}
+      <h1 class="mt-2 text-3xl font-bold text-gray-900">{{ journal.name }}</h1>
+      <p class="mt-1 text-gray-500">Bienvenue sur le dashboard de {{ journal.name }}.</p>
+    </div>
+    <form method="post" action="{% url 'account_logout' %}">
+      {% csrf_token %}
+      <button type="submit" class="shrink-0 text-sm text-gray-500 underline hover:text-gray-700">
+        Se déconnecter
+      </button>
+    </form>
+  </div>
+
+  <section>
+    <h2 class="text-lg font-semibold text-gray-800 mb-3">Numéros en cours</h2>
+    {% if active_issues %}
+      <table class="w-full text-sm border-collapse">
+        <thead>
+          <tr class="border-b border-gray-200 text-left text-gray-500">
+            <th class="pb-2 pr-4 font-medium">N°</th>
+            <th class="pb-2 pr-4 font-medium">Titre thématique</th>
+            <th class="pb-2 pr-4 font-medium">État</th>
+            <th class="pb-2 font-medium">Parution prévue</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for issue in active_issues %}
+            <tr class="border-b border-gray-100 hover:bg-gray-50">
+              <td class="py-2 pr-4 font-mono text-gray-700">{{ issue.number }}</td>
+              <td class="py-2 pr-4 text-gray-900">{{ issue.thematic_title }}</td>
+              <td class="py-2 pr-4 text-gray-600">{{ issue.get_state_display }}</td>
+              <td class="py-2 text-gray-600">
+                {{ issue.planned_publication_date|default:"—" }}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <p class="text-gray-500">Aucun numéro en cours.</p>
+    {% endif %}
+  </section>
+
+</div>
+{% endblock %}
