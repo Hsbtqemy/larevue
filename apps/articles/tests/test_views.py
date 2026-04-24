@@ -1,9 +1,13 @@
+import datetime
+
 import pytest
+from django.core.files.base import ContentFile
 from django.urls import reverse
 
-from apps.articles.models import Article, InternalNote
+from apps.articles.models import Article, ArticleVersion, InternalNote
 from apps.contacts.models import Contact
 from apps.issues.models import Issue
+from apps.reviews.models import ReviewRequest
 
 
 # ──────────────────────────── URL helpers ────────────────────────────
@@ -360,3 +364,375 @@ class TestIssuePatchViewRegression:
         note = InternalNote.objects.filter(issue=issue, is_automatic=True).last()
         assert note is not None
         assert "Refacto" in note.content
+
+
+# ──────────────────────────── URL helpers E2 ────────────────────────────
+
+def _version_create_url(journal, issue, article):
+    return reverse("articles:version_create", kwargs={"slug": journal.slug, "issue_id": issue.pk, "article_id": article.pk})
+
+def _version_download_url(journal, issue, article, version):
+    return reverse("articles:version_download", kwargs={"slug": journal.slug, "issue_id": issue.pk, "article_id": article.pk, "version_id": version.pk})
+
+def _review_create_url(journal, issue, article):
+    return reverse("articles:review_create", kwargs={"slug": journal.slug, "issue_id": issue.pk, "article_id": article.pk})
+
+def _review_receive_url(journal, issue, article, review):
+    return reverse("articles:review_receive", kwargs={"slug": journal.slug, "issue_id": issue.pk, "article_id": article.pk, "review_id": review.pk})
+
+def _review_delete_url(journal, issue, article, review):
+    return reverse("articles:review_delete", kwargs={"slug": journal.slug, "issue_id": issue.pk, "article_id": article.pk, "review_id": review.pk})
+
+def _review_patch_url(journal, issue, article, review):
+    return reverse("articles:review_patch", kwargs={"slug": journal.slug, "issue_id": issue.pk, "article_id": article.pk, "review_id": review.pk})
+
+
+# ──────────────────────────── TestArticleVersionCreateView ────────────────────────────
+
+@pytest.mark.django_db
+class TestArticleVersionCreateView:
+    def _upload(self, client, journal, issue, article, filename="doc.pdf", content=b"pdf"):
+        return client.post(
+            _version_create_url(journal, issue, article),
+            {"file": ContentFile(content, name=filename), "comment": ""},
+        )
+
+    def test_requires_login(self, client, journal, issue, article):
+        res = self._upload(client, journal, issue, article)
+        assert res.status_code == 302
+
+    def test_creates_version(self, client, user, membership, journal, issue, article):
+        client.force_login(user)
+        res = self._upload(client, journal, issue, article)
+        assert res.status_code == 200
+        assert ArticleVersion.objects.filter(article=article).count() == 1
+
+    def test_auto_increments_version_number(self, client, user, membership, journal, issue, article):
+        client.force_login(user)
+        self._upload(client, journal, issue, article)
+        self._upload(client, journal, issue, article)
+        versions = list(ArticleVersion.objects.filter(article=article).order_by("version_number"))
+        assert [v.version_number for v in versions] == [1, 2]
+
+    def test_creates_audit_note(self, client, user, membership, journal, issue, article):
+        client.force_login(user)
+        self._upload(client, journal, issue, article)
+        assert InternalNote.objects.filter(article=article, is_automatic=True).exists()
+
+    def test_with_comment_included_in_note(self, client, user, membership, journal, issue, article):
+        client.force_login(user)
+        client.post(
+            _version_create_url(journal, issue, article),
+            {"file": ContentFile(b"pdf", name="f.pdf"), "comment": "Révision majeure"},
+        )
+        note = InternalNote.objects.filter(article=article, is_automatic=True).last()
+        assert "Révision majeure" in note.content
+
+    def test_missing_file_returns_400(self, client, user, membership, journal, issue, article):
+        client.force_login(user)
+        res = client.post(_version_create_url(journal, issue, article), {"comment": ""})
+        assert res.status_code == 400
+
+    def test_archived_article_returns_403(self, client, user, membership, journal, issue, article):
+        Issue.objects.filter(pk=issue.pk).update(state=Issue.State.PUBLISHED)
+        client.force_login(user)
+        res = self._upload(client, journal, issue, article)
+        assert res.status_code == 403
+
+    def test_response_contains_version_item_html(self, client, user, membership, journal, issue, article):
+        client.force_login(user)
+        res = self._upload(client, journal, issue, article)
+        assert b"version-entry" in res.content
+
+    def test_response_contains_oob_counter(self, client, user, membership, journal, issue, article):
+        client.force_login(user)
+        res = self._upload(client, journal, issue, article)
+        assert b"article-header-counters" in res.content
+
+
+# ──────────────────────────── TestArticleVersionDownloadView ────────────────────────────
+
+@pytest.mark.django_db
+class TestArticleVersionDownloadView:
+    def test_requires_login(self, client, journal, issue, article, article_version):
+        res = client.get(_version_download_url(journal, issue, article, article_version))
+        assert res.status_code == 302
+
+    def test_non_member_forbidden(self, client, journal, issue, article, article_version):
+        from apps.accounts.models import User
+        other = User.objects.create_user(email="other_dl@test.com", password="pass")
+        client.force_login(other)
+        res = client.get(_version_download_url(journal, issue, article, article_version))
+        assert res.status_code == 403
+
+    def test_returns_file(self, client, user, membership, journal, issue, article, article_version):
+        client.force_login(user)
+        res = client.get(_version_download_url(journal, issue, article, article_version))
+        assert res.status_code == 200
+        assert res.get("Content-Disposition", "").startswith("attachment")
+
+    def test_archived_article_still_downloadable(self, client, user, membership, journal, issue, article, article_version):
+        Issue.objects.filter(pk=issue.pk).update(state=Issue.State.PUBLISHED)
+        client.force_login(user)
+        res = client.get(_version_download_url(journal, issue, article, article_version))
+        assert res.status_code == 200
+
+    def test_wrong_article_returns_404(self, client, user, membership, journal, issue, article, article_version):
+        from apps.articles.models import Article
+        other_article = Article.objects.create(issue=issue, title="Autre")
+        client.force_login(user)
+        url = reverse("articles:version_download", kwargs={
+            "slug": journal.slug, "issue_id": issue.pk,
+            "article_id": other_article.pk, "version_id": article_version.pk,
+        })
+        res = client.get(url)
+        assert res.status_code == 404
+
+
+# ──────────────────────────── TestReviewRequestCreateView ────────────────────────────
+
+@pytest.mark.django_db
+class TestReviewRequestCreateView:
+    def _post(self, client, journal, issue, article, version, contact, deadline=None):
+        if deadline is None:
+            deadline = (datetime.date.today() + datetime.timedelta(days=28)).isoformat()
+        return client.post(
+            _review_create_url(journal, issue, article),
+            {"reviewer": contact.pk, "article_version": version.pk, "deadline": deadline},
+        )
+
+    def test_requires_login(self, client, journal, issue, article, article_version, contact):
+        res = self._post(client, journal, issue, article, article_version, contact)
+        assert res.status_code == 302
+
+    def test_creates_review_request(self, client, user, membership, journal, issue, article, article_version, contact):
+        client.force_login(user)
+        res = self._post(client, journal, issue, article, article_version, contact)
+        assert res.status_code == 200
+        assert ReviewRequest.objects.filter(article=article).count() == 1
+
+    def test_snapshot_set_from_contact(self, client, user, membership, journal, issue, article, article_version, contact):
+        client.force_login(user)
+        self._post(client, journal, issue, article, article_version, contact)
+        rr = ReviewRequest.objects.get(article=article)
+        assert rr.reviewer_name_snapshot == contact.full_name
+
+    def test_creates_audit_note(self, client, user, membership, journal, issue, article, article_version, contact):
+        client.force_login(user)
+        self._post(client, journal, issue, article, article_version, contact)
+        assert InternalNote.objects.filter(article=article, is_automatic=True).exists()
+
+    def test_no_version_returns_400(self, client, user, membership, journal, issue, article, contact):
+        client.force_login(user)
+        res = client.post(
+            _review_create_url(journal, issue, article),
+            {"reviewer": contact.pk, "article_version": 9999, "deadline": "2030-01-01"},
+        )
+        assert res.status_code == 400
+
+    def test_reviewer_other_journal_returns_400(self, client, user, membership, journal, issue, article, article_version):
+        from apps.journals.models import Journal
+        other_journal = Journal.objects.create(name="Autre", slug="autre-rv")
+        other_contact = Contact.objects.create(journal=other_journal, first_name="X", last_name="Y")
+        client.force_login(user)
+        res = client.post(
+            _review_create_url(journal, issue, article),
+            {"reviewer": other_contact.pk, "article_version": article_version.pk, "deadline": "2030-01-01"},
+        )
+        assert res.status_code == 400
+
+    def test_archived_article_returns_403(self, client, user, membership, journal, issue, article, article_version, contact):
+        Issue.objects.filter(pk=issue.pk).update(state=Issue.State.PUBLISHED)
+        client.force_login(user)
+        res = self._post(client, journal, issue, article, article_version, contact)
+        assert res.status_code == 403
+
+    def test_past_deadline_accepted(self, client, user, membership, journal, issue, article, article_version, contact):
+        client.force_login(user)
+        res = self._post(client, journal, issue, article, article_version, contact, deadline="2020-01-01")
+        assert res.status_code == 200
+
+    def test_response_contains_review_item_html(self, client, user, membership, journal, issue, article, article_version, contact):
+        client.force_login(user)
+        res = self._post(client, journal, issue, article, article_version, contact)
+        assert b"review-card" in res.content
+
+
+# ──────────────────────────── TestReviewRequestReceiveView ────────────────────────────
+
+@pytest.mark.django_db
+class TestReviewRequestReceiveView:
+    def _post(self, client, journal, issue, article, review, verdict="favorable", file=None):
+        data = {"verdict": verdict}
+        if file:
+            data["received_file"] = file
+        return client.post(_review_receive_url(journal, issue, article, review), data)
+
+    def test_requires_login(self, client, journal, issue, article, review_request):
+        res = self._post(client, journal, issue, article, review_request)
+        assert res.status_code == 302
+
+    def test_marks_review_received(self, client, user, membership, journal, issue, article, review_request):
+        client.force_login(user)
+        res = self._post(client, journal, issue, article, review_request)
+        assert res.status_code == 200
+        assert ReviewRequest.objects.get(pk=review_request.pk).state == ReviewRequest.State.RECEIVED
+
+    def test_sets_received_at(self, client, user, membership, journal, issue, article, review_request):
+        client.force_login(user)
+        self._post(client, journal, issue, article, review_request)
+        assert ReviewRequest.objects.get(pk=review_request.pk).received_at is not None
+
+    def test_verdict_saved(self, client, user, membership, journal, issue, article, review_request):
+        client.force_login(user)
+        self._post(client, journal, issue, article, review_request, verdict="unfavorable")
+        assert ReviewRequest.objects.get(pk=review_request.pk).verdict == "unfavorable"
+
+    def test_creates_audit_note(self, client, user, membership, journal, issue, article, review_request):
+        client.force_login(user)
+        self._post(client, journal, issue, article, review_request)
+        assert InternalNote.objects.filter(article=article, is_automatic=True).exists()
+
+    def test_without_file_ok(self, client, user, membership, journal, issue, article, review_request):
+        client.force_login(user)
+        res = self._post(client, journal, issue, article, review_request)
+        assert res.status_code == 200
+
+    def test_with_file_saved(self, client, user, membership, journal, issue, article, review_request):
+        client.force_login(user)
+        file = ContentFile(b"annotated", name="review.pdf")
+        res = self._post(client, journal, issue, article, review_request, file=file)
+        assert res.status_code == 200
+        assert ReviewRequest.objects.get(pk=review_request.pk).received_file
+
+    def test_already_received_returns_400(self, client, user, membership, journal, issue, article, review_request):
+        ReviewRequest.objects.filter(pk=review_request.pk).update(state=ReviewRequest.State.RECEIVED)
+        client.force_login(user)
+        res = self._post(client, journal, issue, article, review_request)
+        assert res.status_code == 400
+
+    def test_archived_article_returns_403(self, client, user, membership, journal, issue, article, review_request):
+        Issue.objects.filter(pk=issue.pk).update(state=Issue.State.PUBLISHED)
+        client.force_login(user)
+        res = self._post(client, journal, issue, article, review_request)
+        assert res.status_code == 403
+
+    def test_response_contains_oob_received_item(self, client, user, membership, journal, issue, article, review_request):
+        client.force_login(user)
+        res = self._post(client, journal, issue, article, review_request)
+        assert b"reviews-received-list" in res.content
+
+    def test_response_contains_oob_counter(self, client, user, membership, journal, issue, article, review_request):
+        client.force_login(user)
+        res = self._post(client, journal, issue, article, review_request)
+        assert b"article-header-counters" in res.content
+
+
+# ──────────────────────────── TestReviewRequestDeleteView ────────────────────────────
+
+@pytest.mark.django_db
+class TestReviewRequestDeleteView:
+    def test_requires_login(self, client, journal, issue, article, review_request):
+        res = client.post(_review_delete_url(journal, issue, article, review_request))
+        assert res.status_code == 302
+
+    def test_soft_deletes_expected_review(self, client, user, membership, journal, issue, article, review_request):
+        client.force_login(user)
+        res = client.post(_review_delete_url(journal, issue, article, review_request))
+        assert res.status_code == 200
+        assert not ReviewRequest.objects.filter(pk=review_request.pk).exists()
+
+    def test_review_still_in_all_objects(self, client, user, membership, journal, issue, article, review_request):
+        client.force_login(user)
+        client.post(_review_delete_url(journal, issue, article, review_request))
+        assert ReviewRequest.all_objects.filter(pk=review_request.pk).exists()
+
+    def test_creates_audit_note(self, client, user, membership, journal, issue, article, review_request):
+        client.force_login(user)
+        client.post(_review_delete_url(journal, issue, article, review_request))
+        assert InternalNote.objects.filter(article=article, is_automatic=True, content__icontains="annul").exists()
+
+    def test_received_review_cannot_be_deleted(self, client, user, membership, journal, issue, article, review_request):
+        ReviewRequest.objects.filter(pk=review_request.pk).update(state=ReviewRequest.State.RECEIVED)
+        client.force_login(user)
+        res = client.post(_review_delete_url(journal, issue, article, review_request))
+        assert res.status_code == 400
+
+    def test_archived_article_returns_403(self, client, user, membership, journal, issue, article, review_request):
+        Issue.objects.filter(pk=issue.pk).update(state=Issue.State.PUBLISHED)
+        client.force_login(user)
+        res = client.post(_review_delete_url(journal, issue, article, review_request))
+        assert res.status_code == 403
+
+    def test_snapshot_preserved_after_contact_deletion(self, client, user, membership, journal, issue, article, review_request):
+        from apps.contacts.models import Contact
+        from apps.reviews.models import ReviewRequest as RR
+        reviewer = Contact.objects.create(
+            journal=journal,
+            first_name="Marie",
+            last_name="Curie",
+            usual_roles=[Contact.Role.EXTERNAL_REVIEWER],
+        )
+        review_request.reviewer = reviewer
+        review_request.reviewer_name_snapshot = reviewer.full_name
+        review_request.save()
+        snapshot = reviewer.full_name
+        Article.objects.filter(author=reviewer).update(author=None)
+        reviewer.hard_delete()
+        rr = RR.objects.get(pk=review_request.pk)
+        assert rr.reviewer_name_snapshot == snapshot
+        assert rr.reviewer is None
+
+
+# ──────────────────────────── TestReviewRequestPatchView ────────────────────────────
+
+@pytest.mark.django_db
+class TestReviewRequestPatchView:
+    def _patch(self, client, journal, issue, article, review, field, value):
+        import json
+        return client.post(
+            _review_patch_url(journal, issue, article, review),
+            data=json.dumps({"field": field, "value": value}),
+            content_type="application/json",
+        )
+
+    def test_patch_internal_notes_on_received(self, client, user, membership, journal, issue, article, review_request):
+        ReviewRequest.objects.filter(pk=review_request.pk).update(
+            state=ReviewRequest.State.RECEIVED, verdict="favorable"
+        )
+        review_request.refresh_from_db()
+        client.force_login(user)
+        res = self._patch(client, journal, issue, article, review_request, "internal_notes", "Note test")
+        assert res.status_code == 200
+        assert ReviewRequest.objects.get(pk=review_request.pk).internal_notes == "Note test"
+
+    def test_patch_deadline_on_expected(self, client, user, membership, journal, issue, article, review_request):
+        client.force_login(user)
+        res = self._patch(client, journal, issue, article, review_request, "deadline", "2030-06-01")
+        assert res.status_code == 200
+        assert str(ReviewRequest.objects.get(pk=review_request.pk).deadline) == "2030-06-01"
+
+    def test_patch_deadline_on_received_returns_400(self, client, user, membership, journal, issue, article, review_request):
+        ReviewRequest.objects.filter(pk=review_request.pk).update(
+            state=ReviewRequest.State.RECEIVED, verdict="favorable"
+        )
+        review_request.refresh_from_db()
+        client.force_login(user)
+        res = self._patch(client, journal, issue, article, review_request, "deadline", "2030-06-01")
+        assert res.status_code == 400
+
+    def test_patch_verdict_on_received(self, client, user, membership, journal, issue, article, review_request):
+        ReviewRequest.objects.filter(pk=review_request.pk).update(
+            state=ReviewRequest.State.RECEIVED, verdict="favorable"
+        )
+        review_request.refresh_from_db()
+        client.force_login(user)
+        res = self._patch(client, journal, issue, article, review_request, "verdict", "unfavorable")
+        assert res.status_code == 200
+        assert ReviewRequest.objects.get(pk=review_request.pk).verdict == "unfavorable"
+
+    def test_patch_archived_returns_403(self, client, user, membership, journal, issue, article, review_request):
+        Issue.objects.filter(pk=issue.pk).update(state=Issue.State.PUBLISHED)
+        client.force_login(user)
+        res = self._patch(client, journal, issue, article, review_request, "internal_notes", "X")
+        assert res.status_code == 403
