@@ -1,0 +1,70 @@
+{% load edito %}
+{#
+  Variables:
+    spec        — dict: {name, label, description, ui_variant, is_danger, enabled, disabled_reason}
+    transition_url — URL string for the POST
+    dropdown    — bool (optional): render as dropdown item (full-width, left-aligned button)
+#}
+{% if spec.enabled %}
+<div x-data="transitionConfirm('{{ transition_url|escapejs }}', '{{ spec.name|escapejs }}')">
+  {% if dropdown %}
+    <button type="button"
+            class="btn ghost dropdown-item"
+            @click="show()"
+            style="width:100%;text-align:left;justify-content:flex-start;border-radius:6px">
+      {{ spec.label }}
+    </button>
+  {% else %}
+    <button type="button" class="btn {{ spec.ui_variant }}" @click="show()">
+      {{ spec.label }}
+    </button>
+  {% endif %}
+
+  <template x-teleport="body">
+    <div x-show="open"
+         class="modal-backdrop"
+         @click.self="cancel()"
+         @keydown.escape.window="cancel()"
+         x-transition.opacity>
+      <div class="modal" role="dialog" aria-modal="true">
+        <div class="modal-head">
+          <h3>{{ spec.label }} ?</h3>
+        </div>
+        <div class="modal-body">
+          <p style="font-size:14px;color:var(--ink-muted);margin-bottom:16px">{{ spec.description }}</p>
+          <div class="field full">
+            <label style="font-size:12px;text-transform:uppercase;letter-spacing:.06em;font-weight:500;color:var(--ink-faint)">
+              Note (optionnelle)
+            </label>
+            <textarea x-model="note"
+                      class="text-input"
+                      rows="3"
+                      placeholder="Ajouter une note à propos de cette décision…"></textarea>
+          </div>
+          <template x-if="error">
+            <div class="form-msg err" x-text="error" style="margin-top:8px"></div>
+          </template>
+        </div>
+        <div class="modal-foot">
+          <button type="button" class="btn ghost" @click="cancel()" :disabled="submitting">
+            Annuler
+          </button>
+          <button type="button"
+                  class="btn {% if spec.is_danger %}danger{% else %}primary{% endif %}"
+                  @click="confirm()"
+                  :disabled="submitting">
+            <span x-text="submitting ? 'Envoi…' : '{{ spec.label|escapejs }}'">{{ spec.label }}</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </template>
+</div>
+{% else %}
+<button type="button"
+        class="btn {{ spec.ui_variant }}"
+        disabled
+        title="{{ spec.disabled_reason }}">
+  {{ spec.label }}
+</button>
+{% endif %}

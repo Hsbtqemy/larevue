@@ -208,6 +208,43 @@ document.addEventListener("alpine:init", () => {
   }));
 
 
+  Alpine.data("transitionConfirm", (transitionUrl, transitionName) => ({
+    open: false,
+    note: "",
+    submitting: false,
+    error: null,
+
+    show() { this.open = true; this.note = ""; this.error = null; },
+    cancel() { this.open = false; },
+
+    async confirm() {
+      this.submitting = true;
+      this.error = null;
+      try {
+        const body = new URLSearchParams({ transition: transitionName, note: this.note });
+        const res = await fetch(transitionUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+            "X-CSRFToken": getCsrfToken(),
+          },
+          body,
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          this.error = data.error || "Une erreur est survenue.";
+          this.submitting = false;
+          return;
+        }
+        window.location.href = data.redirect_url;
+      } catch {
+        this.error = "Erreur réseau.";
+        this.submitting = false;
+      }
+    },
+  }));
+
+
   Alpine.data("savedBanner", () => {
     let timer = null;
     return {
