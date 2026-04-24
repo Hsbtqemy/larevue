@@ -320,6 +320,63 @@
 
     </div>{# /editModal wrapper #}
 
+    {# ===== Calendrier éditorial ===== #}
+    <div class="main-content" style="padding-bottom:0">
+      <div class="section">
+        <div class="section-head">
+          <h2>Calendrier éditorial</h2>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:16px;padding:4px 0 8px">
+
+          <div>
+            <div class="tiny muted" style="margin-bottom:4px">Limite articles</div>
+            {% if is_editable %}
+              {% inline_editable "deadline_articles" issue patch_url %}
+            {% else %}
+              <span>{{ issue.deadline_articles|date_short|default:"—" }}</span>
+            {% endif %}
+          </div>
+
+          <div>
+            <div class="tiny muted" style="margin-bottom:4px">Limite relectures</div>
+            {% if is_editable %}
+              {% inline_editable "deadline_reviews" issue patch_url %}
+            {% else %}
+              <span>{{ issue.deadline_reviews|date_short|default:"—" }}</span>
+            {% endif %}
+          </div>
+
+          <div>
+            <div class="tiny muted" style="margin-bottom:4px">Limite V2</div>
+            {% if is_editable %}
+              {% inline_editable "deadline_v2" issue patch_url %}
+            {% else %}
+              <span>{{ issue.deadline_v2|date_short|default:"—" }}</span>
+            {% endif %}
+          </div>
+
+          <div>
+            <div class="tiny muted" style="margin-bottom:4px">Vérification finale</div>
+            {% if is_editable %}
+              {% inline_editable "deadline_final_check" issue patch_url %}
+            {% else %}
+              <span>{{ issue.deadline_final_check|date_short|default:"—" }}</span>
+            {% endif %}
+          </div>
+
+          <div>
+            <div class="tiny muted" style="margin-bottom:4px">Envoi à l'éditeur</div>
+            {% if is_editable %}
+              {% inline_editable "deadline_sent_to_publisher" issue patch_url %}
+            {% else %}
+              <span>{{ issue.deadline_sent_to_publisher|date_short|default:"—" }}</span>
+            {% endif %}
+          </div>
+
+        </div>
+      </div>
+    </div>
+
     {# ===== Articles ===== #}
     <div class="main-content">
       <div class="section">
