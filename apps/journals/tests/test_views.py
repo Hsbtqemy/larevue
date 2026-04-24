@@ -145,8 +145,7 @@ class TestDashboardContext:
         )
         ctx = response.context
         assert "active_issues" in ctx
-        assert "late_reviews" in ctx
-        assert "late_issues" in ctx
+        assert "watch_items" in ctx
         assert "late_count" in ctx
         assert "upcoming_deadlines" in ctx
 
@@ -185,9 +184,10 @@ class TestDashboardContext:
         response = client.get(
             reverse("journal_dashboard", kwargs={"slug": membership.journal.slug})
         )
-        late = response.context["late_reviews"]
-        assert len(late) == 1
-        assert late[0]["days_overdue"] == 5
+        watch = response.context["watch_items"]
+        review_items = [w for w in watch if w["type"] == "review"]
+        assert len(review_items) == 1
+        assert review_items[0]["days_overdue"] == 5
 
     def test_upcoming_deadline_publication_date(self, client, user, membership, issue):
         import datetime

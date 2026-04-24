@@ -194,31 +194,32 @@
               <h2>À surveiller</h2>
               <span class="meta">{{ late_count }} retard{{ late_count|pluralize }}</span>
             </div>
-            {% if not late_reviews and not late_issues %}
+            {% if not watch_items %}
               <div class="empty">
                 <h4>Rien à signaler</h4>
                 <p>Toutes les relectures et échéances sont dans les temps.</p>
               </div>
             {% else %}
-              {% for item in late_issues %}
-                <a href="{% url 'issues:detail' slug=journal.slug issue_id=item.issue.pk %}" class="watch-item" style="text-decoration:none">
-                  <div class="watch-icon">{% icon "clock" 15 %}</div>
-                  <div class="watch-body">
-                    <div class="t">N°{{ item.issue.number }} — {{ item.label }}</div>
-                    <div class="s">{{ item.issue.thematic_title }} · échéance {{ item.deadline|date:"d/m/Y" }}</div>
-                  </div>
-                  <div class="watch-late">+{{ item.days_overdue }}&nbsp;j</div>
-                </a>
-              {% endfor %}
-              {% for item in late_reviews %}
-                <div class="watch-item">
-                  <div class="watch-icon">{% icon "clock" 15 %}</div>
-                  <div class="watch-body">
-                    <div class="t">{{ item.review.reviewer_name_snapshot }} n'a pas encore renvoyé sa relecture</div>
-                    <div class="s">« {{ item.article.title }} » — deadline {{ item.review.deadline|date:"d/m/Y" }}</div>
-                  </div>
-                  <div class="watch-late">+{{ item.days_overdue }}&nbsp;j</div>
-                </div>
+              {% for item in watch_items %}
+                {% if item.type == "issue" %}
+                  <a href="{% url 'issues:detail' slug=journal.slug issue_id=item.issue.pk %}" class="watch-item" style="text-decoration:none">
+                    <div class="watch-icon">{% icon "clock" 15 %}</div>
+                    <div class="watch-body">
+                      <div class="t">N°{{ item.issue.number }} — {{ item.label }}</div>
+                      <div class="s">{{ item.issue.thematic_title }} · échéance {{ item.deadline|date:"d/m/Y" }}</div>
+                    </div>
+                    <div class="watch-late">+{{ item.days_overdue }}&nbsp;j</div>
+                  </a>
+                {% else %}
+                  <a href="{% url 'issues:detail' slug=journal.slug issue_id=item.issue.pk %}" class="watch-item" style="text-decoration:none">
+                    <div class="watch-icon">{% icon "clock" 15 %}</div>
+                    <div class="watch-body">
+                      <div class="t">{{ item.review.reviewer_name_snapshot }} n'a pas encore renvoyé sa relecture</div>
+                      <div class="s">« {{ item.article.title }} » — deadline {{ item.review.deadline|date:"d/m/Y" }}</div>
+                    </div>
+                    <div class="watch-late">+{{ item.days_overdue }}&nbsp;j</div>
+                  </a>
+                {% endif %}
               {% endfor %}
             {% endif %}
           </div>
@@ -237,8 +238,7 @@
             {% else %}
               <div class="calendar">
                 {% for item in upcoming_deadlines %}
-                  {# TODO: link to issue/article detail when views exist #}
-                  <div class="cal-row">
+                  <a href="{% url 'issues:detail' slug=journal.slug issue_id=item.issue.pk %}" class="cal-row" style="text-decoration:none">
                     <div class="cal-date">
                       <span class="d">{{ item.day }}</span>
                       <span class="m">{{ item.month }}</span>
@@ -253,7 +253,7 @@
                       {% endif %}
                     </div>
                     {% icon "chevronR" 14 cls="faint" %}
-                  </div>
+                  </a>
                 {% endfor %}
               </div>
             {% endif %}

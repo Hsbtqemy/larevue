@@ -72,16 +72,6 @@ class JournalDashboardView(JournalMemberRequiredMixin, TemplateView):
             .order_by("deadline")
         )
 
-        late_reviews = [
-            {
-                "review": rr,
-                "article": rr.article,
-                "issue": rr.article.issue,
-                "days_overdue": (today - rr.deadline).days,
-            }
-            for rr in all_expected if rr.deadline < today
-        ]
-
         # Maps current state → deadline field that is "currently due" for lateness detection.
         # Offset by one from the timeline's _STATE_DEADLINE_FIELD: when ACCEPTED, you're
         # working toward articles (so deadline_articles is what you track for lateness).
@@ -93,7 +83,16 @@ class JournalDashboardView(JournalMemberRequiredMixin, TemplateView):
             Issue.State.SENT_TO_PUBLISHER: "deadline_sent_to_publisher",
         }
 
-        late_issues = []
+        watch_items = []
+        for rr in all_expected:
+            if rr.deadline < today:
+                watch_items.append({
+                    "type": "review",
+                    "review": rr,
+                    "article": rr.article,
+                    "issue": rr.article.issue,
+                    "days_overdue": (today - rr.deadline).days,
+                })
         for issue in active_issues:
             issue.is_late = False
             field = _state_deadline.get(issue.state)
@@ -103,12 +102,14 @@ class JournalDashboardView(JournalMemberRequiredMixin, TemplateView):
                     days_overdue = (today - d).days
                     issue.is_late = True
                     issue.days_overdue = days_overdue
-                    late_issues.append({
+                    watch_items.append({
+                        "type": "issue",
                         "issue": issue,
                         "deadline": d,
                         "label": DEADLINE_LABELS[field],
                         "days_overdue": days_overdue,
                     })
+        watch_items.sort(key=lambda x: x["days_overdue"], reverse=True)
 
         upcoming = []
         for rr in all_expected:
@@ -139,9 +140,8 @@ class JournalDashboardView(JournalMemberRequiredMixin, TemplateView):
         ctx.update({
             "journal": journal,
             "active_issues": active_issues,
-            "late_reviews": late_reviews,
-            "late_issues": late_issues,
-            "late_count": len(late_reviews) + len(late_issues),
+            "watch_items": watch_items,
+            "late_count": len(watch_items),
             "upcoming_deadlines": upcoming[:10],
             "user_journal_count": self.request.user.memberships.count(),
         })
