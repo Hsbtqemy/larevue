@@ -1,10 +1,4 @@
 {% load edito %}
-{#
-  Variables:
-    spec        — dict: {name, label, description, ui_variant, is_danger, enabled, disabled_reason}
-    transition_url — URL string for the POST
-    dropdown    — bool (optional): render as dropdown item (full-width, left-aligned button)
-#}
 {% if spec.enabled %}
 <div x-data="transitionConfirm('{{ transition_url|escapejs }}', '{{ spec.name|escapejs }}')">
   {% if dropdown %}

@@ -116,6 +116,20 @@ class TestJournalDashboardView:
         )
         assert 'href="/"' not in response.content.decode()
 
+    def test_issue_cards_link_to_detail_no_delete_trigger(self, client, user, membership, issue):
+        client.force_login(user)
+        response = client.get(
+            reverse("journal_dashboard", kwargs={"slug": membership.journal.slug})
+        )
+        content = response.content.decode()
+        expected_url = reverse(
+            "issues:detail",
+            kwargs={"slug": membership.journal.slug, "issue_id": issue.pk},
+        )
+        assert f'href="{expected_url}"' in content
+        assert "confirmDelete" not in content
+        assert "openModal()" not in content
+
 
 # ------------------------------------------------------------------ #
 # JournalDashboardView — contexte enrichi                             #
