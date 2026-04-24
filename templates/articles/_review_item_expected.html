@@ -4,7 +4,7 @@
 {% url 'articles:review_patch' slug=journal.slug issue_id=issue.pk article_id=article.pk review_id=review.pk as review_patch_url %}
 
 <div class="review-card" id="review-expected-{{ review.pk }}"
-     x-data="{ receiveOpen: false, confirming: false }">
+     x-data="{ receiveOpen: false }">
 
   <div class="review-head">
     <span class="review-reviewer">{{ review.reviewer_name_snapshot }}</span>

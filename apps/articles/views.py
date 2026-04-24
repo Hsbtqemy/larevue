@@ -1,7 +1,5 @@
-import os
-
 from django.db.models import Prefetch
-from django.http import FileResponse, Http404, HttpResponse, JsonResponse
+from django.http import Http404, HttpResponse, JsonResponse
 from django.shortcuts import render
 from django.template.loader import render_to_string
 from django.urls import reverse
@@ -19,6 +17,7 @@ from apps.articles.models import Article, ArticleVersion, InternalNote
 from apps.articles.utils import log_action, oob_counters_html
 from apps.contacts.models import Contact
 from apps.core.mixins import JournalMemberRequiredMixin, JournalOwnedObjectMixin
+from apps.core.utils import file_response
 from apps.core.views import JournalOwnedPatchView
 from apps.issues.models import Issue
 from apps.reviews.models import ReviewRequest
@@ -63,15 +62,10 @@ class _ReviewRequestMixin(JournalOwnedObjectMixin):
         except ReviewRequest.DoesNotExist:
             raise Http404
 
-
-def _review_item_ctx(review, article, journal, issue, is_archived):
-    return {
-        "review": review,
-        "article": article,
-        "journal": journal,
-        "issue": issue,
-        "is_archived": is_archived,
-    }
+    def _check_archived(self, article):
+        if article.issue.state in Issue.ARCHIVED_STATES:
+            return JsonResponse({"error": "Cet article ne peut plus être modifié."}, status=403)
+        return None
 
 
 class ArticleDetailView(JournalMemberRequiredMixin, DetailView):
@@ -285,14 +279,13 @@ class ArticleVersionCreateView(_ArticleJournalMixin, JournalMemberRequiredMixin,
             msg += f" — {comment}"
         log_action(article, request.user, msg)
 
-        is_archived = article.issue.state in Issue.ARCHIVED_STATES
         ctx = {
             "version": version,
             "is_latest": True,
             "article": article,
             "journal": request.journal,
             "issue": article.issue,
-            "is_archived": is_archived,
+            "is_archived": False,
         }
         fragment = render_to_string("articles/_version_item.html", ctx, request=request)
         return HttpResponse(fragment + oob_counters_html(article, request=request))
@@ -309,8 +302,7 @@ class ArticleVersionDownloadView(_ArticleJournalMixin, JournalMemberRequiredMixi
         if not version.file:
             raise Http404
 
-        filename = os.path.basename(version.file.name)
-        return FileResponse(version.file.open("rb"), as_attachment=True, filename=filename)
+        return file_response(version.file)
 
 
 # ──────────────────────────── Relectures ────────────────────────────
@@ -350,8 +342,13 @@ class ReviewRequestCreateView(_ArticleJournalMixin, JournalMemberRequiredMixin, 
             f"{actor_name} a demandé une relecture à {reviewer.full_name} pour le {deadline_str}",
         )
 
-        is_archived = article.issue.state in Issue.ARCHIVED_STATES
-        ctx = _review_item_ctx(review, article, request.journal, article.issue, is_archived)
+        ctx = {
+            "review": review,
+            "article": article,
+            "journal": request.journal,
+            "issue": article.issue,
+            "is_archived": False,
+        }
         fragment = render_to_string("articles/_review_item_expected.html", ctx, request=request)
         return HttpResponse(fragment + oob_counters_html(article, request=request))
 
@@ -383,7 +380,13 @@ class ReviewRequestReceiveView(_ReviewRequestMixin, JournalMemberRequiredMixin, 
             f"Relecture de {review.reviewer_name_snapshot} reçue — verdict : {verdict_label}",
         )
 
-        ctx = _review_item_ctx(review, article, request.journal, article.issue, is_archived)
+        ctx = {
+            "review": review,
+            "article": article,
+            "journal": request.journal,
+            "issue": article.issue,
+            "is_archived": is_archived,
+        }
         received_html = render_to_string("articles/_review_item_received.html", ctx, request=request)
         oob_received = (
             f'<div hx-swap-oob="afterbegin:#reviews-received-list">{received_html}</div>'
@@ -396,8 +399,9 @@ class ReviewRequestDeleteView(_ReviewRequestMixin, JournalMemberRequiredMixin, V
         review = self.get_object_or_404()
         article = review.article
 
-        if article.issue.state in Issue.ARCHIVED_STATES:
-            return JsonResponse({"error": "Cet article ne peut plus être modifié."}, status=403)
+        guard = self._check_archived(article)
+        if guard:
+            return guard
         if review.state == ReviewRequest.State.RECEIVED:
             return JsonResponse({"error": "Une relecture reçue ne peut pas être supprimée."}, status=400)
 
@@ -415,8 +419,7 @@ class ReviewRequestFileDownloadView(_ReviewRequestMixin, JournalMemberRequiredMi
         if not review.received_file:
             raise Http404
 
-        filename = os.path.basename(review.received_file.name)
-        return FileResponse(review.received_file.open("rb"), as_attachment=True, filename=filename)
+        return file_response(review.received_file)
 
 
 class ReviewRequestPatchView(_ReviewRequestMixin, JournalOwnedPatchView):
@@ -424,9 +427,7 @@ class ReviewRequestPatchView(_ReviewRequestMixin, JournalOwnedPatchView):
     FULL_CLEAN_EXCLUDE = []
 
     def check_editable(self, obj):
-        if obj.article.issue.state in Issue.ARCHIVED_STATES:
-            return JsonResponse({"error": "Cet article ne peut plus être modifié."}, status=403)
-        return None
+        return self._check_archived(obj.article)
 
     def get_allowed_fields(self, obj):
         if obj.state == ReviewRequest.State.EXPECTED:

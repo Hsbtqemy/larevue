@@ -39,8 +39,9 @@ class ReviewRequestCreateForm(forms.ModelForm):
                 ]
             ).order_by("last_name", "first_name")
         if article:
-            self.fields["article_version"].queryset = article.versions.order_by("-version_number")
-            latest = article.versions.order_by("-version_number").first()
+            qs = article.versions.order_by("-version_number")
+            self.fields["article_version"].queryset = qs
+            latest = qs.first()
             if latest:
                 self.fields["article_version"].initial = latest.pk
         self.fields["deadline"].widget = forms.DateInput(attrs={"type": "date"})

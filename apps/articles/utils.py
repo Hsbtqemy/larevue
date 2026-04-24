@@ -1,3 +1,4 @@
+from django.db.models import Count, Q
 from django.template.loader import render_to_string
 
 from apps.articles.models import InternalNote
@@ -14,17 +15,20 @@ def log_action(article, actor, message):
 
 
 def article_counter_ctx(article):
-    version_count = article.versions.count()
-    rr = list(article.review_requests.all())
-    reviews_received = sum(1 for r in rr if r.state == ReviewRequest.State.RECEIVED)
+    agg = article.review_requests.aggregate(
+        review_request_count=Count("id"),
+        reviews_received=Count("id", filter=Q(state=ReviewRequest.State.RECEIVED)),
+    )
     return {
-        "version_count": version_count,
-        "review_request_count": len(rr),
-        "reviews_received": reviews_received,
+        "version_count": article.versions.count(),
+        "review_request_count": agg["review_request_count"],
+        "reviews_received": agg["reviews_received"],
     }
 
 
 def oob_counters_html(article, request=None):
-    ctx = article_counter_ctx(article)
-    ctx["oob"] = True
-    return render_to_string("articles/_header_counters.html", ctx, request=request)
+    return render_to_string(
+        "articles/_header_counters.html",
+        {**article_counter_ctx(article), "oob": True},
+        request=request,
+    )

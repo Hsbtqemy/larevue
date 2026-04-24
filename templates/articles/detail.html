@@ -250,7 +250,6 @@
         <div class="zone">
           <div class="zone-head">
             <h3>Relectures</h3>
-            <span class="faint mono small">{{ reviews_received }}/{{ review_request_count }} reçue{{ reviews_received|pluralize }}</span>
           </div>
 
           {% include "articles/_review_create_modal.html" with review_create_url=review_create_url version_count=version_count versions=versions reviewer_options=reviewer_options default_deadline=default_deadline is_archived=is_archived %}
