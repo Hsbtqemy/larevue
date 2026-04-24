@@ -2,13 +2,101 @@ from django.http import Http404, JsonResponse
 from django.urls import reverse
 from django.views import View
 from django.views.generic import DetailView
+from django_fsm import can_proceed
 
 from apps.articles.models import Article, InternalNote
 from apps.core.mixins import JournalMemberRequiredMixin, JournalOwnedObjectMixin
-from apps.core.views import JournalOwnedPatchView
+from apps.core.views import JournalOwnedPatchView, JournalOwnedTransitionView
 from apps.issues.forms import IssueEditForm
 from apps.issues.models import Issue
 from apps.reviews.models import ReviewRequest
+
+
+def _check_can_send_to_publisher(issue):
+    total = issue.articles.count()
+    if total == 0:
+        return False, "Le numéro doit contenir au moins un article avant l'envoi."
+    validated = issue.articles.filter(state=Article.State.VALIDATED).count()
+    if validated < total:
+        return False, f"{validated}/{total} articles validés. Tous doivent être validés avant l'envoi à l'éditeur."
+    return True, ""
+
+
+_ISSUE_TRANSITIONS = {
+    "accept": {
+        "label": "Accepter le projet",
+        "description": "Le projet passe en statut Accepté.",
+        "audit_verb": "a accepté le projet",
+        "ui_group": "primary",
+        "ui_variant": "primary",
+        "is_danger": False,
+    },
+    "refuse": {
+        "label": "Refuser le projet",
+        "description": "Le projet sera définitivement refusé.",
+        "audit_verb": "a refusé le projet",
+        "ui_group": "secondary",
+        "ui_variant": "danger-ghost",
+        "is_danger": True,
+    },
+    "start_production": {
+        "label": "Démarrer la production",
+        "description": "Le numéro entre en phase de production éditoriale.",
+        "audit_verb": "a démarré la production",
+        "ui_group": "primary",
+        "ui_variant": "primary",
+        "is_danger": False,
+    },
+    "reopen_for_review": {
+        "label": "Remettre en évaluation",
+        "description": "Le numéro repasse en évaluation.",
+        "audit_verb": "a remis le numéro en évaluation",
+        "ui_group": "advanced",
+        "ui_variant": "ghost",
+        "is_danger": False,
+    },
+    "send_to_publisher": {
+        "label": "Envoyer à l'éditeur",
+        "description": "Le numéro est transmis à l'éditeur.",
+        "audit_verb": "a envoyé le numéro à l'éditeur",
+        "precondition": _check_can_send_to_publisher,
+        "ui_group": "primary",
+        "ui_variant": "primary",
+        "is_danger": False,
+    },
+    "pause_production": {
+        "label": "Suspendre la production",
+        "description": "Le numéro repasse en statut Accepté.",
+        "audit_verb": "a suspendu la production",
+        "ui_group": "advanced",
+        "ui_variant": "ghost",
+        "is_danger": False,
+    },
+    "mark_as_published": {
+        "label": "Marquer comme publié",
+        "description": "Le numéro passe dans les archives en lecture seule. L'action peut être annulée via « Dépublier » si nécessaire.",
+        "audit_verb": "a marqué le numéro comme publié",
+        "ui_group": "primary",
+        "ui_variant": "primary",
+        "is_danger": False,
+    },
+    "recall_from_publisher": {
+        "label": "Rappeler de chez l'éditeur",
+        "description": "Le numéro repasse en production.",
+        "audit_verb": "a rappelé le numéro de chez l'éditeur",
+        "ui_group": "advanced",
+        "ui_variant": "ghost",
+        "is_danger": False,
+    },
+    "unpublish": {
+        "label": "Dépublier",
+        "description": "Le numéro repasse à l'état « Envoyé à l'éditeur ».",
+        "audit_verb": "a dépublié le numéro",
+        "ui_group": "advanced",
+        "ui_variant": "danger-ghost",
+        "is_danger": True,
+    },
+}
 
 
 class IssueDetailView(JournalMemberRequiredMixin, DetailView):
@@ -22,18 +110,38 @@ class IssueDetailView(JournalMemberRequiredMixin, DetailView):
             raise Http404
         return issue
 
-    def _primary_action(self, issue, articles):
-        state = issue.state
-        if state == Issue.State.UNDER_REVIEW:
-            return {"type": "review"}
-        if state in (Issue.State.ACCEPTED, Issue.State.IN_PRODUCTION):
-            all_validated = bool(articles) and all(
-                a.state == Article.State.VALIDATED for a in articles
-            )
-            return {"type": "send", "enabled": all_validated}
-        if state == Issue.State.SENT_TO_PUBLISHER:
-            return {"type": "publish"}
-        return None
+    @staticmethod
+    def _compute_transitions(issue):
+        primary = None
+        secondary = []
+        advanced = []
+        for name, spec in _ISSUE_TRANSITIONS.items():
+            if not can_proceed(getattr(issue, name)):
+                continue
+            enabled = True
+            disabled_reason = ""
+            if precondition := spec.get("precondition"):
+                ok, msg = precondition(issue)
+                if not ok:
+                    enabled = False
+                    disabled_reason = msg
+            entry = {
+                "name": name,
+                "label": spec["label"],
+                "description": spec["description"],
+                "ui_variant": spec["ui_variant"],
+                "is_danger": spec["is_danger"],
+                "enabled": enabled,
+                "disabled_reason": disabled_reason,
+            }
+            group = spec["ui_group"]
+            if group == "primary":
+                primary = entry
+            elif group == "secondary":
+                secondary.append(entry)
+            else:
+                advanced.append(entry)
+        return {"primary": primary, "secondary": secondary, "advanced": advanced}
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
@@ -60,12 +168,17 @@ class IssueDetailView(JournalMemberRequiredMixin, DetailView):
             member_names = [issue.editor_name] + member_names
 
         is_editable = issue.state not in Issue.ARCHIVED_STATES
+        transition_url = reverse(
+            "issues:transition",
+            kwargs={"slug": journal.slug, "issue_id": issue.pk},
+        )
 
         ctx.update({
             "journal": journal,
             "articles": articles,
             "is_editable": is_editable,
-            "primary_action": self._primary_action(issue, articles),
+            "transitions": self._compute_transitions(issue),
+            "transition_url": transition_url,
             "member_names": member_names,
             "user_journal_count": self.request.user.memberships.count(),
         })
@@ -162,3 +275,19 @@ class IssueDeleteView(JournalOwnedObjectMixin, JournalMemberRequiredMixin, View)
         issue.delete()
         url = reverse("journal_dashboard", kwargs={"slug": request.journal.slug})
         return JsonResponse({"redirect_url": url})
+
+
+class IssueTransitionView(JournalOwnedTransitionView):
+    model = Issue
+    pk_url_kwarg = "issue_id"
+    journal_field_path = "journal"
+    TRANSITION_SPECS = _ISSUE_TRANSITIONS
+
+    def create_audit_note(self, obj, user, message):
+        InternalNote.objects.create(issue=obj, author=user, content=message, is_automatic=True)
+
+    def get_success_url(self, obj):
+        return reverse(
+            "issues:detail",
+            kwargs={"slug": self.request.journal.slug, "issue_id": obj.pk},
+        )

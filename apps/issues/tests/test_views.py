@@ -70,10 +70,10 @@ class TestIssueDetailView:
         ctx = client.get(_detail_url(journal, issue)).context
         assert ctx["is_editable"] is False
 
-    def test_primary_action_review_for_under_review(self, client, user, membership, journal, issue):
+    def test_primary_transition_accept_for_under_review(self, client, user, membership, journal, issue):
         client.force_login(user)
         ctx = client.get(_detail_url(journal, issue)).context
-        assert ctx["primary_action"] == {"type": "review"}
+        assert ctx["transitions"]["primary"]["name"] == "accept"
 
     def test_articles_in_context(self, client, user, membership, journal, issue, article):
         client.force_login(user)

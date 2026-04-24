@@ -10,4 +10,5 @@ urlpatterns = [
     path("<int:issue_id>/cover/", views.IssueImageUploadView.as_view(), name="cover"),
     path("<int:issue_id>/edit/", views.IssueEditView.as_view(), name="edit"),
     path("<int:issue_id>/delete/", views.IssueDeleteView.as_view(), name="delete"),
+    path("<int:issue_id>/transition/", views.IssueTransitionView.as_view(), name="transition"),
 ]
