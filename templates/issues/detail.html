@@ -320,6 +320,15 @@
 
     </div>{# /editModal wrapper #}
 
+    {# ===== Timeline ===== #}
+    {% if issue.state not in issue.ARCHIVED_STATES or issue.state == issue.State.PUBLISHED %}
+    <div class="main-content" style="padding-bottom:0">
+      <div class="section" style="padding-bottom:28px">
+        {% include "partials/_timeline.html" with timeline=timeline %}
+      </div>
+    </div>
+    {% endif %}
+
     {# ===== Calendrier éditorial ===== #}
     <div class="main-content" style="padding-bottom:0">
       <div class="section">

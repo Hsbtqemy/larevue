@@ -1,3 +1,5 @@
+import datetime
+
 from django.core.exceptions import ValidationError
 from django.db.models import Count
 from django.http import Http404, JsonResponse
@@ -118,6 +120,53 @@ _ISSUE_TRANSITIONS = {
 }
 
 
+_TIMELINE_STATES = [
+    Issue.State.UNDER_REVIEW,
+    Issue.State.ACCEPTED,
+    Issue.State.IN_REVIEW,
+    Issue.State.IN_REVISION,
+    Issue.State.FINAL_CHECK,
+    Issue.State.SENT_TO_PUBLISHER,
+    Issue.State.PUBLISHED,
+]
+
+_STATE_DEADLINE_FIELD = {
+    Issue.State.IN_REVIEW: "deadline_articles",
+    Issue.State.IN_REVISION: "deadline_reviews",
+    Issue.State.FINAL_CHECK: "deadline_v2",
+    Issue.State.SENT_TO_PUBLISHER: "deadline_final_check",
+    Issue.State.PUBLISHED: "deadline_sent_to_publisher",
+}
+
+
+def _build_timeline(issue):
+    today = datetime.date.today()
+    n = len(_TIMELINE_STATES)
+    try:
+        current_idx = _TIMELINE_STATES.index(issue.state)
+    except ValueError:
+        current_idx = -1
+
+    milestones = []
+    for i, state in enumerate(_TIMELINE_STATES):
+        deadline_field = _STATE_DEADLINE_FIELD.get(state)
+        deadline = getattr(issue, deadline_field) if deadline_field else None
+        if deadline is None and state == Issue.State.PUBLISHED:
+            deadline = issue.planned_publication_date
+        is_done = current_idx > i
+        is_current = current_idx == i
+        milestones.append({
+            "state": state,
+            "label": state.label,
+            "is_current": is_current,
+            "is_done": is_done,
+            "deadline": deadline,
+            "is_late": bool(deadline and deadline < today and not is_done and not (issue.state in Issue.ARCHIVED_STATES and is_current)),
+            "position_pct": round(i / (n - 1) * 100),
+        })
+    return milestones
+
+
 class IssueDetailView(JournalMemberRequiredMixin, DetailView):
     model = Issue
     pk_url_kwarg = "issue_id"
@@ -171,6 +220,7 @@ class IssueDetailView(JournalMemberRequiredMixin, DetailView):
             "transition_url": transition_url,
             "member_names": member_names,
             "user_journal_count": self.request.user.memberships.count(),
+            "timeline": _build_timeline(issue),
         })
         return ctx
 

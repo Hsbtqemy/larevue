@@ -1,0 +1,15 @@
+{% load edito %}
+<div class="timeline-wrap">
+  <div class="timeline-track">
+    {% for m in timeline %}
+    <div class="timeline-milestone{% if m.is_current %} timeline-milestone--current{% elif m.is_done %} timeline-milestone--done{% endif %}{% if m.is_late %} timeline-milestone--late{% endif %}"
+         style="left:{{ m.position_pct }}%">
+      <div class="timeline-dot"></div>
+      <div class="timeline-label">{{ m.label }}</div>
+      {% if m.deadline %}
+        <div class="timeline-date{% if m.is_late %} timeline-date--late{% endif %}">{{ m.deadline|date_short }}</div>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+</div>
