@@ -7,7 +7,9 @@ MONTH_ABBR: list[str] = [m.rstrip(".") for m in MONTH_SHORT]
 ISSUE_TONES: dict[str, str] = {
     "under_review": "neutral",
     "accepted": "info",
-    "in_production": "active",
+    "in_review": "active",
+    "in_revision": "active",
+    "final_check": "progress-tone",
     "sent_to_publisher": "progress-tone",
     "published": "done",
     "refused": "refused",
