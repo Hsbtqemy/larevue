@@ -1,6 +1,6 @@
 import pytest
 
-from apps.core.display import ARTICLE_TONES, ISSUE_TONES, VERDICT_LABELS, VERDICT_TONES
+from apps.core.display import ARTICLE_TONES, DEADLINE_LABELS, ISSUE_TONES, VERDICT_LABELS, VERDICT_TONES
 from apps.issues.models import Issue
 from apps.articles.models import Article
 from apps.reviews.models import ReviewRequest
@@ -73,3 +73,16 @@ class TestVerdictTones:
     ])
     def test_label(self, verdict, expected_label):
         assert VERDICT_LABELS[verdict] == expected_label
+
+
+class TestDeadlineLabels:
+    def test_covers_all_deadline_fields_and_publication_date(self):
+        expected_keys = {
+            "deadline_articles", "deadline_reviews", "deadline_v2",
+            "deadline_final_check", "deadline_sent_to_publisher",
+            "planned_publication_date",
+        }
+        assert set(DEADLINE_LABELS.keys()) == expected_keys
+
+    def test_all_values_are_non_empty_strings(self):
+        assert all(isinstance(v, str) and v for v in DEADLINE_LABELS.values())

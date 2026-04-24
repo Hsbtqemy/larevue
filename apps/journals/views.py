@@ -6,7 +6,7 @@ from django.utils import timezone
 from django.views.generic import TemplateView
 
 from apps.articles.models import Article
-from apps.core.display import MONTH_ABBR
+from apps.core.display import DEADLINE_LABELS, MONTH_ABBR
 from apps.core.mixins import JournalMemberRequiredMixin
 from apps.issues.models import Issue
 from apps.reviews.models import ReviewRequest
@@ -82,21 +82,15 @@ class JournalDashboardView(JournalMemberRequiredMixin, TemplateView):
             for rr in all_expected if rr.deadline < today
         ]
 
-        # Map current issue state → the deadline field that is "currently due"
+        # Maps current state → deadline field that is "currently due" for lateness detection.
+        # Offset by one from the timeline's _STATE_DEADLINE_FIELD: when ACCEPTED, you're
+        # working toward articles (so deadline_articles is what you track for lateness).
         _state_deadline = {
             Issue.State.ACCEPTED: "deadline_articles",
             Issue.State.IN_REVIEW: "deadline_reviews",
             Issue.State.IN_REVISION: "deadline_v2",
             Issue.State.FINAL_CHECK: "deadline_final_check",
             Issue.State.SENT_TO_PUBLISHER: "deadline_sent_to_publisher",
-        }
-        _deadline_labels = {
-            "deadline_articles": "Limite articles",
-            "deadline_reviews": "Limite relectures",
-            "deadline_v2": "Limite V2",
-            "deadline_final_check": "Limite vérif. finale",
-            "deadline_sent_to_publisher": "Limite envoi éditeur",
-            "planned_publication_date": "Parution prévue",
         }
 
         late_issues = []
@@ -106,17 +100,16 @@ class JournalDashboardView(JournalMemberRequiredMixin, TemplateView):
             if field:
                 d = getattr(issue, field)
                 if d and d < today:
+                    days_overdue = (today - d).days
                     issue.is_late = True
-                    issue.late_label = _deadline_labels[field]
-                    issue.days_overdue = (today - d).days
+                    issue.days_overdue = days_overdue
                     late_issues.append({
                         "issue": issue,
                         "deadline": d,
-                        "label": _deadline_labels[field],
-                        "days_overdue": issue.days_overdue,
+                        "label": DEADLINE_LABELS[field],
+                        "days_overdue": days_overdue,
                     })
 
-        # Upcoming deadlines: review deadlines + all 5 issue deadline fields + planned publication
         upcoming = []
         for rr in all_expected:
             if rr.deadline >= today:
@@ -130,7 +123,7 @@ class JournalDashboardView(JournalMemberRequiredMixin, TemplateView):
                     "issue": rr.article.issue,
                 })
         for issue in active_issues:
-            for field, label in _deadline_labels.items():
+            for field, label in DEADLINE_LABELS.items():
                 d = getattr(issue, field, None)
                 if d and d >= today:
                     upcoming.append({

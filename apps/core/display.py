@@ -35,3 +35,12 @@ VERDICT_LABELS: dict[str, str] = {
     "needs_revision": "Révision requise",
     "unfavorable": "Défavorable",
 }
+
+DEADLINE_LABELS: dict[str, str] = {
+    "deadline_articles": "Limite articles",
+    "deadline_reviews": "Limite relectures",
+    "deadline_v2": "Limite V2",
+    "deadline_final_check": "Limite vérif. finale",
+    "deadline_sent_to_publisher": "Limite envoi éditeur",
+    "planned_publication_date": "Parution prévue",
+}

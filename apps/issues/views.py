@@ -233,11 +233,7 @@ class IssuePatchView(JournalOwnedPatchView):
         "deadline_articles", "deadline_reviews", "deadline_v2",
         "deadline_final_check", "deadline_sent_to_publisher",
     }
-    AUDIT_FIELDS = {
-        "number", "thematic_title", "editor_name", "planned_publication_date", "description",
-        "deadline_articles", "deadline_reviews", "deadline_v2",
-        "deadline_final_check", "deadline_sent_to_publisher",
-    }
+    AUDIT_FIELDS = ALLOWED_FIELDS
     FULL_CLEAN_EXCLUDE = ["state", "cover_image", "final_pdf"]
 
     def check_editable(self, obj):
