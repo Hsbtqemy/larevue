@@ -3,6 +3,7 @@ import json
 from django.core.exceptions import ValidationError
 from django.http import JsonResponse
 from django.views import View
+from django_fsm import TransitionNotAllowed, can_proceed
 
 from apps.core.mixins import JournalMemberRequiredMixin, JournalOwnedObjectMixin
 
@@ -64,3 +65,65 @@ class JournalOwnedPatchView(JournalOwnedObjectMixin, JournalMemberRequiredMixin,
             self.create_audit_note(obj, field_name, old_value, new_value, field_obj)
 
         return JsonResponse({"ok": True})
+
+
+class JournalOwnedTransitionView(JournalOwnedObjectMixin, JournalMemberRequiredMixin, View):
+    """Base view for triggering an FSM transition on a journal-owned object.
+
+    Subclasses declare TRANSITION_SPECS: a dict mapping transition_name →
+    {label, description, audit_verb, precondition?, ui_group, ui_variant, is_danger}.
+
+    POST body: transition=<name> + note=<optional user note>.
+    Returns JSON {"ok": True, "redirect_url": "..."} on success.
+    """
+
+    TRANSITION_SPECS: dict = {}
+
+    def check_transition_allowed(self, obj):
+        """Return a JsonResponse to block, or None to proceed."""
+        return None
+
+    def create_audit_note(self, obj, user, message):
+        pass
+
+    def get_success_url(self, obj):
+        raise NotImplementedError
+
+    def post(self, request, **kwargs):
+        obj = self.get_object_or_404()
+
+        guard = self.check_transition_allowed(obj)
+        if guard:
+            return guard
+
+        transition_name = request.POST.get("transition", "")
+        user_note = request.POST.get("note", "").strip()
+
+        if transition_name not in self.TRANSITION_SPECS:
+            return JsonResponse({"error": "Transition non autorisée."}, status=400)
+
+        spec = self.TRANSITION_SPECS[transition_name]
+
+        if precondition := spec.get("precondition"):
+            ok, message = precondition(obj)
+            if not ok:
+                return JsonResponse({"error": message}, status=400)
+
+        transition_method = getattr(obj, transition_name)
+        if not can_proceed(transition_method):
+            return JsonResponse({"error": "Transition impossible depuis l'état actuel."}, status=400)
+
+        try:
+            transition_method()
+        except TransitionNotAllowed:
+            return JsonResponse({"error": "Transition impossible depuis l'état actuel."}, status=400)
+
+        obj.save()
+
+        actor_name = request.user.get_full_name() or request.user.email
+        msg = f"{actor_name} {spec['audit_verb']}"
+        if user_note:
+            msg += f" — {user_note}"
+        self.create_audit_note(obj, request.user, msg)
+
+        return JsonResponse({"ok": True, "redirect_url": self.get_success_url(obj)})
