@@ -145,13 +145,37 @@
 
         {# Action buttons #}
         <div style="display:flex;gap:8px;align-items:flex-start;flex-shrink:0">
+
+          {# ── FSM transition buttons ── #}
+          {% if transitions.primary %}
+            {% include "partials/_transition_confirm_modal.html" with spec=transitions.primary transition_url=transition_url %}
+          {% endif %}
+          {% for spec in transitions.secondary %}
+            {% include "partials/_transition_confirm_modal.html" with spec=spec transition_url=transition_url %}
+          {% endfor %}
+          {% if transitions.advanced %}
+            <div x-data="{ advOpen: false }" style="position:relative">
+              <button type="button" class="btn ghost sm" @click="advOpen = !advOpen">
+                {% icon "dots" 14 cls="icon" %}
+              </button>
+              <div x-show="advOpen"
+                   @click.outside="advOpen = false"
+                   style="position:absolute;right:0;top:calc(100% + 4px);z-index:50;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-md);padding:4px;min-width:220px;box-shadow:0 4px 16px rgba(0,0,0,.08)">
+                {% for spec in transitions.advanced %}
+                  {% include "partials/_transition_confirm_modal.html" with spec=spec transition_url=transition_url dropdown=True %}
+                {% endfor %}
+              </div>
+            </div>
+          {% endif %}
+
+          {# ── Edit / delete (editable states only) ── #}
           {% if not is_archived %}
             <button type="button" class="btn ghost sm" @click="openModal()">
               {% icon "edit" 14 cls="icon" %} Modifier
             </button>
             {% include "partials/_confirm_delete.html" with delete_url=delete_url title="Supprimer cet article ?" require_typing=article.title message="L'article, ses versions et ses relectures seront supprimés définitivement du numéro." trigger_label="" trigger_cls="btn danger-ghost sm" confirm_label="Supprimer l'article" %}
           {% endif %}
-          {# TODO E_FSM : bouton de transition d'état #}
+
         </div>
 
       </div>
