@@ -18,9 +18,75 @@ from apps.articles.utils import log_action, oob_counters_html
 from apps.contacts.models import Contact
 from apps.core.mixins import JournalMemberRequiredMixin, JournalOwnedObjectMixin
 from apps.core.utils import file_response
-from apps.core.views import JournalOwnedPatchView
+from apps.core.views import JournalOwnedPatchView, JournalOwnedTransitionView
 from apps.issues.models import Issue
 from apps.reviews.models import ReviewRequest
+from django_fsm import can_proceed
+
+
+_ARTICLE_TRANSITIONS = {
+    "send_to_review": {
+        "label": "Envoyer en relecture",
+        "description": "L'article passe en phase de relecture.",
+        "description_fn": lambda a: (
+            "Nouveau tour de relecture après révision auteur."
+            if a.state == Article.State.REVISED
+            else "L'article passe en phase de relecture."
+        ),
+        "audit_verb": "a envoyé l'article en relecture",
+        "ui_group": "primary",
+        "ui_variant": "primary",
+        "is_danger": False,
+    },
+    "cancel_review": {
+        "label": "Annuler la relecture",
+        "description": "L'article revient à l'état Reçu (annulation d'erreur de saisie).",
+        "audit_verb": "a annulé la relecture",
+        "ui_group": "advanced",
+        "ui_variant": "ghost",
+        "is_danger": False,
+    },
+    "mark_reviews_received": {
+        "label": "Clore la relecture",
+        "description": "Toutes les relectures sont considérées reçues.",
+        "audit_verb": "a clos la phase de relecture",
+        "ui_group": "primary",
+        "ui_variant": "primary",
+        "is_danger": False,
+    },
+    "send_to_author": {
+        "label": "Retourner à l'auteur",
+        "description": "L'article est renvoyé à l'auteur pour révisions.",
+        "audit_verb": "a retourné l'article à l'auteur",
+        "ui_group": "secondary",
+        "ui_variant": "ghost",
+        "is_danger": False,
+    },
+    "validate": {
+        "label": "Valider l'article",
+        "description": "L'article est validé pour publication.",
+        "audit_verb": "a validé l'article",
+        "ui_group": "primary",
+        "ui_variant": "primary",
+        "is_danger": False,
+    },
+    "mark_as_revised": {
+        "label": "Marquer comme révisé",
+        "description": "La version révisée a été reçue.",
+        "audit_verb": "a marqué l'article comme révisé",
+        "ui_group": "primary",
+        "ui_variant": "primary",
+        "is_danger": False,
+    },
+    "request_more_revision": {
+        "label": "Demander des corrections",
+        "description": "L'article est renvoyé à l'auteur pour corrections supplémentaires.",
+        "audit_verb": "a demandé des corrections supplémentaires",
+        "ui_group": "advanced",
+        "ui_variant": "ghost",
+        "is_danger": False,
+    },
+}
 
 
 class _ArticleJournalMixin(JournalOwnedObjectMixin):
@@ -99,6 +165,35 @@ class ArticleDetailView(JournalMemberRequiredMixin, DetailView):
             raise Http404
         return article
 
+    @staticmethod
+    def _compute_transitions(article, is_archived):
+        if is_archived:
+            return {"primary": None, "secondary": [], "advanced": []}
+        primary = None
+        secondary = []
+        advanced = []
+        for name, spec in _ARTICLE_TRANSITIONS.items():
+            if not can_proceed(getattr(article, name)):
+                continue
+            description = spec.get("description_fn", lambda _: spec["description"])(article)
+            entry = {
+                "name": name,
+                "label": spec["label"],
+                "description": description,
+                "ui_variant": spec["ui_variant"],
+                "is_danger": spec["is_danger"],
+                "enabled": True,
+                "disabled_reason": "",
+            }
+            group = spec["ui_group"]
+            if group == "primary":
+                primary = entry
+            elif group == "secondary":
+                secondary.append(entry)
+            else:
+                advanced.append(entry)
+        return {"primary": primary, "secondary": secondary, "advanced": advanced}
+
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         article = self.object
@@ -127,6 +222,14 @@ class ArticleDetailView(JournalMemberRequiredMixin, DetailView):
         is_archived = issue.state in Issue.ARCHIVED_STATES
         latest_version = versions[0] if versions else None
         next_version_number = (latest_version.version_number + 1) if latest_version else 1
+        transition_url = reverse(
+            "articles:transition",
+            kwargs={
+                "slug": journal.slug,
+                "issue_id": issue.pk,
+                "article_id": article.pk,
+            },
+        )
 
         ctx.update({
             "issue": issue,
@@ -155,6 +258,8 @@ class ArticleDetailView(JournalMemberRequiredMixin, DetailView):
             "default_deadline": (
                 timezone.now().date() + timezone.timedelta(days=28)
             ).isoformat(),
+            "transitions": self._compute_transitions(article, is_archived),
+            "transition_url": transition_url,
         })
         return ctx
 
@@ -435,3 +540,23 @@ class ReviewRequestPatchView(_ReviewRequestMixin, JournalOwnedPatchView):
         if obj.state == ReviewRequest.State.RECEIVED:
             return {"internal_notes", "verdict"}
         return set()
+
+
+class ArticleTransitionView(_ArticleJournalMixin, JournalOwnedTransitionView):
+    TRANSITION_SPECS = _ARTICLE_TRANSITIONS
+
+    def check_transition_allowed(self, article):
+        return self._check_archived(article)
+
+    def create_audit_note(self, obj, user, message):
+        InternalNote.objects.create(article=obj, author=user, content=message, is_automatic=True)
+
+    def get_success_url(self, obj):
+        return reverse(
+            "articles:detail",
+            kwargs={
+                "slug": self.request.journal.slug,
+                "issue_id": self.kwargs["issue_id"],
+                "article_id": obj.pk,
+            },
+        )
