@@ -30,7 +30,6 @@ def compute_transitions(specs, obj, is_archived=False):
             "label": spec["label"],
             "description": description,
             "ui_variant": spec["ui_variant"],
-            "is_danger": spec["is_danger"],
             "enabled": enabled,
             "disabled_reason": disabled_reason,
         }

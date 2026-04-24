@@ -44,7 +44,7 @@
             Annuler
           </button>
           <button type="button"
-                  class="btn {% if spec.is_danger %}danger{% else %}primary{% endif %}"
+                  class="btn {% if spec.ui_variant|slice:':6' == 'danger' %}danger{% else %}primary{% endif %}"
                   @click="confirm()"
                   :disabled="submitting">
             <span x-text="submitting ? 'Envoi…' : '{{ spec.label|escapejs }}'">{{ spec.label }}</span>

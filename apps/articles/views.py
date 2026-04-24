@@ -41,7 +41,6 @@ _ARTICLE_TRANSITIONS = {
         "audit_verb": "a envoyé l'article en relecture",
         "ui_group": "primary",
         "ui_variant": "primary",
-        "is_danger": False,
     },
     "cancel_review": {
         "label": "Annuler la relecture",
@@ -49,7 +48,6 @@ _ARTICLE_TRANSITIONS = {
         "audit_verb": "a annulé la relecture",
         "ui_group": "advanced",
         "ui_variant": "ghost",
-        "is_danger": False,
     },
     "mark_reviews_received": {
         "label": "Clore la relecture",
@@ -57,7 +55,6 @@ _ARTICLE_TRANSITIONS = {
         "audit_verb": "a clos la phase de relecture",
         "ui_group": "primary",
         "ui_variant": "primary",
-        "is_danger": False,
     },
     "send_to_author": {
         "label": "Retourner à l'auteur",
@@ -65,7 +62,6 @@ _ARTICLE_TRANSITIONS = {
         "audit_verb": "a retourné l'article à l'auteur",
         "ui_group": "secondary",
         "ui_variant": "ghost",
-        "is_danger": False,
     },
     "validate": {
         "label": "Valider l'article",
@@ -73,7 +69,6 @@ _ARTICLE_TRANSITIONS = {
         "audit_verb": "a validé l'article",
         "ui_group": "primary",
         "ui_variant": "primary",
-        "is_danger": False,
     },
     "mark_as_revised": {
         "label": "Marquer comme révisé",
@@ -81,7 +76,6 @@ _ARTICLE_TRANSITIONS = {
         "audit_verb": "a marqué l'article comme révisé",
         "ui_group": "primary",
         "ui_variant": "primary",
-        "is_danger": False,
     },
     "request_more_revision": {
         "label": "Demander des corrections",
@@ -89,7 +83,6 @@ _ARTICLE_TRANSITIONS = {
         "audit_verb": "a demandé des corrections supplémentaires",
         "ui_group": "advanced",
         "ui_variant": "ghost",
-        "is_danger": False,
     },
 }
 

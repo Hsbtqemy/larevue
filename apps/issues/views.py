@@ -1,4 +1,5 @@
-from django.db.models import Count, Q
+from django.core.exceptions import ValidationError
+from django.db.models import Count
 from django.http import Http404, JsonResponse
 from django.urls import reverse
 from django.views import View
@@ -12,27 +13,20 @@ from apps.issues.models import Issue
 from apps.reviews.models import ReviewRequest
 
 
-def _check_can_send_to_publisher(issue):
-    agg = issue.articles.aggregate(
-        total=Count("id"),
-        validated=Count("id", filter=Q(state=Article.State.VALIDATED)),
-    )
-    total, validated = agg["total"], agg["validated"]
-    if total == 0:
-        return False, "Le numéro doit contenir au moins un article avant l'envoi."
-    if validated < total:
-        return False, f"{validated}/{total} articles validés. Tous doivent être validés avant l'envoi à l'éditeur."
+def _check_has_articles(issue):
+    if issue.articles.count() == 0:
+        return False, "Le numéro doit contenir au moins un article."
     return True, ""
 
 
 _ISSUE_TRANSITIONS = {
+    # ── Flux normal ───────────────────────────────────────────────────
     "accept": {
         "label": "Accepter le projet",
-        "description": "Le projet passe en statut Accepté.",
+        "description": "Le projet est accepté. Le numéro entre en préparation, en attente des articles.",
         "audit_verb": "a accepté le projet",
         "ui_group": "primary",
         "ui_variant": "primary",
-        "is_danger": False,
     },
     "refuse": {
         "label": "Refuser le projet",
@@ -40,40 +34,36 @@ _ISSUE_TRANSITIONS = {
         "audit_verb": "a refusé le projet",
         "ui_group": "secondary",
         "ui_variant": "danger-ghost",
-        "is_danger": True,
     },
-    "start_production": {
-        "label": "Démarrer la production",
-        "description": "Le numéro entre en phase de production éditoriale.",
-        "audit_verb": "a démarré la production",
+    "send_to_reviewers": {
+        "label": "Envoyer aux relecteurs",
+        "description": "Le numéro entre en phase de relecture.",
+        "audit_verb": "a envoyé le numéro aux relecteurs",
+        "precondition": _check_has_articles,
         "ui_group": "primary",
         "ui_variant": "primary",
-        "is_danger": False,
     },
-    "reopen_for_review": {
-        "label": "Remettre en évaluation",
-        "description": "Le numéro repasse en évaluation.",
-        "audit_verb": "a remis le numéro en évaluation",
-        "ui_group": "advanced",
-        "ui_variant": "ghost",
-        "is_danger": False,
+    "reviews_received_return_to_authors": {
+        "label": "Relectures reçues — renvoyer aux auteurs",
+        "description": "Les relectures ont été reçues. Le numéro passe en phase de révision auteur.",
+        "audit_verb": "a renvoyé le numéro aux auteurs pour révision",
+        "ui_group": "primary",
+        "ui_variant": "primary",
+    },
+    "v2_received_final_check": {
+        "label": "V2 reçues — passer en vérification finale",
+        "description": "Les versions révisées ont été reçues. Le numéro entre en vérification finale.",
+        "audit_verb": "a lancé la vérification finale",
+        "ui_group": "primary",
+        "ui_variant": "primary",
     },
     "send_to_publisher": {
         "label": "Envoyer à l'éditeur",
         "description": "Le numéro est transmis à l'éditeur.",
         "audit_verb": "a envoyé le numéro à l'éditeur",
-        "precondition": _check_can_send_to_publisher,
+        "precondition": _check_has_articles,
         "ui_group": "primary",
         "ui_variant": "primary",
-        "is_danger": False,
-    },
-    "pause_production": {
-        "label": "Suspendre la production",
-        "description": "Le numéro repasse en statut Accepté.",
-        "audit_verb": "a suspendu la production",
-        "ui_group": "advanced",
-        "ui_variant": "ghost",
-        "is_danger": False,
     },
     "mark_as_published": {
         "label": "Marquer comme publié",
@@ -81,15 +71,42 @@ _ISSUE_TRANSITIONS = {
         "audit_verb": "a marqué le numéro comme publié",
         "ui_group": "primary",
         "ui_variant": "primary",
-        "is_danger": False,
     },
-    "recall_from_publisher": {
+    # ── Rollbacks ─────────────────────────────────────────────────────
+    "reopen_for_review": {
+        "label": "Remettre en évaluation",
+        "description": "Le numéro repasse en évaluation.",
+        "audit_verb": "a remis le numéro en évaluation",
+        "ui_group": "advanced",
+        "ui_variant": "ghost",
+    },
+    "recall_reviewers": {
+        "label": "Annuler l'envoi aux relecteurs",
+        "description": "Le numéro repasse en statut Accepté.",
+        "audit_verb": "a annulé l'envoi aux relecteurs",
+        "ui_group": "advanced",
+        "ui_variant": "ghost",
+    },
+    "recall_to_authors": {
+        "label": "Annuler l'envoi aux auteurs",
+        "description": "Le numéro repasse en phase de relecture.",
+        "audit_verb": "a annulé l'envoi aux auteurs",
+        "ui_group": "advanced",
+        "ui_variant": "ghost",
+    },
+    "reopen_revision": {
+        "label": "Retour en phase révision",
+        "description": "Le numéro repasse en phase de révision auteur.",
+        "audit_verb": "a rouvert la phase de révision",
+        "ui_group": "advanced",
+        "ui_variant": "ghost",
+    },
+    "recall_final_check": {
         "label": "Rappeler de chez l'éditeur",
-        "description": "Le numéro repasse en production.",
+        "description": "Le numéro repasse en vérification finale.",
         "audit_verb": "a rappelé le numéro de chez l'éditeur",
         "ui_group": "advanced",
         "ui_variant": "ghost",
-        "is_danger": False,
     },
     "unpublish": {
         "label": "Dépublier",
@@ -97,7 +114,6 @@ _ISSUE_TRANSITIONS = {
         "audit_verb": "a dépublié le numéro",
         "ui_group": "advanced",
         "ui_variant": "danger-ghost",
-        "is_danger": True,
     },
 }
 
@@ -162,8 +178,16 @@ class IssueDetailView(JournalMemberRequiredMixin, DetailView):
 class IssuePatchView(JournalOwnedPatchView):
     model = Issue
     pk_url_kwarg = "issue_id"
-    ALLOWED_FIELDS = {"number", "thematic_title", "editor_name", "planned_publication_date", "description"}
-    AUDIT_FIELDS = {"number", "thematic_title", "editor_name", "planned_publication_date", "description"}
+    ALLOWED_FIELDS = {
+        "number", "thematic_title", "editor_name", "planned_publication_date", "description",
+        "deadline_articles", "deadline_reviews", "deadline_v2",
+        "deadline_final_check", "deadline_sent_to_publisher",
+    }
+    AUDIT_FIELDS = {
+        "number", "thematic_title", "editor_name", "planned_publication_date", "description",
+        "deadline_articles", "deadline_reviews", "deadline_v2",
+        "deadline_final_check", "deadline_sent_to_publisher",
+    }
     FULL_CLEAN_EXCLUDE = ["state", "cover_image", "final_pdf"]
 
     def check_editable(self, obj):
