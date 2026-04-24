@@ -34,7 +34,7 @@ _ISSUE_TRANSITIONS = {
         "label": "Refuser le projet",
         "description": "Le projet sera définitivement refusé.",
         "audit_verb": "a refusé le projet",
-        "ui_group": "secondary",
+        "ui_group": "primary",
         "ui_variant": "danger-ghost",
     },
     "send_to_reviewers": {

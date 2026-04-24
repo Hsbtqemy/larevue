@@ -10,9 +10,8 @@ from apps.core.mixins import JournalMemberRequiredMixin, JournalOwnedObjectMixin
 
 def compute_transitions(specs, obj, is_archived=False):
     if is_archived:
-        return {"primary": None, "secondary": [], "advanced": []}
-    primary = None
-    secondary = []
+        return {"primary": [], "advanced": []}
+    primary = []
     advanced = []
     for name, spec in specs.items():
         if not can_proceed(getattr(obj, name)):
@@ -33,14 +32,11 @@ def compute_transitions(specs, obj, is_archived=False):
             "enabled": enabled,
             "disabled_reason": disabled_reason,
         }
-        group = spec["ui_group"]
-        if group == "primary":
-            primary = entry
-        elif group == "secondary":
-            secondary.append(entry)
+        if spec["ui_group"] == "primary":
+            primary.append(entry)
         else:
             advanced.append(entry)
-    return {"primary": primary, "secondary": secondary, "advanced": advanced}
+    return {"primary": primary, "advanced": advanced}
 
 
 class JournalOwnedPatchView(JournalOwnedObjectMixin, JournalMemberRequiredMixin, View):

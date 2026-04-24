@@ -70,10 +70,12 @@ class TestIssueDetailView:
         ctx = client.get(_detail_url(journal, issue)).context
         assert ctx["is_editable"] is False
 
-    def test_primary_transition_accept_for_under_review(self, client, user, membership, journal, issue):
+    def test_primary_transitions_for_under_review(self, client, user, membership, journal, issue):
         client.force_login(user)
-        ctx = client.get(_detail_url(journal, issue)).context
-        assert ctx["transitions"]["primary"]["name"] == "accept"
+        primary = client.get(_detail_url(journal, issue)).context["transitions"]["primary"]
+        names = {t["name"] for t in primary}
+        assert "accept" in names
+        assert "refuse" in names
 
     def test_articles_in_context(self, client, user, membership, journal, issue, article):
         client.force_login(user)
@@ -313,7 +315,6 @@ class TestIssueDetailTimeline:
         import datetime
         past = datetime.date.today() - datetime.timedelta(days=3)
         Issue.objects.filter(pk=issue.pk).update(state=Issue.State.ACCEPTED, deadline_articles=past)
-        issue.refresh_from_db()
         client.force_login(user)
         timeline = client.get(_detail_url(journal, issue)).context["timeline"]
         in_review_ms = next(m for m in timeline if m["state"] == Issue.State.IN_REVIEW)
@@ -338,24 +339,26 @@ class _FakeMigrationContext:
         pass
 
 
+def _migration_0002():
+    import importlib
+    return importlib.import_module("apps.issues.migrations.0002_issue_state_v2_deadlines")
+
+
 @pytest.mark.django_db
 class TestMigrationFunctions:
     def test_forward_maps_in_production_to_accepted(self, issue):
-        from apps.issues.migrations.0002_issue_state_v2_deadlines import forward_migrate_states
-
+        forward_migrate_states = _migration_0002().forward_migrate_states
         Issue.objects.filter(pk=issue.pk).update(state="in_production")
         forward_migrate_states(_FakeMigrationContext.apps, _FakeMigrationContext.schema_editor)
         assert Issue.objects.get(pk=issue.pk).state == "accepted"
 
     def test_forward_leaves_other_states_unchanged(self, issue):
-        from apps.issues.migrations.0002_issue_state_v2_deadlines import forward_migrate_states
-
+        forward_migrate_states = _migration_0002().forward_migrate_states
         forward_migrate_states(_FakeMigrationContext.apps, _FakeMigrationContext.schema_editor)
         assert Issue.objects.get(pk=issue.pk).state == Issue.State.UNDER_REVIEW
 
     def test_backward_maps_new_states_to_in_production(self, journal):
-        from apps.issues.migrations.0002_issue_state_v2_deadlines import backward_migrate_states
-
+        backward_migrate_states = _migration_0002().backward_migrate_states
         pks = []
         for state in ["in_review", "in_revision", "final_check"]:
             i = Issue.objects.create(

@@ -168,10 +168,7 @@
       <div class="issue-header-right">
 
         {# ── FSM transition buttons ── #}
-        {% if transitions.primary %}
-          {% include "partials/_transition_confirm_modal.html" with spec=transitions.primary transition_url=transition_url %}
-        {% endif %}
-        {% for spec in transitions.secondary %}
+        {% for spec in transitions.primary %}
           {% include "partials/_transition_confirm_modal.html" with spec=spec transition_url=transition_url %}
         {% endfor %}
         {% if transitions.advanced %}
