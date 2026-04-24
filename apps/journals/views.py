@@ -82,7 +82,41 @@ class JournalDashboardView(JournalMemberRequiredMixin, TemplateView):
             for rr in all_expected if rr.deadline < today
         ]
 
-        # Upcoming deadlines: future review deadlines + planned publication dates
+        # Map current issue state → the deadline field that is "currently due"
+        _state_deadline = {
+            Issue.State.ACCEPTED: "deadline_articles",
+            Issue.State.IN_REVIEW: "deadline_reviews",
+            Issue.State.IN_REVISION: "deadline_v2",
+            Issue.State.FINAL_CHECK: "deadline_final_check",
+            Issue.State.SENT_TO_PUBLISHER: "deadline_sent_to_publisher",
+        }
+        _deadline_labels = {
+            "deadline_articles": "Limite articles",
+            "deadline_reviews": "Limite relectures",
+            "deadline_v2": "Limite V2",
+            "deadline_final_check": "Limite vérif. finale",
+            "deadline_sent_to_publisher": "Limite envoi éditeur",
+            "planned_publication_date": "Parution prévue",
+        }
+
+        late_issues = []
+        for issue in active_issues:
+            issue.is_late = False
+            field = _state_deadline.get(issue.state)
+            if field:
+                d = getattr(issue, field)
+                if d and d < today:
+                    issue.is_late = True
+                    issue.late_label = _deadline_labels[field]
+                    issue.days_overdue = (today - d).days
+                    late_issues.append({
+                        "issue": issue,
+                        "deadline": d,
+                        "label": _deadline_labels[field],
+                        "days_overdue": issue.days_overdue,
+                    })
+
+        # Upcoming deadlines: review deadlines + all 5 issue deadline fields + planned publication
         upcoming = []
         for rr in all_expected:
             if rr.deadline >= today:
@@ -96,21 +130,25 @@ class JournalDashboardView(JournalMemberRequiredMixin, TemplateView):
                     "issue": rr.article.issue,
                 })
         for issue in active_issues:
-            d = issue.planned_publication_date
-            if d and d >= today:
-                upcoming.append({
-                    "type": "issue",
-                    "date": d,
-                    "day": d.day,
-                    "month": MONTH_ABBR[d.month - 1],
-                    "issue": issue,
-                })
+            for field, label in _deadline_labels.items():
+                d = getattr(issue, field, None)
+                if d and d >= today:
+                    upcoming.append({
+                        "type": "issue_deadline",
+                        "date": d,
+                        "day": d.day,
+                        "month": MONTH_ABBR[d.month - 1],
+                        "label": label,
+                        "issue": issue,
+                    })
         upcoming.sort(key=lambda x: x["date"])
 
         ctx.update({
             "journal": journal,
             "active_issues": active_issues,
             "late_reviews": late_reviews,
+            "late_issues": late_issues,
+            "late_count": len(late_reviews) + len(late_issues),
             "upcoming_deadlines": upcoming[:10],
             "user_journal_count": self.request.user.memberships.count(),
         })

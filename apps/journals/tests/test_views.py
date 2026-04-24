@@ -146,6 +146,8 @@ class TestDashboardContext:
         ctx = response.context
         assert "active_issues" in ctx
         assert "late_reviews" in ctx
+        assert "late_issues" in ctx
+        assert "late_count" in ctx
         assert "upcoming_deadlines" in ctx
 
     def test_article_count_annotation(self, client, user, membership, issue, article):
@@ -200,8 +202,8 @@ class TestDashboardContext:
             reverse("journal_dashboard", kwargs={"slug": membership.journal.slug})
         )
         deadlines = response.context["upcoming_deadlines"]
-        assert any(d["type"] == "issue" for d in deadlines)
-        issue_deadline = next(d for d in deadlines if d["type"] == "issue")
+        assert any(d["type"] == "issue_deadline" for d in deadlines)
+        issue_deadline = next(d for d in deadlines if d["type"] == "issue_deadline")
         assert issue_deadline["date"] == future_date
 
     def test_other_journal_issues_not_in_context(self, client, db):
