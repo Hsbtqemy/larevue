@@ -145,6 +145,48 @@ class TestIssuePatchView:
         res = _json_post(client, _patch_url(journal, issue), {"field": "number", "value": "2"})
         assert res.status_code == 403
 
+    def test_patch_deadline_articles(self, client, user, membership, journal, issue):
+        client.force_login(user)
+        res = _json_post(client, _patch_url(journal, issue), {"field": "deadline_articles", "value": "2025-06-15"})
+        assert res.status_code == 200
+        assert Issue.objects.get(pk=issue.pk).deadline_articles.isoformat() == "2025-06-15"
+
+    def test_patch_deadline_reviews(self, client, user, membership, journal, issue):
+        client.force_login(user)
+        res = _json_post(client, _patch_url(journal, issue), {"field": "deadline_reviews", "value": "2025-07-01"})
+        assert res.status_code == 200
+        assert Issue.objects.get(pk=issue.pk).deadline_reviews.isoformat() == "2025-07-01"
+
+    def test_patch_deadline_v2(self, client, user, membership, journal, issue):
+        client.force_login(user)
+        res = _json_post(client, _patch_url(journal, issue), {"field": "deadline_v2", "value": "2025-08-10"})
+        assert res.status_code == 200
+        assert Issue.objects.get(pk=issue.pk).deadline_v2.isoformat() == "2025-08-10"
+
+    def test_patch_deadline_final_check(self, client, user, membership, journal, issue):
+        client.force_login(user)
+        res = _json_post(client, _patch_url(journal, issue), {"field": "deadline_final_check", "value": "2025-09-05"})
+        assert res.status_code == 200
+        assert Issue.objects.get(pk=issue.pk).deadline_final_check.isoformat() == "2025-09-05"
+
+    def test_patch_deadline_sent_to_publisher(self, client, user, membership, journal, issue):
+        client.force_login(user)
+        res = _json_post(client, _patch_url(journal, issue), {"field": "deadline_sent_to_publisher", "value": "2025-10-01"})
+        assert res.status_code == 200
+        assert Issue.objects.get(pk=issue.pk).deadline_sent_to_publisher.isoformat() == "2025-10-01"
+
+    def test_patch_deadline_creates_audit_note(self, client, user, membership, journal, issue):
+        client.force_login(user)
+        _json_post(client, _patch_url(journal, issue), {"field": "deadline_articles", "value": "2025-06-15"})
+        assert InternalNote.objects.filter(issue=issue, is_automatic=True).exists()
+
+    def test_patch_deadline_clear_with_empty_value(self, client, user, membership, journal, issue):
+        Issue.objects.filter(pk=issue.pk).update(deadline_articles="2025-06-15")
+        client.force_login(user)
+        res = _json_post(client, _patch_url(journal, issue), {"field": "deadline_articles", "value": ""})
+        assert res.status_code == 200
+        assert Issue.objects.get(pk=issue.pk).deadline_articles is None
+
     def test_patch_invalid_value_too_long(self, client, user, membership, journal, issue):
         client.force_login(user)
         res = _json_post(
@@ -233,3 +275,96 @@ class TestIssueDeleteView:
     def test_requires_login(self, client, journal, issue):
         res = client.delete(_delete_url(journal, issue))
         assert res.status_code == 302
+
+
+@pytest.mark.django_db
+class TestIssueDetailTimeline:
+    def test_timeline_in_context(self, client, user, membership, journal, issue):
+        client.force_login(user)
+        ctx = client.get(_detail_url(journal, issue)).context
+        assert "timeline" in ctx
+
+    def test_timeline_has_seven_milestones(self, client, user, membership, journal, issue):
+        client.force_login(user)
+        timeline = client.get(_detail_url(journal, issue)).context["timeline"]
+        assert len(timeline) == 7
+
+    def test_timeline_current_milestone_for_under_review(self, client, user, membership, journal, issue):
+        client.force_login(user)
+        timeline = client.get(_detail_url(journal, issue)).context["timeline"]
+        current = next(m for m in timeline if m["is_current"])
+        assert current["state"] == Issue.State.UNDER_REVIEW
+
+    def test_timeline_no_done_milestones_for_initial_state(self, client, user, membership, journal, issue):
+        client.force_login(user)
+        timeline = client.get(_detail_url(journal, issue)).context["timeline"]
+        assert not any(m["is_done"] for m in timeline)
+
+    def test_timeline_done_milestones_after_accept(self, client, user, membership, journal, issue):
+        issue.accept()
+        issue.save()
+        client.force_login(user)
+        timeline = client.get(_detail_url(journal, issue)).context["timeline"]
+        done = [m for m in timeline if m["is_done"]]
+        assert len(done) == 1
+        assert done[0]["state"] == Issue.State.UNDER_REVIEW
+
+    def test_timeline_deadline_is_late_when_past(self, client, user, membership, journal, issue):
+        import datetime
+        past = datetime.date.today() - datetime.timedelta(days=3)
+        Issue.objects.filter(pk=issue.pk).update(state=Issue.State.ACCEPTED, deadline_articles=past)
+        issue.refresh_from_db()
+        client.force_login(user)
+        timeline = client.get(_detail_url(journal, issue)).context["timeline"]
+        in_review_ms = next(m for m in timeline if m["state"] == Issue.State.IN_REVIEW)
+        assert in_review_ms["is_late"] is True
+
+    def test_timeline_position_pct_first_and_last(self, client, user, membership, journal, issue):
+        client.force_login(user)
+        timeline = client.get(_detail_url(journal, issue)).context["timeline"]
+        assert timeline[0]["position_pct"] == 0
+        assert timeline[-1]["position_pct"] == 100
+
+
+class _FakeMigrationContext:
+    """Minimal stubs so migration functions can call apps.get_model()."""
+    class apps:
+        @staticmethod
+        def get_model(app, model):
+            from django.apps import apps as real_apps
+            return real_apps.get_model(app, model)
+
+    class schema_editor:
+        pass
+
+
+@pytest.mark.django_db
+class TestMigrationFunctions:
+    def test_forward_maps_in_production_to_accepted(self, issue):
+        from apps.issues.migrations.0002_issue_state_v2_deadlines import forward_migrate_states
+
+        Issue.objects.filter(pk=issue.pk).update(state="in_production")
+        forward_migrate_states(_FakeMigrationContext.apps, _FakeMigrationContext.schema_editor)
+        assert Issue.objects.get(pk=issue.pk).state == "accepted"
+
+    def test_forward_leaves_other_states_unchanged(self, issue):
+        from apps.issues.migrations.0002_issue_state_v2_deadlines import forward_migrate_states
+
+        forward_migrate_states(_FakeMigrationContext.apps, _FakeMigrationContext.schema_editor)
+        assert Issue.objects.get(pk=issue.pk).state == Issue.State.UNDER_REVIEW
+
+    def test_backward_maps_new_states_to_in_production(self, journal):
+        from apps.issues.migrations.0002_issue_state_v2_deadlines import backward_migrate_states
+
+        pks = []
+        for state in ["in_review", "in_revision", "final_check"]:
+            i = Issue.objects.create(
+                journal=journal, number=f"BW-{state}",
+                thematic_title=f"Test {state}", editor_name="Test",
+            )
+            Issue.objects.filter(pk=i.pk).update(state=state)
+            pks.append(i.pk)
+
+        backward_migrate_states(_FakeMigrationContext.apps, _FakeMigrationContext.schema_editor)
+        for pk in pks:
+            assert Issue.objects.get(pk=pk).state == "in_production"
