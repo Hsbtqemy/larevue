@@ -8,7 +8,9 @@ class Issue(BaseModel):
     class State(models.TextChoices):
         UNDER_REVIEW = "under_review", "En évaluation"
         ACCEPTED = "accepted", "Accepté"
-        IN_PRODUCTION = "in_production", "En production"
+        IN_REVIEW = "in_review", "En attente des relectures"
+        IN_REVISION = "in_revision", "En attente des V2"
+        FINAL_CHECK = "final_check", "Vérification finale"
         SENT_TO_PUBLISHER = "sent_to_publisher", "Envoyé à l'éditeur"
         PUBLISHED = "published", "Publié"
         REFUSED = "refused", "Refusé"
@@ -16,7 +18,9 @@ class Issue(BaseModel):
     ACTIVE_STATES = [
         State.UNDER_REVIEW,
         State.ACCEPTED,
-        State.IN_PRODUCTION,
+        State.IN_REVIEW,
+        State.IN_REVISION,
+        State.FINAL_CHECK,
         State.SENT_TO_PUBLISHER,
     ]
 
@@ -42,6 +46,31 @@ class Issue(BaseModel):
     )
     planned_publication_date = models.DateField(
         blank=True, null=True, verbose_name="Date de parution prévue"
+    )
+    deadline_articles = models.DateField(
+        null=True, blank=True,
+        verbose_name="Date limite articles",
+        help_text="Date à laquelle tous les articles doivent être reçus.",
+    )
+    deadline_reviews = models.DateField(
+        null=True, blank=True,
+        verbose_name="Date limite relectures",
+        help_text="Date à laquelle toutes les relectures doivent être reçues.",
+    )
+    deadline_v2 = models.DateField(
+        null=True, blank=True,
+        verbose_name="Date limite V2",
+        help_text="Date à laquelle les versions révisées doivent être reçues.",
+    )
+    deadline_final_check = models.DateField(
+        null=True, blank=True,
+        verbose_name="Date limite vérification finale",
+        help_text="Date limite pour la vérification finale avant envoi.",
+    )
+    deadline_sent_to_publisher = models.DateField(
+        null=True, blank=True,
+        verbose_name="Date limite envoi à l'éditeur",
+        help_text="Date prévue d'envoi à l'éditeur.",
     )
     cover_image = models.ImageField(
         upload_to="issues/covers/", blank=True, null=True, verbose_name="Image de couverture"
@@ -73,7 +102,6 @@ class Issue(BaseModel):
 
     @property
     def progress(self) -> int:
-        """Pourcentage d'articles validés sur le total. Retourne 0 si aucun article."""
         total = self.articles.count()
         if total == 0:
             return 0
@@ -92,11 +120,19 @@ class Issue(BaseModel):
     def refuse(self):
         pass
 
-    @transition(field=state, source=State.ACCEPTED, target=State.IN_PRODUCTION)
-    def start_production(self):
+    @transition(field=state, source=State.ACCEPTED, target=State.IN_REVIEW)
+    def send_to_reviewers(self):
         pass
 
-    @transition(field=state, source=State.IN_PRODUCTION, target=State.SENT_TO_PUBLISHER)
+    @transition(field=state, source=State.IN_REVIEW, target=State.IN_REVISION)
+    def reviews_received_return_to_authors(self):
+        pass
+
+    @transition(field=state, source=State.IN_REVISION, target=State.FINAL_CHECK)
+    def v2_received_final_check(self):
+        pass
+
+    @transition(field=state, source=State.FINAL_CHECK, target=State.SENT_TO_PUBLISHER)
     def send_to_publisher(self):
         pass
 
@@ -112,15 +148,22 @@ class Issue(BaseModel):
     def reopen_for_review(self):
         pass
 
-    @transition(field=state, source=State.IN_PRODUCTION, target=State.ACCEPTED)
-    def pause_production(self):
+    @transition(field=state, source=State.IN_REVIEW, target=State.ACCEPTED)
+    def recall_reviewers(self):
         pass
 
-    @transition(field=state, source=State.SENT_TO_PUBLISHER, target=State.IN_PRODUCTION)
-    def recall_from_publisher(self):
+    @transition(field=state, source=State.IN_REVISION, target=State.IN_REVIEW)
+    def recall_to_authors(self):
         pass
 
-    # Protégé par une confirmation UI — état terminal quasi-sûr mais rattrapable.
+    @transition(field=state, source=State.FINAL_CHECK, target=State.IN_REVISION)
+    def reopen_revision(self):
+        pass
+
+    @transition(field=state, source=State.SENT_TO_PUBLISHER, target=State.FINAL_CHECK)
+    def recall_final_check(self):
+        pass
+
     @transition(field=state, source=State.PUBLISHED, target=State.SENT_TO_PUBLISHER)
     def unpublish(self):
         pass
