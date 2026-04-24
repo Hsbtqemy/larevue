@@ -1,0 +1,5 @@
+<div id="article-header-counters" class="faint mono" style="font-size:12px"{% if oob %} hx-swap-oob="true"{% endif %}>
+  {{ version_count }} version{{ version_count|pluralize }}
+  &nbsp;·&nbsp;
+  {{ reviews_received }}/{{ review_request_count }} relecture{{ review_request_count|pluralize }}
+</div>

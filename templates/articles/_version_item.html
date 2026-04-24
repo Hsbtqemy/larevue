@@ -1,0 +1,19 @@
+{% load edito %}
+<div class="version-entry{% if is_latest %} latest{% endif %}" id="version-item-{{ version.pk }}">
+  <div class="version-dot">v{{ version.version_number }}</div>
+  <div class="version-body">
+    <div class="file">
+      {% url 'articles:version_download' slug=journal.slug issue_id=issue.pk article_id=article.pk version_id=version.pk as dl_url %}
+      {% icon "download" 13 %}
+      <a href="{{ dl_url }}" class="dl" download>Télécharger</a>
+      {% if is_latest %}<span class="badge done" style="font-size:10px;padding:1px 6px">Actuelle</span>{% endif %}
+    </div>
+    <div class="meta">
+      <strong>{{ version.uploaded_by.get_full_name|default:version.uploaded_by.email }}</strong>
+      &nbsp;—&nbsp;{{ version.created_at|date_short }}
+    </div>
+    {% if version.comment %}
+      <div class="comment">{{ version.comment }}</div>
+    {% endif %}
+  </div>
+</div>

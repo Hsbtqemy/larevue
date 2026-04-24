@@ -1,0 +1,34 @@
+{% load edito %}
+{% url 'articles:review_patch' slug=journal.slug issue_id=issue.pk article_id=article.pk review_id=review.pk as review_patch_url %}
+{% url 'articles:review_download' slug=journal.slug issue_id=issue.pk article_id=article.pk review_id=review.pk as review_dl_url %}
+
+<div class="review-card" id="review-received-{{ review.pk }}">
+
+  <div class="review-head">
+    <span class="review-reviewer">{{ review.reviewer_name_snapshot }}</span>
+    <div style="display:flex;gap:8px;align-items:center">
+      {% verdict_badge review.verdict %}
+      <span class="faint" style="font-size:12px">{{ review.received_at|date_short }}</span>
+    </div>
+  </div>
+
+  <div class="review-card-meta">
+    <span>v{{ review.article_version.version_number }}</span>
+  </div>
+
+  {% if review.received_file %}
+    <div class="review-file">
+      {% icon "download" 13 %}
+      <a href="{{ review_dl_url }}" class="dl" download>Télécharger le fichier annoté</a>
+    </div>
+  {% endif %}
+
+  {% if not is_archived %}
+    <div class="review-notes" style="margin-top:10px">
+      {% inline_editable "internal_notes" review review_patch_url input_type="textarea" %}
+    </div>
+  {% elif review.internal_notes %}
+    <div class="review-notes">{{ review.internal_notes }}</div>
+  {% endif %}
+
+</div>

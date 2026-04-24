@@ -24,6 +24,8 @@
 {% url 'articles:edit' slug=journal.slug issue_id=issue.pk article_id=article.pk as edit_url %}
 {% url 'articles:delete' slug=journal.slug issue_id=issue.pk article_id=article.pk as delete_url %}
 {% url 'articles:note_create' slug=journal.slug issue_id=issue.pk article_id=article.pk as note_create_url %}
+{% url 'articles:version_create' slug=journal.slug issue_id=issue.pk article_id=article.pk as version_create_url %}
+{% url 'articles:review_create' slug=journal.slug issue_id=issue.pk article_id=article.pk as review_create_url %}
 
 {% block content %}
 <div class="app-shell" data-theme="chaleureuse">
@@ -137,11 +139,7 @@
               </strong>
             </div>
             <div>{% state_badge article %}</div>
-            <div class="faint mono" style="font-size:12px">
-              {{ version_count }} version{{ version_count|pluralize }}
-              &nbsp;·&nbsp;
-              {{ reviews_received }}/{{ review_request_count }} relecture{{ review_request_count|pluralize }}
-            </div>
+            {% include "articles/_header_counters.html" %}
           </div>
         </div>
 
@@ -231,28 +229,64 @@
       {# ===== Colonne principale ===== #}
       <div style="min-width:0;display:flex;flex-direction:column;gap:24px">
 
-        {# Placeholder Versions #}
+        {# ===== Versions ===== #}
         <div class="zone">
           <div class="zone-head">
             <h3>Versions du manuscrit</h3>
-            <span class="faint mono small">{{ version_count }} version{{ version_count|pluralize }} déposée{{ version_count|pluralize }}</span>
+            {% include "articles/_version_upload_modal.html" with version_create_url=version_create_url next_version_number=next_version_number is_archived=is_archived %}
           </div>
-          <div class="empty" style="padding:24px 0">
-            <h4>Gestion des versions</h4>
-            <p>Le dépôt et le téléchargement des versions seront disponibles prochainement.</p>
+          <div class="versions-timeline" id="versions-list">
+            {% for version in versions %}
+              {% include "articles/_version_item.html" with version=version is_latest=forloop.first %}
+            {% empty %}
+              <div class="empty" style="padding:16px 0">
+                <p style="font-size:13px">Aucune version déposée.</p>
+              </div>
+            {% endfor %}
           </div>
         </div>
 
-        {# Placeholder Relectures #}
+        {# ===== Relectures ===== #}
         <div class="zone">
           <div class="zone-head">
             <h3>Relectures</h3>
             <span class="faint mono small">{{ reviews_received }}/{{ review_request_count }} reçue{{ reviews_received|pluralize }}</span>
           </div>
-          <div class="empty" style="padding:24px 0">
-            <h4>Gestion des relectures</h4>
-            <p>La création et le suivi des demandes de relecture seront disponibles prochainement.</p>
-          </div>
+
+          {% include "articles/_review_create_modal.html" with review_create_url=review_create_url version_count=version_count versions=versions reviewer_options=reviewer_options default_deadline=default_deadline is_archived=is_archived %}
+
+          {% if expected_reviews %}
+            <div style="margin-top:16px">
+              <div class="tiny muted" style="margin-bottom:8px;text-transform:uppercase;letter-spacing:.06em">Attendues</div>
+              <div id="reviews-expected-list">
+                {% for review in expected_reviews %}
+                  {% include "articles/_review_item_expected.html" with review=review %}
+                {% endfor %}
+              </div>
+            </div>
+          {% else %}
+            <div id="reviews-expected-list" style="display:none"></div>
+          {% endif %}
+
+          {% if received_reviews %}
+            <div style="margin-top:20px">
+              <div class="tiny muted" style="margin-bottom:8px;text-transform:uppercase;letter-spacing:.06em">Reçues</div>
+              <div id="reviews-received-list">
+                {% for review in received_reviews %}
+                  {% include "articles/_review_item_received.html" with review=review %}
+                {% endfor %}
+              </div>
+            </div>
+          {% else %}
+            <div id="reviews-received-list" style="display:none"></div>
+          {% endif %}
+
+          {% if not expected_reviews and not received_reviews %}
+            <div class="empty" style="padding:16px 0;margin-top:8px">
+              <p style="font-size:13px">Aucune relecture demandée.</p>
+            </div>
+          {% endif %}
+
         </div>
 
       </div>

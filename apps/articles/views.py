@@ -1,12 +1,22 @@
+import os
+
 from django.db.models import Prefetch
-from django.http import Http404, JsonResponse
+from django.http import FileResponse, Http404, HttpResponse, JsonResponse
 from django.shortcuts import render
+from django.template.loader import render_to_string
 from django.urls import reverse
+from django.utils import timezone
 from django.views import View
 from django.views.generic import DetailView
 
-from apps.articles.forms import ArticleEditForm
-from apps.articles.models import Article, InternalNote
+from apps.articles.forms import (
+    ArticleEditForm,
+    ArticleVersionUploadForm,
+    ReviewRequestCreateForm,
+    ReviewRequestReceiveForm,
+)
+from apps.articles.models import Article, ArticleVersion, InternalNote
+from apps.articles.utils import log_action, oob_counters_html
 from apps.contacts.models import Contact
 from apps.core.mixins import JournalMemberRequiredMixin, JournalOwnedObjectMixin
 from apps.core.views import JournalOwnedPatchView
@@ -35,6 +45,35 @@ class _ArticleJournalMixin(JournalOwnedObjectMixin):
         return None
 
 
+class _ReviewRequestMixin(JournalOwnedObjectMixin):
+    model = ReviewRequest
+    pk_url_kwarg = "review_id"
+    journal_field_path = "article__issue__journal"
+
+    def get_object_or_404(self):
+        try:
+            return ReviewRequest.objects.select_related(
+                "article__issue", "reviewer", "article_version"
+            ).get(
+                pk=self.kwargs["review_id"],
+                article_id=self.kwargs["article_id"],
+                article__issue_id=self.kwargs["issue_id"],
+                article__issue__journal=self.request.journal,
+            )
+        except ReviewRequest.DoesNotExist:
+            raise Http404
+
+
+def _review_item_ctx(review, article, journal, issue, is_archived):
+    return {
+        "review": review,
+        "article": article,
+        "journal": journal,
+        "issue": issue,
+        "is_archived": is_archived,
+    }
+
+
 class ArticleDetailView(JournalMemberRequiredMixin, DetailView):
     model = Article
     pk_url_kwarg = "article_id"
@@ -44,8 +83,14 @@ class ArticleDetailView(JournalMemberRequiredMixin, DetailView):
         return Article.objects.select_related(
             "issue", "issue__journal", "author"
         ).prefetch_related(
-            "versions",
-            "review_requests",
+            Prefetch(
+                "versions",
+                queryset=ArticleVersion.objects.select_related("uploaded_by").order_by("-version_number"),
+            ),
+            Prefetch(
+                "review_requests",
+                queryset=ReviewRequest.objects.select_related("reviewer", "article_version").order_by("deadline"),
+            ),
             Prefetch(
                 "internal_notes",
                 queryset=InternalNote.objects.order_by("-created_at").select_related("author"),
@@ -68,8 +113,12 @@ class ArticleDetailView(JournalMemberRequiredMixin, DetailView):
 
         versions = list(article.versions.all())
         review_requests = list(article.review_requests.all())
-        reviews_received = sum(
-            1 for rr in review_requests if rr.state == ReviewRequest.State.RECEIVED
+        reviews_received_count = sum(1 for r in review_requests if r.state == ReviewRequest.State.RECEIVED)
+        expected_reviews = [r for r in review_requests if r.state == ReviewRequest.State.EXPECTED]
+        received_reviews = sorted(
+            [r for r in review_requests if r.state == ReviewRequest.State.RECEIVED],
+            key=lambda r: r.received_at or timezone.datetime.min.replace(tzinfo=timezone.utc),
+            reverse=True,
         )
 
         internal_notes = list(article.internal_notes.all())
@@ -82,7 +131,8 @@ class ArticleDetailView(JournalMemberRequiredMixin, DetailView):
             author_options = [(article.author_id, article.author.full_name)] + author_options
 
         is_archived = issue.state in Issue.ARCHIVED_STATES
-        latest_version_number = versions[-1].version_number if versions else None
+        latest_version = versions[0] if versions else None
+        next_version_number = (latest_version.version_number + 1) if latest_version else 1
 
         ctx.update({
             "issue": issue,
@@ -90,12 +140,27 @@ class ArticleDetailView(JournalMemberRequiredMixin, DetailView):
             "internal_notes": internal_notes,
             "author_options": author_options,
             "is_archived": is_archived,
+            "versions": versions,
             "version_count": len(versions),
+            "latest_version_number": latest_version.version_number if latest_version else None,
+            "next_version_number": next_version_number,
             "review_request_count": len(review_requests),
-            "reviews_received": reviews_received,
-            "latest_version_number": latest_version_number,
+            "reviews_received": reviews_received_count,
+            "expected_reviews": expected_reviews,
+            "received_reviews": received_reviews,
             "article_count_in_issue": issue.articles.count(),
             "user_journal_count": self.request.user.memberships.count(),
+            "reviewer_options": list(
+                journal.contacts.filter(
+                    usual_roles__overlap=[
+                        Contact.Role.INTERNAL_REVIEWER,
+                        Contact.Role.EXTERNAL_REVIEWER,
+                    ]
+                ).order_by("last_name", "first_name")
+            ),
+            "default_deadline": (
+                timezone.now().date() + timezone.timedelta(days=28)
+            ).isoformat(),
         })
         return ctx
 
@@ -190,3 +255,182 @@ class ArticleNoteCreateView(_ArticleJournalMixin, JournalMemberRequiredMixin, Vi
             is_automatic=False,
         )
         return render(request, "articles/_note.html", {"note": note})
+
+
+# ──────────────────────────── Versions ────────────────────────────
+
+class ArticleVersionCreateView(_ArticleJournalMixin, JournalMemberRequiredMixin, View):
+    def post(self, request, issue_id, article_id, **kwargs):
+        article = self.get_object_or_404()
+
+        guard = self._check_archived(article)
+        if guard:
+            return guard
+
+        form = ArticleVersionUploadForm(request.POST, request.FILES)
+        if not form.is_valid():
+            return JsonResponse({"error": "Fichier requis."}, status=400)
+
+        version = ArticleVersion.objects.create(
+            article=article,
+            file=form.cleaned_data["file"],
+            uploaded_by=request.user,
+            comment=form.cleaned_data.get("comment", ""),
+        )
+
+        actor_name = request.user.get_full_name() or request.user.email
+        comment = form.cleaned_data.get("comment", "").strip()
+        msg = f"{actor_name} a déposé la version v{version.version_number}"
+        if comment:
+            msg += f" — {comment}"
+        log_action(article, request.user, msg)
+
+        is_archived = article.issue.state in Issue.ARCHIVED_STATES
+        ctx = {
+            "version": version,
+            "is_latest": True,
+            "article": article,
+            "journal": request.journal,
+            "issue": article.issue,
+            "is_archived": is_archived,
+        }
+        fragment = render_to_string("articles/_version_item.html", ctx, request=request)
+        return HttpResponse(fragment + oob_counters_html(article, request=request))
+
+
+class ArticleVersionDownloadView(_ArticleJournalMixin, JournalMemberRequiredMixin, View):
+    def get(self, request, issue_id, article_id, version_id, **kwargs):
+        article = self.get_object_or_404()
+        try:
+            version = ArticleVersion.objects.get(pk=version_id, article=article)
+        except ArticleVersion.DoesNotExist:
+            raise Http404
+
+        if not version.file:
+            raise Http404
+
+        filename = os.path.basename(version.file.name)
+        return FileResponse(version.file.open("rb"), as_attachment=True, filename=filename)
+
+
+# ──────────────────────────── Relectures ────────────────────────────
+
+class ReviewRequestCreateView(_ArticleJournalMixin, JournalMemberRequiredMixin, View):
+    def post(self, request, issue_id, article_id, **kwargs):
+        article = self.get_object_or_404()
+
+        guard = self._check_archived(article)
+        if guard:
+            return guard
+
+        if not article.versions.exists():
+            return JsonResponse({"error": "Déposez d'abord une version avant de demander une relecture."}, status=400)
+
+        form = ReviewRequestCreateForm(
+            request.POST, journal=request.journal, article=article
+        )
+        if not form.is_valid():
+            errors = {f: [str(e.message) for e in errs] for f, errs in form.errors.as_data().items()}
+            return JsonResponse({"errors": errors}, status=400)
+
+        reviewer = form.cleaned_data["reviewer"]
+        review = ReviewRequest.objects.create(
+            article=article,
+            article_version=form.cleaned_data["article_version"],
+            reviewer=reviewer,
+            reviewer_name_snapshot=reviewer.full_name,
+            deadline=form.cleaned_data["deadline"],
+            state=ReviewRequest.State.EXPECTED,
+        )
+
+        actor_name = request.user.get_full_name() or request.user.email
+        deadline_str = review.deadline.strftime("%d/%m/%Y")
+        log_action(
+            article, request.user,
+            f"{actor_name} a demandé une relecture à {reviewer.full_name} pour le {deadline_str}",
+        )
+
+        is_archived = article.issue.state in Issue.ARCHIVED_STATES
+        ctx = _review_item_ctx(review, article, request.journal, article.issue, is_archived)
+        fragment = render_to_string("articles/_review_item_expected.html", ctx, request=request)
+        return HttpResponse(fragment + oob_counters_html(article, request=request))
+
+
+class ReviewRequestReceiveView(_ReviewRequestMixin, JournalMemberRequiredMixin, View):
+    def post(self, request, issue_id, article_id, review_id, **kwargs):
+        review = self.get_object_or_404()
+        article = review.article
+        is_archived = article.issue.state in Issue.ARCHIVED_STATES
+
+        if is_archived:
+            return JsonResponse({"error": "Cet article ne peut plus être modifié."}, status=403)
+        if review.state == ReviewRequest.State.RECEIVED:
+            return JsonResponse({"error": "Cette relecture a déjà été enregistrée."}, status=400)
+
+        form = ReviewRequestReceiveForm(request.POST, request.FILES, instance=review)
+        if not form.is_valid():
+            errors = {f: [str(e.message) for e in errs] for f, errs in form.errors.as_data().items()}
+            return JsonResponse({"errors": errors}, status=400)
+
+        review = form.save(commit=False)
+        review.state = ReviewRequest.State.RECEIVED
+        review.received_at = timezone.now()
+        review.save()
+
+        verdict_label = review.get_verdict_display()
+        log_action(
+            article, request.user,
+            f"Relecture de {review.reviewer_name_snapshot} reçue — verdict : {verdict_label}",
+        )
+
+        ctx = _review_item_ctx(review, article, request.journal, article.issue, is_archived)
+        received_html = render_to_string("articles/_review_item_received.html", ctx, request=request)
+        oob_received = (
+            f'<div hx-swap-oob="afterbegin:#reviews-received-list">{received_html}</div>'
+        )
+        return HttpResponse(oob_received + oob_counters_html(article, request=request))
+
+
+class ReviewRequestDeleteView(_ReviewRequestMixin, JournalMemberRequiredMixin, View):
+    def post(self, request, issue_id, article_id, review_id, **kwargs):
+        review = self.get_object_or_404()
+        article = review.article
+
+        if article.issue.state in Issue.ARCHIVED_STATES:
+            return JsonResponse({"error": "Cet article ne peut plus être modifié."}, status=403)
+        if review.state == ReviewRequest.State.RECEIVED:
+            return JsonResponse({"error": "Une relecture reçue ne peut pas être supprimée."}, status=400)
+
+        name = review.reviewer_name_snapshot
+        review.delete()
+        log_action(article, request.user, f"Demande de relecture à {name} annulée")
+
+        return HttpResponse(oob_counters_html(article, request=request))
+
+
+class ReviewRequestFileDownloadView(_ReviewRequestMixin, JournalMemberRequiredMixin, View):
+    def get(self, request, issue_id, article_id, review_id, **kwargs):
+        review = self.get_object_or_404()
+
+        if not review.received_file:
+            raise Http404
+
+        filename = os.path.basename(review.received_file.name)
+        return FileResponse(review.received_file.open("rb"), as_attachment=True, filename=filename)
+
+
+class ReviewRequestPatchView(_ReviewRequestMixin, JournalOwnedPatchView):
+    ALLOWED_FIELDS = {"deadline", "internal_notes", "verdict"}
+    FULL_CLEAN_EXCLUDE = []
+
+    def check_editable(self, obj):
+        if obj.article.issue.state in Issue.ARCHIVED_STATES:
+            return JsonResponse({"error": "Cet article ne peut plus être modifié."}, status=403)
+        return None
+
+    def get_allowed_fields(self, obj):
+        if obj.state == ReviewRequest.State.EXPECTED:
+            return {"deadline", "internal_notes"}
+        if obj.state == ReviewRequest.State.RECEIVED:
+            return {"internal_notes", "verdict"}
+        return set()
