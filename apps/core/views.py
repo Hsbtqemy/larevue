@@ -3,9 +3,45 @@ import json
 from django.core.exceptions import ValidationError
 from django.http import JsonResponse
 from django.views import View
-from django_fsm import TransitionNotAllowed, can_proceed
+from django_fsm import can_proceed
 
 from apps.core.mixins import JournalMemberRequiredMixin, JournalOwnedObjectMixin
+
+
+def compute_transitions(specs, obj, is_archived=False):
+    if is_archived:
+        return {"primary": None, "secondary": [], "advanced": []}
+    primary = None
+    secondary = []
+    advanced = []
+    for name, spec in specs.items():
+        if not can_proceed(getattr(obj, name)):
+            continue
+        enabled = True
+        disabled_reason = ""
+        if precondition := spec.get("precondition"):
+            ok, msg = precondition(obj)
+            if not ok:
+                enabled = False
+                disabled_reason = msg
+        description = spec.get("description_fn", lambda _: spec["description"])(obj)
+        entry = {
+            "name": name,
+            "label": spec["label"],
+            "description": description,
+            "ui_variant": spec["ui_variant"],
+            "is_danger": spec["is_danger"],
+            "enabled": enabled,
+            "disabled_reason": disabled_reason,
+        }
+        group = spec["ui_group"]
+        if group == "primary":
+            primary = entry
+        elif group == "secondary":
+            secondary.append(entry)
+        else:
+            advanced.append(entry)
+    return {"primary": primary, "secondary": secondary, "advanced": advanced}
 
 
 class JournalOwnedPatchView(JournalOwnedObjectMixin, JournalMemberRequiredMixin, View):
@@ -68,19 +104,10 @@ class JournalOwnedPatchView(JournalOwnedObjectMixin, JournalMemberRequiredMixin,
 
 
 class JournalOwnedTransitionView(JournalOwnedObjectMixin, JournalMemberRequiredMixin, View):
-    """Base view for triggering an FSM transition on a journal-owned object.
-
-    Subclasses declare TRANSITION_SPECS: a dict mapping transition_name →
-    {label, description, audit_verb, precondition?, ui_group, ui_variant, is_danger}.
-
-    POST body: transition=<name> + note=<optional user note>.
-    Returns JSON {"ok": True, "redirect_url": "..."} on success.
-    """
 
     TRANSITION_SPECS: dict = {}
 
     def check_transition_allowed(self, obj):
-        """Return a JsonResponse to block, or None to proceed."""
         return None
 
     def create_audit_note(self, obj, user, message):
@@ -113,11 +140,7 @@ class JournalOwnedTransitionView(JournalOwnedObjectMixin, JournalMemberRequiredM
         if not can_proceed(transition_method):
             return JsonResponse({"error": "Transition impossible depuis l'état actuel."}, status=400)
 
-        try:
-            transition_method()
-        except TransitionNotAllowed:
-            return JsonResponse({"error": "Transition impossible depuis l'état actuel."}, status=400)
-
+        transition_method()
         obj.save()
 
         actor_name = request.user.get_full_name() or request.user.email

@@ -18,10 +18,15 @@ from apps.articles.utils import log_action, oob_counters_html
 from apps.contacts.models import Contact
 from apps.core.mixins import JournalMemberRequiredMixin, JournalOwnedObjectMixin
 from apps.core.utils import file_response
-from apps.core.views import JournalOwnedPatchView, JournalOwnedTransitionView
+from apps.core.views import JournalOwnedPatchView, JournalOwnedTransitionView, compute_transitions
 from apps.issues.models import Issue
 from apps.reviews.models import ReviewRequest
-from django_fsm import can_proceed
+
+
+def _check_article_archived(article):
+    if article.issue.state in Issue.ARCHIVED_STATES:
+        return JsonResponse({"error": "Cet article ne peut plus être modifié."}, status=403)
+    return None
 
 
 _ARTICLE_TRANSITIONS = {
@@ -105,9 +110,7 @@ class _ArticleJournalMixin(JournalOwnedObjectMixin):
             raise Http404
 
     def _check_archived(self, article):
-        if article.issue.state in Issue.ARCHIVED_STATES:
-            return JsonResponse({"error": "Cet article ne peut plus être modifié."}, status=403)
-        return None
+        return _check_article_archived(article)
 
 
 class _ReviewRequestMixin(JournalOwnedObjectMixin):
@@ -129,9 +132,7 @@ class _ReviewRequestMixin(JournalOwnedObjectMixin):
             raise Http404
 
     def _check_archived(self, article):
-        if article.issue.state in Issue.ARCHIVED_STATES:
-            return JsonResponse({"error": "Cet article ne peut plus être modifié."}, status=403)
-        return None
+        return _check_article_archived(article)
 
 
 class ArticleDetailView(JournalMemberRequiredMixin, DetailView):
@@ -167,32 +168,7 @@ class ArticleDetailView(JournalMemberRequiredMixin, DetailView):
 
     @staticmethod
     def _compute_transitions(article, is_archived):
-        if is_archived:
-            return {"primary": None, "secondary": [], "advanced": []}
-        primary = None
-        secondary = []
-        advanced = []
-        for name, spec in _ARTICLE_TRANSITIONS.items():
-            if not can_proceed(getattr(article, name)):
-                continue
-            description = spec.get("description_fn", lambda _: spec["description"])(article)
-            entry = {
-                "name": name,
-                "label": spec["label"],
-                "description": description,
-                "ui_variant": spec["ui_variant"],
-                "is_danger": spec["is_danger"],
-                "enabled": True,
-                "disabled_reason": "",
-            }
-            group = spec["ui_group"]
-            if group == "primary":
-                primary = entry
-            elif group == "secondary":
-                secondary.append(entry)
-            else:
-                advanced.append(entry)
-        return {"primary": primary, "secondary": secondary, "advanced": advanced}
+        return compute_transitions(_ARTICLE_TRANSITIONS, article, is_archived=is_archived)
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)

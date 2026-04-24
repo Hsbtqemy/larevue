@@ -1,22 +1,25 @@
+from django.db.models import Count, Q
 from django.http import Http404, JsonResponse
 from django.urls import reverse
 from django.views import View
 from django.views.generic import DetailView
-from django_fsm import can_proceed
 
 from apps.articles.models import Article, InternalNote
 from apps.core.mixins import JournalMemberRequiredMixin, JournalOwnedObjectMixin
-from apps.core.views import JournalOwnedPatchView, JournalOwnedTransitionView
+from apps.core.views import JournalOwnedPatchView, JournalOwnedTransitionView, compute_transitions
 from apps.issues.forms import IssueEditForm
 from apps.issues.models import Issue
 from apps.reviews.models import ReviewRequest
 
 
 def _check_can_send_to_publisher(issue):
-    total = issue.articles.count()
+    agg = issue.articles.aggregate(
+        total=Count("id"),
+        validated=Count("id", filter=Q(state=Article.State.VALIDATED)),
+    )
+    total, validated = agg["total"], agg["validated"]
     if total == 0:
         return False, "Le numéro doit contenir au moins un article avant l'envoi."
-    validated = issue.articles.filter(state=Article.State.VALIDATED).count()
     if validated < total:
         return False, f"{validated}/{total} articles validés. Tous doivent être validés avant l'envoi à l'éditeur."
     return True, ""
@@ -112,36 +115,7 @@ class IssueDetailView(JournalMemberRequiredMixin, DetailView):
 
     @staticmethod
     def _compute_transitions(issue):
-        primary = None
-        secondary = []
-        advanced = []
-        for name, spec in _ISSUE_TRANSITIONS.items():
-            if not can_proceed(getattr(issue, name)):
-                continue
-            enabled = True
-            disabled_reason = ""
-            if precondition := spec.get("precondition"):
-                ok, msg = precondition(issue)
-                if not ok:
-                    enabled = False
-                    disabled_reason = msg
-            entry = {
-                "name": name,
-                "label": spec["label"],
-                "description": spec["description"],
-                "ui_variant": spec["ui_variant"],
-                "is_danger": spec["is_danger"],
-                "enabled": enabled,
-                "disabled_reason": disabled_reason,
-            }
-            group = spec["ui_group"]
-            if group == "primary":
-                primary = entry
-            elif group == "secondary":
-                secondary.append(entry)
-            else:
-                advanced.append(entry)
-        return {"primary": primary, "secondary": secondary, "advanced": advanced}
+        return compute_transitions(_ISSUE_TRANSITIONS, issue)
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
