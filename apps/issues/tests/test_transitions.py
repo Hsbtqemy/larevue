@@ -21,21 +21,33 @@ def accepted_issue(issue):
 
 
 @pytest.fixture
-def in_production_issue(accepted_issue):
-    accepted_issue.start_production()
+def in_review_issue(accepted_issue, article):
+    """Issue in IN_REVIEW state — has one article (required by send_to_reviewers precondition)."""
+    accepted_issue.send_to_reviewers()
     accepted_issue.save()
     return accepted_issue
 
 
 @pytest.fixture
-def sent_issue(in_production_issue, article):
-    article.send_to_review()
-    article.mark_reviews_received()
-    article.validate()
-    article.save()
-    in_production_issue.send_to_publisher()
-    in_production_issue.save()
-    return in_production_issue
+def in_revision_issue(in_review_issue):
+    in_review_issue.reviews_received_return_to_authors()
+    in_review_issue.save()
+    return in_review_issue
+
+
+@pytest.fixture
+def final_check_issue(in_revision_issue):
+    in_revision_issue.v2_received_final_check()
+    in_revision_issue.save()
+    return in_revision_issue
+
+
+@pytest.fixture
+def sent_issue(final_check_issue):
+    """Issue in SENT_TO_PUBLISHER — already has one article from in_review_issue."""
+    final_check_issue.send_to_publisher()
+    final_check_issue.save()
+    return final_check_issue
 
 
 @pytest.mark.django_db
@@ -99,34 +111,41 @@ class TestIssueTransitionView:
         _post(client, _url(journal, issue), "refuse")
         assert InternalNote.objects.filter(issue=issue, is_automatic=True).exists()
 
-    # ── start_production ──────────────────────────────────────────────
+    # ── send_to_reviewers (+ precondition) ────────────────────────────
 
-    def test_start_production_changes_state(self, client, user, membership, journal, accepted_issue):
+    def test_send_to_reviewers_empty_issue_returns_400(self, client, user, membership, journal, accepted_issue):
         client.force_login(user)
-        _post(client, _url(journal, accepted_issue), "start_production")
-        assert Issue.objects.get(pk=accepted_issue.pk).state == Issue.State.IN_PRODUCTION
-
-    # ── send_to_publisher preconditions ───────────────────────────────
-
-    def test_send_to_publisher_empty_issue_returns_400(self, client, user, membership, journal, in_production_issue):
-        client.force_login(user)
-        res = _post(client, _url(journal, in_production_issue), "send_to_publisher")
+        res = _post(client, _url(journal, accepted_issue), "send_to_reviewers")
         assert res.status_code == 400
         assert "article" in res.json()["error"].lower()
 
-    def test_send_to_publisher_not_all_validated_returns_400(self, client, user, membership, journal, in_production_issue, article):
+    def test_send_to_reviewers_with_article_succeeds(self, client, user, membership, journal, accepted_issue, article):
         client.force_login(user)
-        res = _post(client, _url(journal, in_production_issue), "send_to_publisher")
-        assert res.status_code == 400
-        data = res.json()
-        assert "0/1" in data["error"] or "validé" in data["error"]
-
-    def test_send_to_publisher_all_validated_succeeds(self, client, user, membership, journal, in_production_issue, article):
-        Article.objects.filter(pk=article.pk).update(state=Article.State.VALIDATED)
-        client.force_login(user)
-        res = _post(client, _url(journal, in_production_issue), "send_to_publisher")
+        res = _post(client, _url(journal, accepted_issue), "send_to_reviewers")
         assert res.status_code == 200
-        assert Issue.objects.get(pk=in_production_issue.pk).state == Issue.State.SENT_TO_PUBLISHER
+        assert Issue.objects.get(pk=accepted_issue.pk).state == Issue.State.IN_REVIEW
+
+    # ── reviews_received_return_to_authors ────────────────────────────
+
+    def test_reviews_received_changes_state(self, client, user, membership, journal, in_review_issue):
+        client.force_login(user)
+        _post(client, _url(journal, in_review_issue), "reviews_received_return_to_authors")
+        assert Issue.objects.get(pk=in_review_issue.pk).state == Issue.State.IN_REVISION
+
+    # ── v2_received_final_check ───────────────────────────────────────
+
+    def test_v2_received_changes_state(self, client, user, membership, journal, in_revision_issue):
+        client.force_login(user)
+        _post(client, _url(journal, in_revision_issue), "v2_received_final_check")
+        assert Issue.objects.get(pk=in_revision_issue.pk).state == Issue.State.FINAL_CHECK
+
+    # ── send_to_publisher (+ precondition) ────────────────────────────
+
+    def test_send_to_publisher_with_article_succeeds(self, client, user, membership, journal, final_check_issue):
+        client.force_login(user)
+        res = _post(client, _url(journal, final_check_issue), "send_to_publisher")
+        assert res.status_code == 200
+        assert Issue.objects.get(pk=final_check_issue.pk).state == Issue.State.SENT_TO_PUBLISHER
 
     # ── mark_as_published ─────────────────────────────────────────────
 
@@ -147,15 +166,25 @@ class TestIssueTransitionView:
         _post(client, _url(journal, accepted_issue), "reopen_for_review")
         assert Issue.objects.get(pk=accepted_issue.pk).state == Issue.State.UNDER_REVIEW
 
-    def test_pause_production(self, client, user, membership, journal, in_production_issue):
+    def test_recall_reviewers(self, client, user, membership, journal, in_review_issue):
         client.force_login(user)
-        _post(client, _url(journal, in_production_issue), "pause_production")
-        assert Issue.objects.get(pk=in_production_issue.pk).state == Issue.State.ACCEPTED
+        _post(client, _url(journal, in_review_issue), "recall_reviewers")
+        assert Issue.objects.get(pk=in_review_issue.pk).state == Issue.State.ACCEPTED
 
-    def test_recall_from_publisher(self, client, user, membership, journal, sent_issue):
+    def test_recall_to_authors(self, client, user, membership, journal, in_revision_issue):
         client.force_login(user)
-        _post(client, _url(journal, sent_issue), "recall_from_publisher")
-        assert Issue.objects.get(pk=sent_issue.pk).state == Issue.State.IN_PRODUCTION
+        _post(client, _url(journal, in_revision_issue), "recall_to_authors")
+        assert Issue.objects.get(pk=in_revision_issue.pk).state == Issue.State.IN_REVIEW
+
+    def test_reopen_revision(self, client, user, membership, journal, final_check_issue):
+        client.force_login(user)
+        _post(client, _url(journal, final_check_issue), "reopen_revision")
+        assert Issue.objects.get(pk=final_check_issue.pk).state == Issue.State.IN_REVISION
+
+    def test_recall_final_check(self, client, user, membership, journal, sent_issue):
+        client.force_login(user)
+        _post(client, _url(journal, sent_issue), "recall_final_check")
+        assert Issue.objects.get(pk=sent_issue.pk).state == Issue.State.FINAL_CHECK
 
     def test_unpublish(self, client, user, membership, journal, sent_issue):
         sent_issue.mark_as_published()
@@ -178,7 +207,7 @@ class TestIssueTransitionView:
         ctx = client.get(reverse("issues:detail", kwargs={"slug": journal.slug, "issue_id": issue.pk})).context
         assert ctx["transitions"]["primary"]["name"] == "accept"
 
-    def test_context_secondary_transition_for_under_review(self, client, user, membership, journal, issue):
+    def test_context_secondary_for_under_review_is_refuse(self, client, user, membership, journal, issue):
         client.force_login(user)
         ctx = client.get(reverse("issues:detail", kwargs={"slug": journal.slug, "issue_id": issue.pk})).context
         secondary_names = [t["name"] for t in ctx["transitions"]["secondary"]]
@@ -191,9 +220,19 @@ class TestIssueTransitionView:
         ctx = client.get(reverse("issues:detail", kwargs={"slug": journal.slug, "issue_id": issue.pk})).context
         assert ctx["transitions"]["primary"] is None
 
-    def test_context_send_to_publisher_disabled_when_no_articles(self, client, user, membership, journal, in_production_issue):
+    def test_context_send_to_reviewers_disabled_when_no_articles(self, client, user, membership, journal, accepted_issue):
         client.force_login(user)
-        ctx = client.get(reverse("issues:detail", kwargs={"slug": journal.slug, "issue_id": in_production_issue.pk})).context
+        ctx = client.get(reverse("issues:detail", kwargs={"slug": journal.slug, "issue_id": accepted_issue.pk})).context
+        primary = ctx["transitions"]["primary"]
+        assert primary["name"] == "send_to_reviewers"
+        assert primary["enabled"] is False
+        assert primary["disabled_reason"]
+
+    def test_context_send_to_publisher_disabled_when_no_articles(self, client, user, membership, journal, final_check_issue):
+        # Remove the article that was created by the fixture chain
+        Article.objects.filter(issue=final_check_issue).delete()
+        client.force_login(user)
+        ctx = client.get(reverse("issues:detail", kwargs={"slug": journal.slug, "issue_id": final_check_issue.pk})).context
         primary = ctx["transitions"]["primary"]
         assert primary["name"] == "send_to_publisher"
         assert primary["enabled"] is False

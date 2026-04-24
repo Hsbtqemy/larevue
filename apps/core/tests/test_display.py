@@ -14,7 +14,9 @@ class TestIssueTones:
     @pytest.mark.parametrize("state,expected_tone", [
         (Issue.State.UNDER_REVIEW, "neutral"),
         (Issue.State.ACCEPTED, "info"),
-        (Issue.State.IN_PRODUCTION, "active"),
+        (Issue.State.IN_REVIEW, "active"),
+        (Issue.State.IN_REVISION, "active"),
+        (Issue.State.FINAL_CHECK, "progress-tone"),
         (Issue.State.SENT_TO_PUBLISHER, "progress-tone"),
         (Issue.State.PUBLISHED, "done"),
         (Issue.State.REFUSED, "refused"),

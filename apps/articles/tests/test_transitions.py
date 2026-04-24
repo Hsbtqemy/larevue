@@ -56,7 +56,9 @@ def validated_article(reviews_received_article):
 @pytest.fixture
 def archived_issue(issue):
     issue.accept()
-    issue.start_production()
+    issue.send_to_reviewers()
+    issue.reviews_received_return_to_authors()
+    issue.v2_received_final_check()
     Article.objects.filter(issue=issue).update(state=Article.State.VALIDATED)
     issue.send_to_publisher()
     issue.mark_as_published()

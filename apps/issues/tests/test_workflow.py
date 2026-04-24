@@ -31,7 +31,9 @@ class TestIssueWorkflow:
 
     def test_full_forward_workflow(self, issue):
         issue.accept()
-        issue.start_production()
+        issue.send_to_reviewers()
+        issue.reviews_received_return_to_authors()
+        issue.v2_received_final_check()
         issue.send_to_publisher()
         issue.mark_as_published()
         assert issue.state == Issue.State.PUBLISHED
@@ -41,22 +43,41 @@ class TestIssueWorkflow:
         issue.reopen_for_review()
         assert issue.state == Issue.State.UNDER_REVIEW
 
-    def test_rollback_pause_production(self, issue):
+    def test_rollback_recall_reviewers(self, issue):
         issue.accept()
-        issue.start_production()
-        issue.pause_production()
+        issue.send_to_reviewers()
+        issue.recall_reviewers()
         assert issue.state == Issue.State.ACCEPTED
 
-    def test_rollback_recall_from_publisher(self, issue):
+    def test_rollback_recall_to_authors(self, issue):
         issue.accept()
-        issue.start_production()
+        issue.send_to_reviewers()
+        issue.reviews_received_return_to_authors()
+        issue.recall_to_authors()
+        assert issue.state == Issue.State.IN_REVIEW
+
+    def test_rollback_reopen_revision(self, issue):
+        issue.accept()
+        issue.send_to_reviewers()
+        issue.reviews_received_return_to_authors()
+        issue.v2_received_final_check()
+        issue.reopen_revision()
+        assert issue.state == Issue.State.IN_REVISION
+
+    def test_rollback_recall_final_check(self, issue):
+        issue.accept()
+        issue.send_to_reviewers()
+        issue.reviews_received_return_to_authors()
+        issue.v2_received_final_check()
         issue.send_to_publisher()
-        issue.recall_from_publisher()
-        assert issue.state == Issue.State.IN_PRODUCTION
+        issue.recall_final_check()
+        assert issue.state == Issue.State.FINAL_CHECK
 
     def test_unpublish(self, issue):
         issue.accept()
-        issue.start_production()
+        issue.send_to_reviewers()
+        issue.reviews_received_return_to_authors()
+        issue.v2_received_final_check()
         issue.send_to_publisher()
         issue.mark_as_published()
         issue.unpublish()
