@@ -111,6 +111,9 @@
               {% if form.number.errors %}
                 <div class="form-msg err">{{ form.number.errors|join:" " }}</div>
               {% endif %}
+              {% if form.number.help_text %}
+                <div class="tiny muted">{{ form.number.help_text }}</div>
+              {% endif %}
             </div>
 
             <div class="field">

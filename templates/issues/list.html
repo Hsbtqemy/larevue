@@ -97,17 +97,17 @@
     <div class="main-content">
       <div class="section">
 
-        <div class="section-head">
-          <div class="tab-bar">
-            <a href="?tab=active" class="tab {% if tab != 'archived' %}active{% endif %}">
-              Actifs ({{ active_count }})
-            </a>
-            <a href="?tab=archived" class="tab {% if tab == 'archived' %}active{% endif %}">
-              Archivés ({{ archived_count }})
-            </a>
-          </div>
+        <div style="display:flex;justify-content:flex-end;margin-bottom:8px">
           <a href="{% url 'issues:create' slug=journal.slug %}" class="btn primary sm" style="text-decoration:none">
             {% icon "plus" 14 cls="icon" %} Nouveau numéro
+          </a>
+        </div>
+        <div class="tab-bar">
+          <a href="?tab=active" class="tab {% if tab != 'archived' %}active{% endif %}">
+            Actifs ({{ active_count }})
+          </a>
+          <a href="?tab=archived" class="tab {% if tab == 'archived' %}active{% endif %}">
+            Archivés ({{ archived_count }})
           </a>
         </div>
 
