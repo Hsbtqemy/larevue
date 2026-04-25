@@ -1,11 +1,14 @@
 import json
 
+from django.contrib.auth import update_session_auth_hash
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import ValidationError
 from django.http import JsonResponse
-from django.shortcuts import render
+from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.views import View
+
+from apps.accounts.forms import ProfilePasswordForm
 
 
 class ProfileView(LoginRequiredMixin, View):
@@ -14,6 +17,8 @@ class ProfileView(LoginRequiredMixin, View):
     def get(self, request):
         return render(request, self.template_name, {
             "patch_url": reverse("accounts:profile_patch"),
+            "pw_form": ProfilePasswordForm(request.user),
+            "pw_success": request.GET.get("pw") == "ok",
         })
 
 
@@ -40,3 +45,18 @@ class ProfilePatchView(LoginRequiredMixin, View):
             return JsonResponse({"error": " ".join(e.messages)}, status=400)
 
         return JsonResponse({"ok": True})
+
+
+class ProfilePasswordView(LoginRequiredMixin, View):
+    def post(self, request):
+        form = ProfilePasswordForm(request.user, request.POST)
+        if form.is_valid():
+            request.user.set_password(form.cleaned_data["new_password"])
+            request.user.save()
+            update_session_auth_hash(request, request.user)
+            return redirect(reverse("accounts:profile") + "?pw=ok")
+        return render(request, "accounts/profile.html", {
+            "patch_url": reverse("accounts:profile_patch"),
+            "pw_form": form,
+            "pw_open": True,
+        })

@@ -7,6 +7,7 @@ from apps.accounts.models import User
 
 PROFILE_URL = reverse("accounts:profile")
 PATCH_URL = reverse("accounts:profile_patch")
+PASSWORD_URL = reverse("accounts:profile_password")
 
 
 def _patch(client, field, value):
@@ -136,3 +137,58 @@ class TestProfilePatchView:
         assert res.status_code == 400
         user.refresh_from_db()
         assert user.email == original
+
+
+def _change_password(client, current, new, confirm):
+    return client.post(PASSWORD_URL, {
+        "current_password": current,
+        "new_password": new,
+        "new_password_confirm": confirm,
+    })
+
+
+@pytest.mark.django_db
+class TestProfilePasswordView:
+    def test_unauthenticated_redirects(self, client):
+        res = _change_password(client, "testpass123", "newpass456", "newpass456")
+        assert res.status_code == 302
+        assert "/accounts/" in res["Location"]
+
+    def test_valid_change_redirects_with_success(self, client, user):
+        client.force_login(user)
+        res = _change_password(client, "testpass123", "newpass456", "newpass456")
+        assert res.status_code == 302
+        assert "pw=ok" in res["Location"]
+
+    def test_valid_change_updates_password(self, client, user):
+        client.force_login(user)
+        _change_password(client, "testpass123", "newpass456", "newpass456")
+        user.refresh_from_db()
+        assert user.check_password("newpass456")
+
+    def test_valid_change_preserves_session(self, client, user):
+        client.force_login(user)
+        _change_password(client, "testpass123", "newpass456", "newpass456")
+        res = client.get(PROFILE_URL)
+        assert res.status_code == 200
+
+    def test_wrong_current_password_rerenders(self, client, user):
+        client.force_login(user)
+        res = _change_password(client, "wrong-password", "newpass456", "newpass456")
+        assert res.status_code == 200
+        user.refresh_from_db()
+        assert user.check_password("testpass123")
+
+    def test_new_password_too_short_rerenders(self, client, user):
+        client.force_login(user)
+        res = _change_password(client, "testpass123", "short", "short")
+        assert res.status_code == 200
+        user.refresh_from_db()
+        assert user.check_password("testpass123")
+
+    def test_confirmation_mismatch_rerenders(self, client, user):
+        client.force_login(user)
+        res = _change_password(client, "testpass123", "newpass456", "different789")
+        assert res.status_code == 200
+        user.refresh_from_db()
+        assert user.check_password("testpass123")
