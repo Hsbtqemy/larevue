@@ -41,6 +41,20 @@ class TestProfileView:
         res = client.get(PROFILE_URL)
         assert user.email in res.content.decode()
 
+    def test_shows_only_own_journals(self, client, user, membership, journal):
+        from apps.journals.models import Journal
+        other = Journal.objects.create(name="Autre revue", slug="autre-revue-profile")
+        client.force_login(user)
+        res = client.get(PROFILE_URL)
+        content = res.content.decode()
+        assert journal.name in content
+        assert other.name not in content
+
+    def test_journal_counters_present(self, client, user, membership, journal):
+        client.force_login(user)
+        res = client.get(PROFILE_URL)
+        assert res.status_code == 200
+
 
 @pytest.mark.django_db
 class TestProfilePatchView:

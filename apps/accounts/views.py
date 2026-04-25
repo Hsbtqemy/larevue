@@ -3,22 +3,37 @@ import json
 from django.contrib.auth import update_session_auth_hash
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import ValidationError
+from django.db.models import Count, Q
 from django.http import JsonResponse
 from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.views import View
 
 from apps.accounts.forms import ProfilePasswordForm
+from apps.issues.models import Issue
 
 
 class ProfileView(LoginRequiredMixin, View):
     template_name = "accounts/profile.html"
 
     def get(self, request):
+        memberships = list(
+            request.user.memberships
+            .select_related("journal")
+            .annotate(
+                active_issue_count=Count(
+                    "journal__issues",
+                    filter=~Q(journal__issues__state__in=Issue.ARCHIVED_STATES),
+                    distinct=True,
+                ),
+                member_count=Count("journal__memberships", distinct=True),
+            )
+        )
         return render(request, self.template_name, {
             "patch_url": reverse("accounts:profile_patch"),
             "pw_form": ProfilePasswordForm(request.user),
             "pw_success": request.GET.get("pw") == "ok",
+            "memberships": memberships,
         })
 
 

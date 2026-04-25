@@ -177,8 +177,33 @@
     <div class="profile-section">
       <div class="profile-section-head">
         <h2>Mes revues</h2>
-        <p style="font-size:13px;color:var(--ink-muted);margin:4px 0 0">Liste des revues disponible prochainement.</p>
       </div>
+      {% if memberships %}
+        <ul class="my-revues-list">
+          {% for m in memberships %}
+            <li class="my-revue-row">
+              <span class="revue-dot" data-accent="{{ m.journal.accent_color }}"
+                    style="width:28px;height:28px;border-radius:50%;flex-shrink:0;background:var(--accent-{{ m.journal.accent_color }})"></span>
+              <div style="flex:1">
+                <div class="n">{{ m.journal.name }}</div>
+                <div style="font-size:12px;color:var(--ink-muted);margin-top:2px">
+                  {{ m.active_issue_count }} numéro{{ m.active_issue_count|pluralize }} actif{{ m.active_issue_count|pluralize }}
+                  · {{ m.member_count }} membre{{ m.member_count|pluralize }}
+                </div>
+              </div>
+              <a href="{% url 'journal_dashboard' slug=m.journal.slug %}"
+                 class="btn ghost sm" style="flex-shrink:0">
+                Tableau de bord
+              </a>
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p style="font-size:13.5px;color:var(--ink-muted);margin:0">Vous n'appartenez à aucune revue.</p>
+      {% endif %}
+      <p style="font-size:12px;color:var(--ink-faint);margin:14px 0 0">
+        Pour rejoindre ou quitter une revue, contactez l'administrateur·ice.
+      </p>
     </div>
 
     {# ===== Session ===== #}

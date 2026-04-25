@@ -64,6 +64,7 @@
     <div class="sidebar-user-info">
       <div class="n">{{ request.user.get_full_name }}</div>
       <div class="e">{{ request.user.email }}</div>
+      <a href="{% url 'accounts:profile' %}" class="sidebar-user-profile-link">Mon profil</a>
     </div>
     <form method="post" action="{% url 'account_logout' %}" style="margin-left:auto;flex-shrink:0">
       {% csrf_token %}
