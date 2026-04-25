@@ -16,63 +16,7 @@
 <div class="app-shell" data-accent="{{ journal.accent_color }}">
 
   {# ===== SIDEBAR ===== #}
-  <aside class="sidebar">
-
-    <div class="sidebar-brand">
-      <div class="brand-mark">É</div>
-      <div class="brand-name">Edito</div>
-    </div>
-
-    <div class="revue-switcher">
-      <div class="revue-switcher-label">Revue courante</div>
-      {% if user_journal_count > 1 %}
-        <a href="{% url 'home' %}" class="revue-switcher-current" style="text-decoration:none">
-          <span class="revue-dot" style="background:var(--accent)"></span>
-          <span class="revue-name">{{ journal.name }}</span>
-          <span class="chev">{% icon "chevron" 14 %}</span>
-        </a>
-      {% else %}
-        <div class="revue-switcher-current" style="cursor:default">
-          <span class="revue-dot" style="background:var(--accent)"></span>
-          <span class="revue-name">{{ journal.name }}</span>
-        </div>
-      {% endif %}
-    </div>
-
-    <nav class="nav">
-      <a href="{% url 'journal_dashboard' slug=journal.slug %}" class="nav-item" style="text-decoration:none">
-        {% icon "home" 17 cls="icon" %}
-        Tableau de bord
-      </a>
-      <a href="{% url 'issues:list' slug=journal.slug %}" class="nav-item active" style="text-decoration:none">
-        {% icon "file" 17 cls="icon" %}
-        Numéros en cours
-      </a>
-      <a href="{% url 'contacts:list' slug=journal.slug %}" class="nav-item" style="text-decoration:none">
-        {% icon "users" 17 cls="icon" %}
-        Contacts
-      </a>
-      <a href="#" class="nav-item" style="text-decoration:none">
-        {% icon "archive" 17 cls="icon" %}
-        Archives
-      </a>
-    </nav>
-
-    <div class="sidebar-user">
-      <div class="avatar">{{ request.user.first_name|slice:":1" }}{{ request.user.last_name|slice:":1" }}</div>
-      <div class="sidebar-user-info">
-        <div class="n">{{ request.user.get_full_name }}</div>
-        <div class="e">{{ request.user.email }}</div>
-      </div>
-      <form method="post" action="{% url 'account_logout' %}" style="margin-left:auto;flex-shrink:0">
-        {% csrf_token %}
-        <button type="submit" class="btn ghost sm" title="Se déconnecter">
-          {% icon "back" 14 %}
-        </button>
-      </form>
-    </div>
-
-  </aside>
+  {% include "partials/_sidebar.html" with sidebar_active="issues" %}
 
   {# ===== MAIN ===== #}
   <main class="main">
