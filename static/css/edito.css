@@ -512,9 +512,11 @@ label {
   backdrop-filter: blur(2px);
   z-index: 100;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
   overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
   padding: 20px;
   animation: fadeIn 160ms ease;
 }
@@ -524,6 +526,7 @@ label {
   border-radius: var(--radius-lg);
   max-width: 540px;
   width: 100%;
+  margin: auto 0;
   max-height: calc((100vh - 40px) / var(--zoom, 1));
   overflow: visible;
   display: flex;
