@@ -43,6 +43,20 @@ def _resolve_author(post_data, journal):
     return None, author_name
 
 
+def _apply_article_creation_extras(instance, post_data, journal, form, uploaded_by):
+    author, override = _resolve_author(post_data, journal)
+    instance.author = author
+    instance.author_name_override = override
+    f = form.cleaned_data.get("file")
+    update_fields = ["author", "author_name_override"]
+    if f:
+        instance.mark_received()
+        update_fields.append("state")
+    instance.save(update_fields=update_fields)
+    if f:
+        ArticleVersion.objects.create(article=instance, file=f, uploaded_by=uploaded_by)
+
+
 class ArticleCreateView(JournalOwnedCreateView):
     form_class = ArticleCreateForm
     template_name = "articles/create.html"
@@ -73,15 +87,7 @@ class ArticleCreateView(JournalOwnedCreateView):
         instance.issue = self.issue
 
     def post_create(self, instance, form):
-        author, override = _resolve_author(self.request.POST, self.request.journal)
-        instance.author = author
-        instance.author_name_override = override
-        instance.save(update_fields=["author", "author_name_override"])
-        f = form.cleaned_data.get("file")
-        if f:
-            instance.mark_received()
-            instance.save()
-            ArticleVersion.objects.create(article=instance, file=f, uploaded_by=self.request.user)
+        _apply_article_creation_extras(instance, self.request.POST, self.request.journal, form, self.request.user)
 
     def get_success_url(self, instance):
         return reverse(
@@ -120,15 +126,7 @@ class ArticleCreateFromJournalView(JournalOwnedCreateView):
         instance.issue = form.cleaned_data["issue"]
 
     def post_create(self, instance, form):
-        author, override = _resolve_author(self.request.POST, self.request.journal)
-        instance.author = author
-        instance.author_name_override = override
-        instance.save(update_fields=["author", "author_name_override"])
-        f = form.cleaned_data.get("file")
-        if f:
-            instance.mark_received()
-            instance.save()
-            ArticleVersion.objects.create(article=instance, file=f, uploaded_by=self.request.user)
+        _apply_article_creation_extras(instance, self.request.POST, self.request.journal, form, self.request.user)
 
     def get_success_url(self, instance):
         return reverse(
@@ -311,6 +309,7 @@ class ArticleDetailView(JournalMemberRequiredMixin, DetailView):
         show_file_upload = not is_archived and article.state not in _UPLOAD_BLOCKED_STATES
         file_upload_is_first = article.state == Article.State.PENDING
 
+        _kw = {"slug": journal.slug, "issue_id": issue.pk, "article_id": article.pk}
         ctx.update({
             "issue": issue,
             "journal": journal,
@@ -340,6 +339,11 @@ class ArticleDetailView(JournalMemberRequiredMixin, DetailView):
             "file_upload_url": file_upload_url,
             "show_file_upload": show_file_upload,
             "file_upload_is_first": file_upload_is_first,
+            "patch_url": reverse("articles:patch", kwargs=_kw),
+            "edit_url": reverse("articles:edit", kwargs=_kw),
+            "delete_url": reverse("articles:delete", kwargs=_kw),
+            "note_create_url": reverse("articles:note_create", kwargs=_kw),
+            "review_create_url": reverse("articles:review_create", kwargs=_kw),
         })
         return ctx
 

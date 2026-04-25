@@ -22,7 +22,7 @@ def _make_file(name="doc.pdf", content=b"pdf content"):
 
 
 @pytest.fixture
-def doc(db, journal, user):
+def doc(journal, user):
     return JournalDocument.objects.create(
         journal=journal,
         name="Règlement intérieur",

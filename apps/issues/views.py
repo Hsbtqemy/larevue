@@ -253,7 +253,7 @@ class IssueDetailView(JournalMemberRequiredMixin, DetailView):
         )
 
         _doc_kw = {"slug": journal.slug, "issue_id": issue.pk}
-        documents = list(issue.documents.select_related("uploaded_by").all())
+        documents = list(issue.documents.select_related("uploaded_by"))
         for doc in documents:
             doc.download_url = reverse(
                 "issues:document_download", kwargs={**_doc_kw, "doc_id": doc.pk}

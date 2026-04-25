@@ -1,7 +1,3 @@
-{# Confirm-delete modal.
-   Context: delete_url, title (opt), message (opt), confirm_label (opt),
-   require_typing (opt), trigger_label (opt), trigger_cls (opt).
-   Server contract: returns JSON {"redirect_url": "..."} on success. #}
 {% if require_typing %}
 <div x-data="confirmDelete('{{ delete_url }}', '{{ require_typing|escapejs }}')">
 {% else %}

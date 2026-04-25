@@ -1,8 +1,7 @@
 from django import forms
 
+from apps.core.utils import MAX_UPLOAD_MB
 from apps.issues.models import Issue, IssueDocument
-
-MAX_UPLOAD_MB = 25
 
 
 class IssueEditForm(forms.ModelForm):

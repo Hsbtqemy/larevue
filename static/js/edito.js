@@ -193,14 +193,20 @@ document.addEventListener("alpine:init", () => {
           headers: { "X-CSRFToken": getCsrfToken() },
           body: new FormData(form),
         });
-        const data = await res.json();
+        let data;
+        try {
+          data = await res.json();
+        } catch {
+          this.errors = { __all__: [`Erreur serveur (${res.status}).`] };
+          return;
+        }
         if (res.ok) {
           window.location.href = data.redirect_url;
         } else {
-          this.errors = data.errors || {};
+          this.errors = data.errors || { __all__: [data.error || `Erreur (${res.status}).`] };
         }
       } catch (e) {
-        this.errors = { __all__: ["Erreur lors de l'enregistrement."] };
+        this.errors = { __all__: ["Erreur réseau."] };
       } finally {
         this.saving = false;
       }

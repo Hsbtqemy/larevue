@@ -1,14 +1,4 @@
 {% load edito %}
-{#
-  Context vars:
-    search_url    — API endpoint URL (append ?role=... before passing if needed)
-    id_field      — name attr for the hidden id input, e.g. "author_id"
-    name_field    — name attr for the text/free-text input, e.g. "author_name"
-    initial_id    — initial contact pk (empty string if none)
-    initial_name  — initial display name (empty string if none)
-    placeholder   — input placeholder text
-    create_url    — optional URL to create a new contact (shown when query yields no results)
-#}
 <div x-data="contactAutocomplete({ searchUrl: '{{ search_url|escapejs }}', initialName: '{{ initial_name|escapejs }}', initialId: '{{ initial_id }}' })"
      style="position:relative">
 

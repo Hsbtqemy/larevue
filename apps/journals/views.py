@@ -192,7 +192,7 @@ class JournalEditView(JournalMemberRequiredMixin, View):
     def _context(self, form):
         journal = self.request.journal
         _kw = {"slug": journal.slug}
-        documents = list(journal.documents.select_related("uploaded_by").all())
+        documents = list(journal.documents.select_related("uploaded_by"))
         for doc in documents:
             doc.download_url = reverse("journal_document_download", kwargs={**_kw, "doc_id": doc.pk})
             doc.delete_url = reverse("journal_document_delete", kwargs={**_kw, "doc_id": doc.pk})
