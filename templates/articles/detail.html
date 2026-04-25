@@ -216,16 +216,8 @@
                 </template>
               </div>
               <div class="field">
-                <label for="em-author">Auteur·ice</label>
-                <select id="em-author" name="author" class="text-input">
-                  <option value="">— Aucun —</option>
-                  {% for pk, name in author_options %}
-                    <option value="{{ pk }}"{% if article.author_id == pk %} selected{% endif %}>{{ name }}</option>
-                  {% endfor %}
-                </select>
-                <template x-if="fieldErrors('author').length">
-                  <div class="form-msg err" x-text="fieldErrors('author').join(' ')"></div>
-                </template>
+                <label>Auteur·ice</label>
+                {% include "partials/_contact_autocomplete.html" with search_url=author_search_url id_field="author_id" name_field="author_name" initial_id=article_author_initial_id initial_name=article_author_initial_name placeholder="Nom ou affiliation…" %}
               </div>
               <div class="field">
                 <label for="em-type">Type</label>

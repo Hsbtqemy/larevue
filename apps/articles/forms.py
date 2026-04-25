@@ -11,13 +11,10 @@ from apps.reviews.models import ReviewRequest
 class ArticleEditForm(forms.ModelForm):
     def __init__(self, *args, journal=None, **kwargs):
         super().__init__(*args, **kwargs)
-        if journal is not None:
-            self.fields["author"].queryset = journal.contacts.order_by("last_name", "first_name")
-        self.fields["author"].required = False
 
     class Meta:
         model = Article
-        fields = ["title", "author", "article_type", "abstract"]
+        fields = ["title", "article_type", "abstract"]
         widgets = {"abstract": forms.Textarea(attrs={"rows": 4})}
 
 
@@ -26,12 +23,6 @@ class ArticleCreateForm(forms.ModelForm):
 
     def __init__(self, *args, journal=None, **kwargs):
         super().__init__(*args, **kwargs)
-        if journal is not None:
-            self.fields["author"].queryset = journal.contacts.filter(
-                usual_roles__overlap=[Contact.Role.AUTHOR]
-            ).order_by("last_name", "first_name")
-        self.fields["author"].required = False
-        self.fields["author"].empty_label = "— Choisir un·e auteur·ice —"
         for name, field in self.fields.items():
             if name == "file":
                 continue
@@ -40,7 +31,7 @@ class ArticleCreateForm(forms.ModelForm):
 
     class Meta:
         model = Article
-        fields = ["title", "author", "article_type", "abstract"]
+        fields = ["title", "article_type", "abstract"]
         widgets = {"abstract": forms.Textarea(attrs={"rows": 4})}
 
 

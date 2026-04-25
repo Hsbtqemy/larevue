@@ -19,15 +19,8 @@
   </div>
 
   <div class="field">
-    <label for="id_author">{{ form.author.label }} <span class="opt">(facultatif)</span></label>
-    {{ form.author }}
-    {% if form.author.errors %}
-      <div class="form-msg err">{{ form.author.errors|join:" " }}</div>
-    {% endif %}
-    <div class="tiny muted" style="margin-top:4px">
-      Contact absent de la liste ?
-      <a href="{% url 'contacts:create' slug=journal.slug %}" target="_blank" style="color:var(--accent)">Ajouter un contact</a>
-    </div>
+    <label>Auteur·ice <span class="opt">(facultatif)</span></label>
+    {% include "partials/_contact_autocomplete.html" with search_url=author_search_url id_field="author_id" name_field="author_name" initial_id="" initial_name="" placeholder="Nom ou affiliation…" create_url=author_create_url %}
   </div>
 </div>
 

@@ -32,6 +32,17 @@ def _check_article_archived(article):
     return None
 
 
+def _resolve_author(post_data, journal):
+    author_id = post_data.get("author_id", "").strip()
+    author_name = post_data.get("author_name", "").strip()
+    if author_id:
+        try:
+            return Contact.objects.get(pk=int(author_id), journal=journal), ""
+        except (Contact.DoesNotExist, ValueError):
+            pass
+    return None, author_name
+
+
 class ArticleCreateView(JournalOwnedCreateView):
     form_class = ArticleCreateForm
     template_name = "articles/create.html"
@@ -51,12 +62,21 @@ class ArticleCreateView(JournalOwnedCreateView):
         return super().post(request, **kwargs)
 
     def get_extra_context(self):
-        return {"issue": self.issue}
+        slug = self.request.journal.slug
+        return {
+            "issue": self.issue,
+            "author_search_url": reverse("contacts:search", kwargs={"slug": slug}) + "?role=author",
+            "author_create_url": reverse("contacts:create", kwargs={"slug": slug}) + "?role=author",
+        }
 
     def prepare_instance(self, instance, form):
         instance.issue = self.issue
 
     def post_create(self, instance, form):
+        author, override = _resolve_author(self.request.POST, self.request.journal)
+        instance.author = author
+        instance.author_name_override = override
+        instance.save(update_fields=["author", "author_name_override"])
         f = form.cleaned_data.get("file")
         if f:
             instance.mark_received()
@@ -89,10 +109,21 @@ class ArticleCreateFromJournalView(JournalOwnedCreateView):
             return redirect(reverse("issues:create", kwargs={"slug": request.journal.slug}))
         return super().post(request, **kwargs)
 
+    def get_extra_context(self):
+        slug = self.request.journal.slug
+        return {
+            "author_search_url": reverse("contacts:search", kwargs={"slug": slug}) + "?role=author",
+            "author_create_url": reverse("contacts:create", kwargs={"slug": slug}) + "?role=author",
+        }
+
     def prepare_instance(self, instance, form):
         instance.issue = form.cleaned_data["issue"]
 
     def post_create(self, instance, form):
+        author, override = _resolve_author(self.request.POST, self.request.journal)
+        instance.author = author
+        instance.author_name_override = override
+        instance.save(update_fields=["author", "author_name_override"])
         f = form.cleaned_data.get("file")
         if f:
             instance.mark_received()
@@ -265,6 +296,10 @@ class ArticleDetailView(JournalMemberRequiredMixin, DetailView):
         if article.author and (article.author_id, article.author.full_name) not in author_options:
             author_options = [(article.author_id, article.author.full_name)] + author_options
 
+        author_search_url = (
+            reverse("contacts:search", kwargs={"slug": journal.slug}) + "?role=author"
+        )
+
         is_archived = issue.state in Issue.ARCHIVED_STATES
         latest_version = versions[0] if versions else None
         transition_url = reverse(
@@ -288,6 +323,9 @@ class ArticleDetailView(JournalMemberRequiredMixin, DetailView):
             "journal": journal,
             "internal_notes": internal_notes,
             "author_options": author_options,
+            "author_search_url": author_search_url,
+            "article_author_initial_id": article.author_id or "",
+            "article_author_initial_name": article.displayed_author_name,
             "is_archived": is_archived,
             "versions": versions,
             "version_count": len(versions),
@@ -356,6 +394,10 @@ class ArticleEditView(_ArticleJournalMixin, JournalMemberRequiredMixin, View):
         form = ArticleEditForm(request.POST, instance=article, journal=request.journal)
         if form.is_valid():
             form.save()
+            author, override = _resolve_author(request.POST, request.journal)
+            article.author = author
+            article.author_name_override = override
+            article.save(update_fields=["author", "author_name_override"])
             url = reverse(
                 "articles:detail",
                 kwargs={

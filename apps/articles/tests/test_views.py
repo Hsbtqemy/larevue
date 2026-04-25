@@ -243,7 +243,6 @@ class TestArticleEditView:
     def _form_data(self, article, **overrides):
         data = {
             "title": article.title,
-            "author": article.author_id or "",
             "article_type": article.article_type,
         }
         data.update(overrides)
