@@ -268,7 +268,7 @@
         <div class="zone">
           <div class="zone-head">
             <h3>Versions du manuscrit</h3>
-            {% include "articles/_version_upload_modal.html" with upload_url=file_upload_url is_first=file_upload_is_first show=show_file_upload %}
+            {% if show_file_upload %}{% include "articles/_version_upload_modal.html" with upload_url=file_upload_url is_first=file_upload_is_first %}{% endif %}
           </div>
           <div class="versions-timeline" id="versions-list">
             {% for version in versions %}

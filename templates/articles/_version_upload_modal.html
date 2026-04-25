@@ -1,12 +1,11 @@
 {% load edito %}
-{% if show %}
+{% with btn_label=is_first|yesno:"Déposer le fichier,Déposer une nouvelle version" heading=is_first|yesno:"Déposer le fichier de l'article,Déposer une nouvelle version" %}
 <div x-data="{ open: false }">
 
   <button type="button"
           class="btn primary sm"
           @click="open = true">
-    {% icon "upload" 14 cls="icon" %}
-    {% if is_first %}Déposer le fichier{% else %}Déposer une nouvelle version{% endif %}
+    {% icon "upload" 14 cls="icon" %} {{ btn_label }}
   </button>
 
   <template x-teleport="body">
@@ -19,7 +18,7 @@
         <form method="post" action="{{ upload_url }}" enctype="multipart/form-data">
           {% csrf_token %}
           <div class="modal-head">
-            <h3>{% if is_first %}Déposer le fichier de l'article{% else %}Déposer une nouvelle version{% endif %}</h3>
+            <h3>{{ heading }}</h3>
           </div>
           <div class="modal-body">
             <div class="edit-meta-form">
@@ -43,4 +42,4 @@
   </template>
 
 </div>
-{% endif %}
+{% endwith %}

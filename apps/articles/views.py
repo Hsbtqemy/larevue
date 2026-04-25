@@ -1,5 +1,6 @@
 from django.contrib import messages
 from django.core.exceptions import PermissionDenied
+from django.db import transaction
 from django.db.models import Prefetch
 from django.http import Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -266,7 +267,6 @@ class ArticleDetailView(JournalMemberRequiredMixin, DetailView):
 
         is_archived = issue.state in Issue.ARCHIVED_STATES
         latest_version = versions[0] if versions else None
-        next_version_number = (latest_version.version_number + 1) if latest_version else 1
         transition_url = reverse(
             "articles:transition",
             kwargs={
@@ -292,7 +292,6 @@ class ArticleDetailView(JournalMemberRequiredMixin, DetailView):
             "versions": versions,
             "version_count": len(versions),
             "latest_version_number": latest_version.version_number if latest_version else None,
-            "next_version_number": next_version_number,
             "review_request_count": len(review_requests),
             "reviews_received": reviews_received_count,
             "expected_reviews": expected_reviews,
@@ -439,17 +438,19 @@ class ArticleFileUploadView(_ArticleJournalMixin, JournalMemberRequiredMixin, Vi
         is_first = article.state == Article.State.PENDING
         description = request.POST.get("comment", "").strip()
 
-        version = ArticleVersion.objects.create(
-            article=article,
-            file=file,
-            uploaded_by=request.user,
-            comment=description,
-        )
+        with transaction.atomic():
+            version = ArticleVersion.objects.create(
+                article=article,
+                file=file,
+                uploaded_by=request.user,
+                comment=description,
+            )
+            if is_first:
+                article.mark_received()
+                article.save()
 
         actor_name = request.user.get_full_name() or request.user.email
         if is_first:
-            article.mark_received()
-            article.save()
             msg = f"{actor_name} a déposé le fichier de l'article"
         else:
             msg = f"{actor_name} a déposé la version v{version.version_number}"
