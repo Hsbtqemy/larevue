@@ -736,3 +736,137 @@ class TestReviewRequestPatchView:
         client.force_login(user)
         res = self._patch(client, journal, issue, article, review_request, "internal_notes", "X")
         assert res.status_code == 403
+
+
+# ------------------------------------------------------------------ #
+# ArticleCreateView                                                   #
+# ------------------------------------------------------------------ #
+
+
+def _article_create_url(journal, issue):
+    return reverse(
+        "articles:create",
+        kwargs={"slug": journal.slug, "issue_id": issue.pk},
+    )
+
+
+@pytest.mark.django_db
+class TestArticleCreateView:
+    def test_unauthenticated_redirects(self, client, journal, issue):
+        response = client.get(_article_create_url(journal, issue))
+        assert response.status_code == 302
+
+    def test_member_can_get_form(self, client, user, membership, journal, issue):
+        client.force_login(user)
+        response = client.get(_article_create_url(journal, issue))
+        assert response.status_code == 200
+        assert "form" in response.context
+
+    def test_valid_post_creates_article(self, client, user, membership, journal, issue):
+        client.force_login(user)
+        response = client.post(_article_create_url(journal, issue), {
+            "title": "Mon article",
+            "article_type": Article.Type.ARTICLE,
+        })
+        assert response.status_code == 302
+        a = Article.objects.get(issue=issue, title="Mon article")
+        assert a.state == Article.State.RECEIVED
+        assert response["Location"] == reverse(
+            "issues:detail", kwargs={"slug": journal.slug, "issue_id": issue.pk}
+        )
+
+    def test_article_belongs_to_issue(self, client, user, membership, journal, issue):
+        client.force_login(user)
+        client.post(_article_create_url(journal, issue), {
+            "title": "Appartenance",
+            "article_type": Article.Type.ARTICLE,
+        })
+        a = Article.objects.get(title="Appartenance")
+        assert a.issue == issue
+
+    def test_archived_issue_returns_403(self, client, user, membership, journal, issue):
+        Issue.objects.filter(pk=issue.pk).update(state=Issue.State.PUBLISHED)
+        client.force_login(user)
+        response = client.get(_article_create_url(journal, issue))
+        assert response.status_code == 403
+
+    def test_file_upload_creates_version(self, client, user, membership, journal, issue):
+        from django.core.files.base import ContentFile
+        from apps.articles.models import ArticleVersion
+
+        client.force_login(user)
+        client.post(_article_create_url(journal, issue), {
+            "title": "Avec fichier",
+            "article_type": Article.Type.ARTICLE,
+            "file": ContentFile(b"%PDF content", name="article.pdf"),
+        })
+        a = Article.objects.get(title="Avec fichier")
+        assert ArticleVersion.objects.filter(article=a).count() == 1
+
+    def test_no_file_creates_no_version(self, client, user, membership, journal, issue):
+        from apps.articles.models import ArticleVersion
+
+        client.force_login(user)
+        client.post(_article_create_url(journal, issue), {
+            "title": "Sans fichier",
+            "article_type": Article.Type.ARTICLE,
+        })
+        a = Article.objects.get(title="Sans fichier")
+        assert ArticleVersion.objects.filter(article=a).count() == 0
+
+    def test_invalid_post_rerenders_form(self, client, user, membership, journal, issue):
+        client.force_login(user)
+        response = client.post(_article_create_url(journal, issue), {"title": ""})
+        assert response.status_code == 200
+        assert response.context["form"].errors
+
+
+# ------------------------------------------------------------------ #
+# ArticleCreateFromJournalView                                        #
+# ------------------------------------------------------------------ #
+
+
+def _article_create_from_journal_url(journal):
+    return reverse("article_create_from_journal", kwargs={"slug": journal.slug})
+
+
+@pytest.mark.django_db
+class TestArticleCreateFromJournalView:
+    def test_unauthenticated_redirects(self, client, journal):
+        response = client.get(_article_create_from_journal_url(journal))
+        assert response.status_code == 302
+
+    def test_no_active_issues_redirects_to_issue_create(self, client, user, membership, journal):
+        client.force_login(user)
+        response = client.get(_article_create_from_journal_url(journal))
+        assert response.status_code == 302
+        assert reverse("issues:create", kwargs={"slug": journal.slug}) in response["Location"]
+
+    def test_with_active_issue_shows_form(self, client, user, membership, journal, issue):
+        client.force_login(user)
+        response = client.get(_article_create_from_journal_url(journal))
+        assert response.status_code == 200
+        assert "form" in response.context
+
+    def test_valid_post_creates_article_linked_to_issue(self, client, user, membership, journal, issue):
+        client.force_login(user)
+        response = client.post(_article_create_from_journal_url(journal), {
+            "issue": issue.pk,
+            "title": "Article depuis dashboard",
+            "article_type": Article.Type.ARTICLE,
+        })
+        assert response.status_code == 302
+        a = Article.objects.get(title="Article depuis dashboard")
+        assert a.issue == issue
+
+    def test_archived_issues_not_in_form_choices(self, client, user, membership, journal, issue):
+        Issue.objects.filter(pk=issue.pk).update(state=Issue.State.PUBLISHED)
+        active = Issue.objects.create(
+            journal=journal, number="2", thematic_title="Actif", editor_name="Ed"
+        )
+        client.force_login(user)
+        response = client.get(_article_create_from_journal_url(journal))
+        form = response.context["form"]
+        pks = [obj.pk for obj in form.fields["issue"].queryset]
+        assert issue.pk not in pks
+        assert active.pk in pks

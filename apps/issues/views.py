@@ -1,16 +1,16 @@
 import datetime
 
 from django.core.exceptions import ValidationError
-from django.db.models import Count
+from django.db.models import Count, F
 from django.http import Http404, JsonResponse
 from django.urls import reverse
 from django.views import View
-from django.views.generic import DetailView
+from django.views.generic import DetailView, TemplateView
 
 from apps.articles.models import Article, InternalNote
 from apps.core.mixins import JournalMemberRequiredMixin, JournalOwnedObjectMixin
-from apps.core.views import JournalOwnedPatchView, JournalOwnedTransitionView, compute_transitions
-from apps.issues.forms import IssueEditForm
+from apps.core.views import JournalOwnedCreateView, JournalOwnedPatchView, JournalOwnedTransitionView, compute_transitions
+from apps.issues.forms import IssueCreateForm, IssueEditForm
 from apps.issues.models import Issue
 from apps.reviews.models import ReviewRequest
 
@@ -165,6 +165,44 @@ def _build_timeline(issue):
             "position_pct": round(i / (n - 1) * 100),
         })
     return milestones
+
+
+class IssueListView(JournalMemberRequiredMixin, TemplateView):
+    template_name = "issues/list.html"
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        journal = self.request.journal
+        tab = self.request.GET.get("tab", "active")
+
+        active_qs = journal.issues.filter(state__in=Issue.ACTIVE_STATES).order_by(
+            F("planned_publication_date").asc(nulls_last=True)
+        )
+        archived_qs = journal.issues.filter(state__in=Issue.ARCHIVED_STATES).order_by(
+            F("planned_publication_date").desc(nulls_last=True)
+        )
+
+        ctx.update({
+            "journal": journal,
+            "tab": tab,
+            "active_issues": active_qs,
+            "archived_issues": archived_qs,
+            "active_count": active_qs.count(),
+            "archived_count": archived_qs.count(),
+            "user_journal_count": self.request.user.memberships.count(),
+        })
+        return ctx
+
+
+class IssueCreateView(JournalOwnedCreateView):
+    form_class = IssueCreateForm
+    template_name = "issues/create.html"
+
+    def get_success_url(self, instance):
+        return reverse(
+            "issues:detail",
+            kwargs={"slug": self.request.journal.slug, "issue_id": instance.pk},
+        )
 
 
 class IssueDetailView(JournalMemberRequiredMixin, DetailView):

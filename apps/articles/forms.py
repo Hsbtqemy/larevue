@@ -4,6 +4,7 @@ from django import forms
 
 from apps.articles.models import Article
 from apps.contacts.models import Contact
+from apps.issues.models import Issue
 from apps.reviews.models import ReviewRequest
 
 
@@ -17,6 +18,37 @@ class ArticleEditForm(forms.ModelForm):
     class Meta:
         model = Article
         fields = ["title", "author", "article_type"]
+
+
+class ArticleCreateForm(forms.ModelForm):
+    file = forms.FileField(label="Fichier (facultatif)", required=False)
+
+    def __init__(self, *args, journal=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        if journal is not None:
+            self.fields["author"].queryset = journal.contacts.filter(
+                usual_roles__overlap=[Contact.Role.AUTHOR]
+            ).order_by("last_name", "first_name")
+        self.fields["author"].required = False
+
+    class Meta:
+        model = Article
+        fields = ["title", "author", "article_type"]
+
+
+class ArticleCreateWithIssueForm(ArticleCreateForm):
+    issue = forms.ModelChoiceField(
+        queryset=Issue.objects.none(),
+        label="Numéro",
+        empty_label="— Choisir un numéro —",
+    )
+
+    def __init__(self, *args, journal=None, **kwargs):
+        super().__init__(*args, journal=journal, **kwargs)
+        if journal is not None:
+            self.fields["issue"].queryset = journal.issues.filter(
+                state__in=Issue.ACTIVE_STATES
+            ).order_by("-number")
 
 
 class ArticleVersionUploadForm(forms.Form):

@@ -1,6 +1,8 @@
+from django.contrib import messages
+from django.core.exceptions import PermissionDenied
 from django.db.models import Prefetch
 from django.http import Http404, HttpResponse, JsonResponse
-from django.shortcuts import render
+from django.shortcuts import get_object_or_404, redirect, render
 from django.template.loader import render_to_string
 from django.urls import reverse
 from django.utils import timezone
@@ -8,6 +10,8 @@ from django.views import View
 from django.views.generic import DetailView
 
 from apps.articles.forms import (
+    ArticleCreateForm,
+    ArticleCreateWithIssueForm,
     ArticleEditForm,
     ArticleVersionUploadForm,
     ReviewRequestCreateForm,
@@ -18,7 +22,7 @@ from apps.articles.utils import log_action, oob_counters_html
 from apps.contacts.models import Contact
 from apps.core.mixins import JournalMemberRequiredMixin, JournalOwnedObjectMixin
 from apps.core.utils import file_response
-from apps.core.views import JournalOwnedPatchView, JournalOwnedTransitionView, compute_transitions
+from apps.core.views import JournalOwnedCreateView, JournalOwnedPatchView, JournalOwnedTransitionView, compute_transitions
 from apps.issues.models import Issue
 from apps.reviews.models import ReviewRequest
 
@@ -27,6 +31,76 @@ def _check_article_archived(article):
     if article.issue.state in Issue.ARCHIVED_STATES:
         return JsonResponse({"error": "Cet article ne peut plus être modifié."}, status=403)
     return None
+
+
+class ArticleCreateView(JournalOwnedCreateView):
+    form_class = ArticleCreateForm
+    template_name = "articles/create.html"
+
+    def _get_issue(self):
+        issue = get_object_or_404(Issue, pk=self.kwargs["issue_id"], journal=self.request.journal)
+        if issue.state in Issue.ARCHIVED_STATES:
+            raise PermissionDenied
+        return issue
+
+    def get(self, request, **kwargs):
+        self.issue = self._get_issue()
+        return super().get(request, **kwargs)
+
+    def post(self, request, **kwargs):
+        self.issue = self._get_issue()
+        return super().post(request, **kwargs)
+
+    def get_extra_context(self):
+        return {"issue": self.issue}
+
+    def prepare_instance(self, instance, form):
+        instance.issue = self.issue
+
+    def post_create(self, instance, form):
+        f = form.cleaned_data.get("file")
+        if f:
+            ArticleVersion.objects.create(article=instance, file=f, uploaded_by=self.request.user)
+
+    def get_success_url(self, instance):
+        return reverse(
+            "issues:detail",
+            kwargs={"slug": self.request.journal.slug, "issue_id": self.issue.pk},
+        )
+
+
+class ArticleCreateFromJournalView(JournalOwnedCreateView):
+    form_class = ArticleCreateWithIssueForm
+    template_name = "articles/create_from_journal.html"
+
+    def _has_active_issues(self):
+        return self.request.journal.issues.filter(state__in=Issue.ACTIVE_STATES).exists()
+
+    def get(self, request, **kwargs):
+        if not self._has_active_issues():
+            messages.warning(request, "Créez d'abord un projet de numéro pour y importer des articles.")
+            return redirect(reverse("issues:create", kwargs={"slug": request.journal.slug}))
+        return super().get(request, **kwargs)
+
+    def post(self, request, **kwargs):
+        if not self._has_active_issues():
+            messages.warning(request, "Créez d'abord un projet de numéro pour y importer des articles.")
+            return redirect(reverse("issues:create", kwargs={"slug": request.journal.slug}))
+        return super().post(request, **kwargs)
+
+    def prepare_instance(self, instance, form):
+        instance.issue = form.cleaned_data["issue"]
+
+    def post_create(self, instance, form):
+        f = form.cleaned_data.get("file")
+        if f:
+            ArticleVersion.objects.create(article=instance, file=f, uploaded_by=self.request.user)
+
+    def get_success_url(self, instance):
+        return reverse(
+            "issues:detail",
+            kwargs={"slug": self.request.journal.slug, "issue_id": instance.issue_id},
+        )
 
 
 _ARTICLE_TRANSITIONS = {

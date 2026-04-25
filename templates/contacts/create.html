@@ -1,0 +1,180 @@
+{% extends "base.html" %}
+{% load static edito %}
+
+{% block title %}Nouveau contact — {{ journal.name }}{% endblock %}
+
+{% block body_class %}{% endblock %}
+
+{% block extra_head %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter+Tight:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{% static 'css/edito.css' %}">
+<style>
+  :root {
+    --accent: {{ journal.accent_color }};
+    --accent-soft: color-mix(in srgb, {{ journal.accent_color }} 25%, #fbf8f1);
+    --accent-tint: color-mix(in srgb, {{ journal.accent_color }} 10%, #fbf8f1);
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="app-shell" data-theme="chaleureuse">
+
+  {# ===== SIDEBAR ===== #}
+  <aside class="sidebar">
+
+    <div class="sidebar-brand">
+      <div class="brand-mark">É</div>
+      <div class="brand-name">Edito</div>
+    </div>
+
+    <div class="revue-switcher">
+      <div class="revue-switcher-label">Revue courante</div>
+      {% if user_journal_count > 1 %}
+        <a href="{% url 'home' %}" class="revue-switcher-current" style="text-decoration:none">
+          <span class="revue-dot" style="background:var(--accent)"></span>
+          <span class="revue-name">{{ journal.name }}</span>
+          <span class="chev">{% icon "chevron" 14 %}</span>
+        </a>
+      {% else %}
+        <div class="revue-switcher-current" style="cursor:default">
+          <span class="revue-dot" style="background:var(--accent)"></span>
+          <span class="revue-name">{{ journal.name }}</span>
+        </div>
+      {% endif %}
+    </div>
+
+    <nav class="nav">
+      <a href="{% url 'journal_dashboard' slug=journal.slug %}" class="nav-item" style="text-decoration:none">
+        {% icon "home" 17 cls="icon" %}
+        Tableau de bord
+      </a>
+      <a href="{% url 'issues:list' slug=journal.slug %}" class="nav-item" style="text-decoration:none">
+        {% icon "file" 17 cls="icon" %}
+        Numéros en cours
+      </a>
+      <a href="{% url 'contacts:create' slug=journal.slug %}" class="nav-item active" style="text-decoration:none">
+        {% icon "users" 17 cls="icon" %}
+        Contacts
+      </a>
+      <a href="#" class="nav-item" style="text-decoration:none">
+        {% icon "archive" 17 cls="icon" %}
+        Archives
+      </a>
+    </nav>
+
+    <div class="sidebar-user">
+      <div class="avatar">{{ request.user.first_name|slice:":1" }}{{ request.user.last_name|slice:":1" }}</div>
+      <div class="sidebar-user-info">
+        <div class="n">{{ request.user.get_full_name }}</div>
+        <div class="e">{{ request.user.email }}</div>
+      </div>
+      <form method="post" action="{% url 'account_logout' %}" style="margin-left:auto;flex-shrink:0">
+        {% csrf_token %}
+        <button type="submit" class="btn ghost sm" title="Se déconnecter">
+          {% icon "back" 14 %}
+        </button>
+      </form>
+    </div>
+
+  </aside>
+
+  {# ===== MAIN ===== #}
+  <main class="main">
+
+    <div class="accent-strip" style="background:var(--accent)"></div>
+
+    <div style="padding:10px 40px;background:var(--surface);border-bottom:1px solid var(--line);font-size:12.5px;color:var(--ink-faint);display:flex;align-items:center;gap:6px">
+      <a href="{% url 'journal_dashboard' slug=journal.slug %}" style="color:var(--ink-muted);text-decoration:none">{{ journal.name }}</a>
+      {% icon "chevronR" 12 %}
+      <span style="color:var(--ink)">Nouveau contact</span>
+    </div>
+
+    <div class="main-content">
+      <div class="section" style="max-width:640px">
+        <div class="section-head">
+          <h2>Nouveau contact</h2>
+        </div>
+
+        <form method="post" novalidate>
+          {% csrf_token %}
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+
+            <div class="field">
+              <label for="id_first_name">{{ form.first_name.label }}</label>
+              {{ form.first_name }}
+              {% if form.first_name.errors %}
+                <div class="form-msg err">{{ form.first_name.errors|join:" " }}</div>
+              {% endif %}
+            </div>
+
+            <div class="field">
+              <label for="id_last_name">{{ form.last_name.label }}</label>
+              {{ form.last_name }}
+              {% if form.last_name.errors %}
+                <div class="form-msg err">{{ form.last_name.errors|join:" " }}</div>
+              {% endif %}
+            </div>
+
+            <div class="field">
+              <label for="id_email">{{ form.email.label }}</label>
+              {{ form.email }}
+              {% if form.email.errors %}
+                <div class="form-msg err">{{ form.email.errors|join:" " }}</div>
+              {% endif %}
+            </div>
+
+            <div class="field">
+              <label for="id_affiliation">{{ form.affiliation.label }}</label>
+              {{ form.affiliation }}
+              {% if form.affiliation.errors %}
+                <div class="form-msg err">{{ form.affiliation.errors|join:" " }}</div>
+              {% endif %}
+            </div>
+
+            <div class="field" style="grid-column:span 2">
+              <label>{{ form.usual_roles.label }}</label>
+              <div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:4px">
+                {% for checkbox in form.usual_roles %}
+                  <label style="display:flex;align-items:center;gap:6px;font-size:14px;cursor:pointer">
+                    {{ checkbox.tag }}
+                    {{ checkbox.choice_label }}
+                  </label>
+                {% endfor %}
+              </div>
+              {% if form.usual_roles.errors %}
+                <div class="form-msg err">{{ form.usual_roles.errors|join:" " }}</div>
+              {% endif %}
+            </div>
+
+            <div class="field" style="grid-column:span 2">
+              <label for="id_notes">{{ form.notes.label }}</label>
+              {{ form.notes }}
+              {% if form.notes.errors %}
+                <div class="form-msg err">{{ form.notes.errors|join:" " }}</div>
+              {% endif %}
+              <div class="tiny muted" style="margin-top:4px">{{ form.notes.help_text }}</div>
+            </div>
+
+          </div>
+
+          {% if form.non_field_errors %}
+            <div class="form-msg err" style="margin-top:12px">{{ form.non_field_errors|join:" " }}</div>
+          {% endif %}
+
+          <div style="display:flex;gap:8px;margin-top:24px">
+            <a href="{% url 'journal_dashboard' slug=journal.slug %}" class="btn ghost">Annuler</a>
+            <button type="submit" class="btn primary">Créer le contact</button>
+          </div>
+
+        </form>
+      </div>
+    </div>
+
+  </main>
+
+</div>
+{% endblock %}

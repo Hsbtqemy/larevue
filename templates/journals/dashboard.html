@@ -51,13 +51,11 @@
         {% icon "home" 17 cls="icon" %}
         Tableau de bord
       </button>
-      {# TODO: replace with {% url 'issue_list' slug=journal.slug %} when view exists #}
-      <a href="#" class="nav-item" style="text-decoration:none">
+      <a href="{% url 'issues:list' slug=journal.slug %}" class="nav-item" style="text-decoration:none">
         {% icon "file" 17 cls="icon" %}
         Numéros en cours
       </a>
-      {# TODO: replace with {% url 'contact_list' slug=journal.slug %} when view exists #}
-      <a href="#" class="nav-item" style="text-decoration:none">
+      <a href="{% url 'contacts:create' slug=journal.slug %}" class="nav-item" style="text-decoration:none">
         {% icon "users" 17 cls="icon" %}
         Contacts
       </a>
@@ -102,24 +100,21 @@
       {# ===== Actions rapides ===== #}
       <div class="section">
         <div class="quick-actions">
-          {# TODO: replace with {% url 'issue_create' slug=journal.slug %} when view exists #}
-          <a href="#" class="qa-btn" style="text-decoration:none">
+          <a href="{% url 'issues:create' slug=journal.slug %}" class="qa-btn" style="text-decoration:none">
             <div class="qa-icon">{% icon "plus" 16 %}</div>
             <div>
               <div style="font-weight:500;color:var(--ink)">Nouveau projet de numéro</div>
               <div class="tiny muted">Proposer un numéro thématique</div>
             </div>
           </a>
-          {# TODO: replace with {% url 'article_create' slug=journal.slug %} when view exists #}
-          <a href="#" class="qa-btn" style="text-decoration:none">
+          <a href="{% url 'article_create_from_journal' slug=journal.slug %}" class="qa-btn" style="text-decoration:none">
             <div class="qa-icon">{% icon "file" 16 %}</div>
             <div>
               <div style="font-weight:500;color:var(--ink)">Nouvel article</div>
               <div class="tiny muted">Importer un article reçu par mail</div>
             </div>
           </a>
-          {# TODO: replace with {% url 'contact_create' slug=journal.slug %} when view exists #}
-          <a href="#" class="qa-btn" style="text-decoration:none">
+          <a href="{% url 'contacts:create' slug=journal.slug %}" class="qa-btn" style="text-decoration:none">
             <div class="qa-icon">{% icon "users" 16 %}</div>
             <div>
               <div style="font-weight:500;color:var(--ink)">Nouveau contact</div>

@@ -51,11 +51,11 @@
         {% icon "home" 17 cls="icon" %}
         Tableau de bord
       </a>
-      <button class="nav-item active" type="button">
+      <a href="{% url 'issues:list' slug=journal.slug %}" class="nav-item active" style="text-decoration:none">
         {% icon "file" 17 cls="icon" %}
         Numéros en cours
-      </button>
-      <a href="#" class="nav-item" style="text-decoration:none">
+      </a>
+      <a href="{% url 'contacts:create' slug=journal.slug %}" class="nav-item" style="text-decoration:none">
         {% icon "users" 17 cls="icon" %}
         Contacts
       </a>
@@ -389,6 +389,11 @@
         <div class="section-head">
           <h2>Articles</h2>
           <span class="meta">{{ articles|length }} article{{ articles|length|pluralize }}</span>
+          {% if is_editable %}
+            <a href="{% url 'articles:create' slug=journal.slug issue_id=issue.pk %}" class="btn primary sm" style="text-decoration:none">
+              {% icon "plus" 14 cls="icon" %} Ajouter un article
+            </a>
+          {% endif %}
         </div>
 
         {% if articles %}

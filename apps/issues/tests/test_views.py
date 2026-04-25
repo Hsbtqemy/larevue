@@ -7,6 +7,17 @@ from apps.articles.models import InternalNote
 from apps.issues.models import Issue
 
 
+def _create_url(journal):
+    return reverse("issues:create", kwargs={"slug": journal.slug})
+
+
+def _list_url(journal, tab=None):
+    url = reverse("issues:list", kwargs={"slug": journal.slug})
+    if tab:
+        url += f"?tab={tab}"
+    return url
+
+
 def _detail_url(journal, issue):
     return reverse("issues:detail", kwargs={"slug": journal.slug, "issue_id": issue.pk})
 
@@ -371,3 +382,127 @@ class TestMigrationFunctions:
         backward_migrate_states(_FakeMigrationContext.apps, _FakeMigrationContext.schema_editor)
         for pk in pks:
             assert Issue.objects.get(pk=pk).state == "in_production"
+
+
+# ------------------------------------------------------------------ #
+# IssueCreateView                                                     #
+# ------------------------------------------------------------------ #
+
+
+@pytest.mark.django_db
+class TestIssueCreateView:
+    def test_unauthenticated_redirects(self, client, journal):
+        response = client.get(_create_url(journal))
+        assert response.status_code == 302
+        assert "/accounts/" in response["Location"]
+
+    def test_non_member_gets_403(self, client, db):
+        from apps.accounts.models import User
+        from apps.journals.models import Journal
+
+        j = Journal.objects.create(name="Autre", slug="autre")
+        u = User.objects.create_user(email="x@x.com", password="pass")
+        client.force_login(u)
+        response = client.get(_create_url(j))
+        assert response.status_code == 403
+
+    def test_member_can_get_form(self, client, user, membership):
+        client.force_login(user)
+        response = client.get(_create_url(membership.journal))
+        assert response.status_code == 200
+        assert "form" in response.context
+
+    def test_valid_post_creates_issue(self, client, user, membership):
+        client.force_login(user)
+        response = client.post(_create_url(membership.journal), {
+            "number": "42",
+            "thematic_title": "Titre du numéro",
+            "description": "",
+            "editor_name": "Éditeur",
+            "planned_publication_date": "",
+            "deadline_articles": "",
+        })
+        assert response.status_code == 302
+        new_issue = Issue.objects.get(journal=membership.journal, number="42")
+        assert new_issue.thematic_title == "Titre du numéro"
+        assert new_issue.state == Issue.State.UNDER_REVIEW
+        assert response["Location"] == reverse(
+            "issues:detail", kwargs={"slug": membership.journal.slug, "issue_id": new_issue.pk}
+        )
+
+    def test_invalid_post_rerenders_form(self, client, user, membership):
+        client.force_login(user)
+        response = client.post(_create_url(membership.journal), {
+            "number": "",
+            "thematic_title": "",
+            "editor_name": "",
+        })
+        assert response.status_code == 200
+        assert response.context["form"].errors
+
+    def test_issue_belongs_to_journal(self, client, user, membership):
+        client.force_login(user)
+        client.post(_create_url(membership.journal), {
+            "number": "99",
+            "thematic_title": "Test appartenance",
+            "description": "",
+            "editor_name": "Ed",
+            "planned_publication_date": "",
+            "deadline_articles": "",
+        })
+        issue = Issue.objects.get(number="99")
+        assert issue.journal == membership.journal
+
+
+# ------------------------------------------------------------------ #
+# IssueListView                                                       #
+# ------------------------------------------------------------------ #
+
+
+@pytest.mark.django_db
+class TestIssueListView:
+    def test_unauthenticated_redirects(self, client, journal):
+        response = client.get(_list_url(journal))
+        assert response.status_code == 302
+
+    def test_member_sees_active_tab_by_default(self, client, user, membership, issue):
+        client.force_login(user)
+        response = client.get(_list_url(membership.journal))
+        assert response.status_code == 200
+        assert response.context["tab"] != "archived"
+        assert issue in list(response.context["active_issues"])
+
+    def test_archived_tab_shows_archived_issues(self, client, user, membership, issue):
+        Issue.objects.filter(pk=issue.pk).update(state=Issue.State.PUBLISHED)
+        client.force_login(user)
+        response = client.get(_list_url(membership.journal, tab="archived"))
+        assert response.status_code == 200
+        assert response.context["tab"] == "archived"
+        assert issue.pk in [i.pk for i in response.context["archived_issues"]]
+
+    def test_active_issue_not_in_archived_tab(self, client, user, membership, issue):
+        client.force_login(user)
+        response = client.get(_list_url(membership.journal, tab="archived"))
+        assert issue.pk not in [i.pk for i in response.context["archived_issues"]]
+
+    def test_counts_in_context(self, client, user, membership, issue, db):
+        from apps.journals.models import Journal
+
+        Issue.objects.create(
+            journal=membership.journal, number="2",
+            thematic_title="Deuxième", editor_name="Ed",
+        )
+        Issue.objects.filter(pk=issue.pk).update(state=Issue.State.PUBLISHED)
+        client.force_login(user)
+        response = client.get(_list_url(membership.journal))
+        assert response.context["active_count"] == 1
+        assert response.context["archived_count"] == 1
+
+    def test_other_journal_issues_not_shown(self, client, user, membership, db):
+        from apps.journals.models import Journal
+
+        other = Journal.objects.create(name="Autre", slug="autre")
+        Issue.objects.create(journal=other, number="X", thematic_title="Autre", editor_name="Ed")
+        client.force_login(user)
+        response = client.get(_list_url(membership.journal))
+        assert all(i.journal_id == membership.journal.pk for i in response.context["active_issues"])

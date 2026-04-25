@@ -2,6 +2,7 @@ import json
 
 from django.core.exceptions import ValidationError
 from django.http import JsonResponse
+from django.shortcuts import redirect, render
 from django.views import View
 from django_fsm import can_proceed
 
@@ -37,6 +38,57 @@ def compute_transitions(specs, obj, is_archived=False):
         else:
             advanced.append(entry)
     return {"primary": primary, "advanced": advanced}
+
+
+class JournalOwnedCreateView(JournalMemberRequiredMixin, View):
+    form_class = None
+    template_name = None
+
+    def get_form_kwargs(self):
+        kwargs = {"journal": self.request.journal}
+        if self.request.method == "POST":
+            kwargs["data"] = self.request.POST
+            kwargs["files"] = self.request.FILES
+        return kwargs
+
+    def get_form(self):
+        return self.form_class(**self.get_form_kwargs())
+
+    def get_extra_context(self):
+        return {}
+
+    def get_context_data(self, form):
+        return {
+            "journal": self.request.journal,
+            "user_journal_count": self.request.user.memberships.count(),
+            "form": form,
+            **self.get_extra_context(),
+        }
+
+    def prepare_instance(self, instance, form):
+        """Set FK fields on the unsaved instance before save()."""
+        pass
+
+    def post_create(self, instance, form):
+        """Side-effect hook called after save() (e.g. creating related objects)."""
+        pass
+
+    def get_success_url(self, instance):
+        raise NotImplementedError
+
+    def get(self, request, **kwargs):
+        return render(request, self.template_name, self.get_context_data(self.get_form()))
+
+    def post(self, request, **kwargs):
+        form = self.get_form()
+        if form.is_valid():
+            instance = form.save(commit=False)
+            instance.journal = request.journal
+            self.prepare_instance(instance, form)
+            instance.save()
+            self.post_create(instance, form)
+            return redirect(self.get_success_url(instance))
+        return render(request, self.template_name, self.get_context_data(form))
 
 
 class JournalOwnedPatchView(JournalOwnedObjectMixin, JournalMemberRequiredMixin, View):

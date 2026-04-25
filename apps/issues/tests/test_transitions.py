@@ -205,28 +205,29 @@ class TestIssueTransitionView:
     def test_context_primary_transition_for_under_review(self, client, user, membership, journal, issue):
         client.force_login(user)
         ctx = client.get(reverse("issues:detail", kwargs={"slug": journal.slug, "issue_id": issue.pk})).context
-        assert ctx["transitions"]["primary"]["name"] == "accept"
+        primary_names = [t["name"] for t in ctx["transitions"]["primary"]]
+        assert "accept" in primary_names
 
-    def test_context_secondary_for_under_review_is_refuse(self, client, user, membership, journal, issue):
+    def test_context_refuse_in_primary_for_under_review(self, client, user, membership, journal, issue):
         client.force_login(user)
         ctx = client.get(reverse("issues:detail", kwargs={"slug": journal.slug, "issue_id": issue.pk})).context
-        secondary_names = [t["name"] for t in ctx["transitions"]["secondary"]]
-        assert "refuse" in secondary_names
+        primary_names = [t["name"] for t in ctx["transitions"]["primary"]]
+        assert "refuse" in primary_names
 
     def test_context_no_primary_for_refused(self, client, user, membership, journal, issue):
         issue.refuse()
         issue.save()
         client.force_login(user)
         ctx = client.get(reverse("issues:detail", kwargs={"slug": journal.slug, "issue_id": issue.pk})).context
-        assert ctx["transitions"]["primary"] is None
+        assert ctx["transitions"]["primary"] == []
 
     def test_context_send_to_reviewers_disabled_when_no_articles(self, client, user, membership, journal, accepted_issue):
         client.force_login(user)
         ctx = client.get(reverse("issues:detail", kwargs={"slug": journal.slug, "issue_id": accepted_issue.pk})).context
         primary = ctx["transitions"]["primary"]
-        assert primary["name"] == "send_to_reviewers"
-        assert primary["enabled"] is False
-        assert primary["disabled_reason"]
+        entry = next(t for t in primary if t["name"] == "send_to_reviewers")
+        assert entry["enabled"] is False
+        assert entry["disabled_reason"]
 
     def test_context_send_to_publisher_disabled_when_no_articles(self, client, user, membership, journal, final_check_issue):
         # Remove the article that was created by the fixture chain
@@ -234,6 +235,6 @@ class TestIssueTransitionView:
         client.force_login(user)
         ctx = client.get(reverse("issues:detail", kwargs={"slug": journal.slug, "issue_id": final_check_issue.pk})).context
         primary = ctx["transitions"]["primary"]
-        assert primary["name"] == "send_to_publisher"
-        assert primary["enabled"] is False
-        assert primary["disabled_reason"]
+        entry = next(t for t in primary if t["name"] == "send_to_publisher")
+        assert entry["enabled"] is False
+        assert entry["disabled_reason"]

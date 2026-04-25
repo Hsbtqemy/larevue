@@ -1,0 +1,176 @@
+{% extends "base.html" %}
+{% load static edito %}
+
+{% block title %}Numéros — {{ journal.name }}{% endblock %}
+
+{% block body_class %}{% endblock %}
+
+{% block extra_head %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter+Tight:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{% static 'css/edito.css' %}">
+<style>
+  :root {
+    --accent: {{ journal.accent_color }};
+    --accent-soft: color-mix(in srgb, {{ journal.accent_color }} 25%, #fbf8f1);
+    --accent-tint: color-mix(in srgb, {{ journal.accent_color }} 10%, #fbf8f1);
+  }
+  .tab-bar { display:flex; gap:4px; margin-bottom:20px; border-bottom:1px solid var(--line); }
+  .tab { padding:8px 16px; font-size:14px; font-weight:500; color:var(--ink-muted); text-decoration:none; border-bottom:2px solid transparent; margin-bottom:-1px; }
+  .tab.active { color:var(--ink); border-bottom-color:var(--accent); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="app-shell" data-theme="chaleureuse">
+
+  {# ===== SIDEBAR ===== #}
+  <aside class="sidebar">
+
+    <div class="sidebar-brand">
+      <div class="brand-mark">É</div>
+      <div class="brand-name">Edito</div>
+    </div>
+
+    <div class="revue-switcher">
+      <div class="revue-switcher-label">Revue courante</div>
+      {% if user_journal_count > 1 %}
+        <a href="{% url 'home' %}" class="revue-switcher-current" style="text-decoration:none">
+          <span class="revue-dot" style="background:var(--accent)"></span>
+          <span class="revue-name">{{ journal.name }}</span>
+          <span class="chev">{% icon "chevron" 14 %}</span>
+        </a>
+      {% else %}
+        <div class="revue-switcher-current" style="cursor:default">
+          <span class="revue-dot" style="background:var(--accent)"></span>
+          <span class="revue-name">{{ journal.name }}</span>
+        </div>
+      {% endif %}
+    </div>
+
+    <nav class="nav">
+      <a href="{% url 'journal_dashboard' slug=journal.slug %}" class="nav-item" style="text-decoration:none">
+        {% icon "home" 17 cls="icon" %}
+        Tableau de bord
+      </a>
+      <a href="{% url 'issues:list' slug=journal.slug %}" class="nav-item active" style="text-decoration:none">
+        {% icon "file" 17 cls="icon" %}
+        Numéros en cours
+      </a>
+      <a href="{% url 'contacts:create' slug=journal.slug %}" class="nav-item" style="text-decoration:none">
+        {% icon "users" 17 cls="icon" %}
+        Contacts
+      </a>
+      <a href="#" class="nav-item" style="text-decoration:none">
+        {% icon "archive" 17 cls="icon" %}
+        Archives
+      </a>
+    </nav>
+
+    <div class="sidebar-user">
+      <div class="avatar">{{ request.user.first_name|slice:":1" }}{{ request.user.last_name|slice:":1" }}</div>
+      <div class="sidebar-user-info">
+        <div class="n">{{ request.user.get_full_name }}</div>
+        <div class="e">{{ request.user.email }}</div>
+      </div>
+      <form method="post" action="{% url 'account_logout' %}" style="margin-left:auto;flex-shrink:0">
+        {% csrf_token %}
+        <button type="submit" class="btn ghost sm" title="Se déconnecter">
+          {% icon "back" 14 %}
+        </button>
+      </form>
+    </div>
+
+  </aside>
+
+  {# ===== MAIN ===== #}
+  <main class="main">
+
+    <div class="accent-strip" style="background:var(--accent)"></div>
+
+    <div class="accent-bandeau">
+      <div class="eyebrow">{{ journal.name }}</div>
+      <h1 style="font-size:32px;letter-spacing:-0.02em">Numéros</h1>
+    </div>
+
+    <div class="main-content">
+      <div class="section">
+
+        <div class="section-head">
+          <div class="tab-bar">
+            <a href="?tab=active" class="tab {% if tab != 'archived' %}active{% endif %}">
+              Actifs ({{ active_count }})
+            </a>
+            <a href="?tab=archived" class="tab {% if tab == 'archived' %}active{% endif %}">
+              Archivés ({{ archived_count }})
+            </a>
+          </div>
+          <a href="{% url 'issues:create' slug=journal.slug %}" class="btn primary sm" style="text-decoration:none">
+            {% icon "plus" 14 cls="icon" %} Nouveau numéro
+          </a>
+        </div>
+
+        {% if tab == "archived" %}
+          {% if archived_issues %}
+            <div class="issue-grid">
+              {% for issue in archived_issues %}
+                <a href="{% url 'issues:detail' slug=journal.slug issue_id=issue.pk %}" class="issue-card" style="text-decoration:none">
+                  <div class="issue-card-head">
+                    <div>
+                      <div class="issue-card-num">
+                        N°{{ issue.number }}{% if issue.planned_publication_date %}&nbsp;· parution {{ issue.planned_publication_date|date:"d/m/Y" }}{% endif %}
+                      </div>
+                      <h3>{{ issue.thematic_title }}</h3>
+                    </div>
+                    <span class="badge {{ issue.get_badge_tone }}">{{ issue.get_state_display }}</span>
+                  </div>
+                  <div class="issue-card-meta">
+                    <span>Responsable&nbsp;: <strong style="color:var(--ink);font-weight:500">{{ issue.editor_name }}</strong></span>
+                  </div>
+                </a>
+              {% endfor %}
+            </div>
+          {% else %}
+            <div class="empty">
+              <h4>Aucun numéro archivé</h4>
+              <p>Les numéros publiés ou refusés apparaîtront ici.</p>
+            </div>
+          {% endif %}
+        {% else %}
+          {% if active_issues %}
+            <div class="issue-grid">
+              {% for issue in active_issues %}
+                <a href="{% url 'issues:detail' slug=journal.slug issue_id=issue.pk %}" class="issue-card" style="text-decoration:none">
+                  <div class="issue-card-head">
+                    <div>
+                      <div class="issue-card-num">
+                        N°{{ issue.number }}{% if issue.planned_publication_date %}&nbsp;· parution {{ issue.planned_publication_date|date:"d/m/Y" }}{% endif %}
+                      </div>
+                      <h3>{{ issue.thematic_title }}</h3>
+                    </div>
+                    <span class="badge {{ issue.get_badge_tone }}">{{ issue.get_state_display }}</span>
+                  </div>
+                  <div class="issue-card-meta">
+                    <span>Responsable&nbsp;: <strong style="color:var(--ink);font-weight:500">{{ issue.editor_name }}</strong></span>
+                  </div>
+                </a>
+              {% endfor %}
+            </div>
+          {% else %}
+            <div class="empty">
+              <h4>Aucun numéro en cours</h4>
+              <p>
+                <a href="{% url 'issues:create' slug=journal.slug %}" style="color:var(--accent)">Créer le premier numéro</a>
+              </p>
+            </div>
+          {% endif %}
+        {% endif %}
+
+      </div>
+    </div>
+
+  </main>
+
+</div>
+{% endblock %}

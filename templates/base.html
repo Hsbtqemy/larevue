@@ -12,6 +12,13 @@
 </head>
 <body class="{% block body_class %}min-h-screen bg-gray-50 text-gray-900{% endblock %}">
   {% include "partials/_saved_banner.html" %}
+  {% if messages %}
+    <div style="position:fixed;top:20px;right:20px;z-index:400;display:flex;flex-direction:column;gap:8px">
+      {% for message in messages %}
+        <div class="saved-banner" style="background:{% if 'error' in message.tags %}#c0392b{% else %}#2d6a4f{% endif %}">{{ message }}</div>
+      {% endfor %}
+    </div>
+  {% endif %}
   {% block content %}{% endblock %}
 </body>
 </html>

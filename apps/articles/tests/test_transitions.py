@@ -200,14 +200,16 @@ class TestArticleTransitionView:
         ctx = client.get(
             reverse("articles:detail", kwargs={"slug": journal.slug, "issue_id": issue.pk, "article_id": article.pk})
         ).context
-        assert ctx["transitions"]["primary"]["name"] == "send_to_review"
+        primary_names = [t["name"] for t in ctx["transitions"]["primary"]]
+        assert "send_to_review" in primary_names
 
     def test_context_primary_transition_for_in_review(self, client, user, membership, journal, issue, in_review_article):
         client.force_login(user)
         ctx = client.get(
             reverse("articles:detail", kwargs={"slug": journal.slug, "issue_id": issue.pk, "article_id": in_review_article.pk})
         ).context
-        assert ctx["transitions"]["primary"]["name"] == "mark_reviews_received"
+        primary_names = [t["name"] for t in ctx["transitions"]["primary"]]
+        assert "mark_reviews_received" in primary_names
 
     def test_context_cancel_review_in_advanced_for_in_review(self, client, user, membership, journal, issue, in_review_article):
         client.force_login(user)
@@ -222,6 +224,5 @@ class TestArticleTransitionView:
         ctx = client.get(
             reverse("articles:detail", kwargs={"slug": journal.slug, "issue_id": archived_issue.pk, "article_id": article.pk})
         ).context
-        assert ctx["transitions"]["primary"] is None
-        assert ctx["transitions"]["secondary"] == []
+        assert ctx["transitions"]["primary"] == []
         assert ctx["transitions"]["advanced"] == []
