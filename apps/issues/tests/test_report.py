@@ -6,7 +6,7 @@ from django.urls import reverse
 
 from apps.accounts.models import User
 from apps.articles.models import InternalNote
-from apps.issues.models import Issue, IssueDocument
+from apps.issues.models import IssueDocument
 from apps.reviews.models import ReviewRequest
 
 
@@ -47,6 +47,11 @@ def issue_document(issue, user):
 
 @pytest.mark.django_db
 class TestIssueReportAccess:
+    def _get(self, client, user, url, wp=None):
+        client.force_login(user)
+        with patch("apps.issues.views.weasyprint", wp):
+            return client.get(url)
+
     def test_unauthenticated_redirects(self, client, journal, issue):
         res = client.get(_report_url(journal.slug, issue.pk))
         assert res.status_code == 302
@@ -62,42 +67,25 @@ class TestIssueReportAccess:
         assert res.status_code == 403
 
     def test_member_gets_200(self, client, user, membership, report_url):
-        client.force_login(user)
-        with patch("apps.issues.views.weasyprint", None):
-            res = client.get(report_url)
-        assert res.status_code == 200
+        assert self._get(client, user, report_url).status_code == 200
 
     def test_nonexistent_issue_returns_404(self, client, user, membership):
-        client.force_login(user)
-        with patch("apps.issues.views.weasyprint", None):
-            res = client.get(_report_url(membership.journal.slug, 99999))
-        assert res.status_code == 404
+        assert self._get(client, user, _report_url(membership.journal.slug, 99999)).status_code == 404
 
     def test_content_type_pdf_when_weasyprint_available(self, client, user, membership, report_url, mock_wp):
-        client.force_login(user)
-        with patch("apps.issues.views.weasyprint", mock_wp):
-            res = client.get(report_url)
-        assert res["Content-Type"] == "application/pdf"
+        assert self._get(client, user, report_url, mock_wp)["Content-Type"] == "application/pdf"
 
     def test_content_disposition_filename(self, client, user, membership, report_url, mock_wp):
-        client.force_login(user)
-        with patch("apps.issues.views.weasyprint", mock_wp):
-            res = client.get(report_url)
-        disposition = res["Content-Disposition"]
+        disposition = self._get(client, user, report_url, mock_wp)["Content-Disposition"]
         assert "rapport_" in disposition
         assert ".pdf" in disposition
 
     def test_html_fallback_when_weasyprint_unavailable(self, client, user, membership, report_url):
-        client.force_login(user)
-        with patch("apps.issues.views.weasyprint", None):
-            res = client.get(report_url)
-        assert "text/html" in res["Content-Type"]
+        assert "text/html" in self._get(client, user, report_url)["Content-Type"]
 
 
 @pytest.mark.django_db
 class TestIssueReportOptions:
-    """Test that option flags control which sections appear in the HTML report."""
-
     def _get(self, client, user, report_url, **params):
         client.force_login(user)
         with patch("apps.issues.views.weasyprint", None):

@@ -472,21 +472,25 @@ class IssueDocumentDownloadView(JournalMemberRequiredMixin, View):
 
 
 def _build_report_context(request, issue, options):
+    prefetch = ["review_requests"]
+    if options["include_articles_detail"]:
+        prefetch += ["versions", "review_requests__reviewer"]
+
     articles = list(
         issue.articles
-        .prefetch_related("versions", "review_requests", "review_requests__reviewer")
+        .prefetch_related(*prefetch)
         .order_by("order", "created_at")
     )
     for a in articles:
-        versions = list(a.versions.all())
-        a.all_versions = versions
         rrs = list(a.review_requests.all())
         a.reviews = rrs
         a.reviews_received = sum(1 for r in rrs if r.state == ReviewRequest.State.RECEIVED)
         a.reviews_total = len(rrs)
+        if options["include_articles_detail"]:
+            a.all_versions = list(a.versions.all())
 
     issue_notes = (
-        list(issue.internal_notes.select_related("author").order_by("created_at"))
+        list(issue.internal_notes.select_related("author"))
         if options["include_notes"] else []
     )
     documents = (
@@ -495,9 +499,9 @@ def _build_report_context(request, issue, options):
     )
 
     deadlines = [
-        (label, getattr(issue, field))
+        (label, v)
         for field, label in DEADLINE_LABELS.items()
-        if getattr(issue, field)
+        if (v := getattr(issue, field))
     ]
 
     return {
@@ -531,7 +535,7 @@ class IssueReportView(JournalMemberRequiredMixin, View):
 
         if weasyprint is not None:
             pdf = weasyprint.HTML(string=html).write_pdf()
-            filename = f"rapport_{request.journal.slug}_n{issue.number}_{ctx['generated_at'].date()}.pdf"
+            filename = f"rapport_{ctx['journal'].slug}_n{issue.number}_{ctx['generated_at'].date()}.pdf"
             response = HttpResponse(pdf, content_type="application/pdf")
             response["Content-Disposition"] = f'attachment; filename="{filename}"'
             return response
