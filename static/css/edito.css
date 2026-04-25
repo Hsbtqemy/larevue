@@ -36,6 +36,12 @@
   --accent-slate:     #4a6272;
   --accent-slate-soft: #d4dde3;
   --accent-slate-tint: #e4ebef;
+  --accent-plum:      #7a4a8c;
+  --accent-plum-soft: #e0d4e8;
+  --accent-plum-tint: #ede7f2;
+  --accent-ochre:     #8a6a18;
+  --accent-ochre-soft: #e8dfc4;
+  --accent-ochre-tint: #f1ead6;
 
   /* Sémantique (états) */
   --tone-neutral-bg:  #e6dfcf;
@@ -97,6 +103,12 @@
   --accent-slate:     #3d4d58;
   --accent-slate-soft: #cdd4d9;
   --accent-slate-tint: #dee3e7;
+  --accent-plum:      #5e3a70;
+  --accent-plum-soft: #d5cade;
+  --accent-plum-tint: #e6e0ec;
+  --accent-ochre:     #6e5314;
+  --accent-ochre-soft: #ddd4bc;
+  --accent-ochre-tint: #ece5d4;
 
   --tone-neutral-bg:  #eaeae8;
   --tone-neutral-ink: #3a3a38;
@@ -504,6 +516,8 @@ label {
 [data-accent="terracotta"] { --accent: var(--accent-terracotta); --accent-soft: var(--accent-terracotta-soft); --accent-tint: var(--accent-terracotta-tint); }
 [data-accent="olive"]      { --accent: var(--accent-olive);      --accent-soft: var(--accent-olive-soft);      --accent-tint: var(--accent-olive-tint); }
 [data-accent="slate"]      { --accent: var(--accent-slate);      --accent-soft: var(--accent-slate-soft);      --accent-tint: var(--accent-slate-tint); }
+[data-accent="plum"]       { --accent: var(--accent-plum);       --accent-soft: var(--accent-plum-soft);       --accent-tint: var(--accent-plum-tint); }
+[data-accent="ochre"]      { --accent: var(--accent-ochre);      --accent-soft: var(--accent-ochre-soft);      --accent-tint: var(--accent-ochre-tint); }
 
 /* ---------- Modal ---------- */
 .modal-backdrop {
@@ -2514,6 +2528,12 @@ textarea.text-input {
   --accent-slate:           #8fb0c5;
   --accent-slate-soft:      #2a3942;
   --accent-slate-tint:      #1c252b;
+  --accent-plum:            #c090d5;
+  --accent-plum-soft:       #3a2545;
+  --accent-plum-tint:       #261833;
+  --accent-ochre:           #d4a852;
+  --accent-ochre-soft:      #3d3018;
+  --accent-ochre-tint:      #281f0e;
 
   /* Sémantique — fonds plus saturés, encres pâles pour ratio AA */
   --tone-neutral-bg:  #2c3038;  --tone-neutral-ink:  #e3ddd0;

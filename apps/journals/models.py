@@ -6,6 +6,14 @@ from apps.core.models import BaseModel, TimestampedModel
 
 
 class Journal(BaseModel):
+    ACCENT_CHOICES = [
+        ("terracotta", "Terracotta"),
+        ("olive", "Olive"),
+        ("slate", "Ardoise"),
+        ("plum", "Prune"),
+        ("ochre", "Ocre"),
+    ]
+
     name = models.CharField(max_length=200, unique=True, verbose_name="Nom")
     slug = models.SlugField(unique=True, verbose_name="Identifiant URL")
     description = models.TextField(blank=True, verbose_name="Description")
@@ -13,10 +21,10 @@ class Journal(BaseModel):
         upload_to="journals/logos/", blank=True, null=True, verbose_name="Logo"
     )
     accent_color = models.CharField(
-        max_length=7,
-        default="#000000",
+        max_length=20,
+        choices=ACCENT_CHOICES,
+        default="terracotta",
         verbose_name="Couleur d'accentuation",
-        help_text="Code hexadécimal (ex : #3B82F6) pour personnaliser l'interface.",
     )
 
     class Meta:
