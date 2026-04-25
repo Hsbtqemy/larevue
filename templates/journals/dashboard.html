@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter+Tight:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="{% static 'css/edito.css' %}?v=20260425c">
+<link rel="stylesheet" href="{% static 'css/edito.css' %}?v=20260425d">
 {% endblock %}
 
 {% block content %}
@@ -192,6 +192,65 @@
         </div>
 
       </div>{# /dash-grid #}
+
+      {# ===== Calendrier des échéances ===== #}
+      {{ calendar_events|json_script:"calendar-events" }}
+      <div class="section" x-data="calendarView('{{ today_iso }}')">
+        <div class="section-head">
+          <h2>Calendrier des échéances</h2>
+        </div>
+        <div class="cal-month-nav" role="group" aria-label="Navigation mensuelle">
+          <button type="button" class="btn ghost sm" @click="prevMonth()" :disabled="!canPrev" aria-label="Mois précédent">← Préc.</button>
+          <span class="cal-month-label" x-text="monthLabel" aria-live="polite"></span>
+          <button type="button" class="btn ghost sm" @click="goToday()" x-show="!isCurrentMonth" x-cloak>Aujourd'hui</button>
+          <button type="button" class="btn ghost sm" @click="nextMonth()" :disabled="!canNext" aria-label="Mois suivant">Suiv. →</button>
+        </div>
+        <div class="cal-month-grid" role="grid" aria-label="Calendrier des échéances" @click="expandedDate = null">
+          <div class="cal-weekday" role="columnheader">Lun</div>
+          <div class="cal-weekday" role="columnheader">Mar</div>
+          <div class="cal-weekday" role="columnheader">Mer</div>
+          <div class="cal-weekday" role="columnheader">Jeu</div>
+          <div class="cal-weekday" role="columnheader">Ven</div>
+          <div class="cal-weekday" role="columnheader">Sam</div>
+          <div class="cal-weekday" role="columnheader">Dim</div>
+          <template x-for="cell in cells" :key="cell.dateStr">
+            <div class="cal-cell"
+                 role="gridcell"
+                 :class="{ 'out-of-month': !cell.inMonth, 'is-today': cell.isToday }"
+                 :aria-label="cell.dateStr">
+              <div class="cal-day-num" x-text="cell.day" :aria-current="cell.isToday ? 'date' : null"></div>
+              <template x-for="evt in cell.events.slice(0, 3)" :key="evt.url + evt.type + evt.date">
+                <a :href="evt.url"
+                   class="cal-evt"
+                   :class="'cal-evt--' + evt.type"
+                   :title="evt.label"
+                   x-text="evt.label"
+                   :aria-label="evt.label"></a>
+              </template>
+              <div x-show="cell.events.length > 3"
+                   class="cal-evt-more"
+                   tabindex="0"
+                   role="button"
+                   @click.stop="toggleExpand(cell.dateStr)"
+                   @keydown.enter.prevent="toggleExpand(cell.dateStr)"
+                   x-text="'+' + (cell.events.length - 3) + ' autre' + (cell.events.length - 3 > 1 ? 's' : '')"></div>
+              <div x-show="expandedDate === cell.dateStr"
+                   class="cal-popover"
+                   @click.stop
+                   role="dialog"
+                   :aria-label="'Tous les événements du ' + cell.dateStr">
+                <template x-for="evt in cell.events" :key="'pop-' + evt.url + evt.type + evt.date">
+                  <a :href="evt.url"
+                     class="cal-evt"
+                     :class="'cal-evt--' + evt.type"
+                     x-text="evt.label"
+                     :aria-label="evt.label"></a>
+                </template>
+              </div>
+            </div>
+          </template>
+        </div>
+      </div>
 
     </div>{# /main-content #}
   </main>
