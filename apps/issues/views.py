@@ -2,13 +2,21 @@ import datetime
 
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.db.models import Count, F
-from django.http import Http404, JsonResponse
+from django.http import Http404, HttpResponse, JsonResponse
 from django.shortcuts import redirect
+from django.template.loader import render_to_string
 from django.urls import reverse
+from django.utils import timezone
 from django.views import View
 from django.views.generic import DetailView, TemplateView
 
+try:
+    import weasyprint
+except OSError:
+    weasyprint = None
+
 from apps.articles.models import Article, InternalNote
+from apps.core.display import DEADLINE_LABELS
 from apps.core.mixins import JournalMemberRequiredMixin, JournalOwnedObjectMixin
 from apps.core.utils import file_response
 from apps.core.views import JournalOwnedCreateView, JournalOwnedPatchView, JournalOwnedTransitionView, compute_transitions
@@ -461,3 +469,68 @@ class IssueDocumentDownloadView(JournalMemberRequiredMixin, View):
         if not doc.file:
             raise Http404
         return file_response(doc.file)
+
+
+def _build_report_context(request, issue, options):
+    journal = request.journal
+
+    articles = list(
+        issue.articles
+        .prefetch_related("versions", "review_requests", "review_requests__reviewer")
+        .order_by("order", "created_at")
+    )
+    for a in articles:
+        versions = list(a.versions.all())
+        a.all_versions = versions
+        a.latest_version = versions[-1] if versions else None
+        rrs = list(a.review_requests.all())
+        a.reviews = rrs
+        a.reviews_received = sum(1 for r in rrs if r.state == ReviewRequest.State.RECEIVED)
+        a.reviews_total = len(rrs)
+
+    issue_notes = (
+        list(issue.internal_notes.select_related("author").order_by("created_at"))
+        if options["include_notes"] else []
+    )
+    documents = (
+        list(issue.documents.select_related("uploaded_by"))
+        if options["include_documents"] else []
+    )
+
+    return {
+        "journal": journal,
+        "issue": issue,
+        "articles": articles,
+        "issue_notes": issue_notes,
+        "documents": documents,
+        "options": options,
+        "generated_at": timezone.now(),
+        "deadline_labels": DEADLINE_LABELS,
+    }
+
+
+class IssueReportView(JournalMemberRequiredMixin, View):
+    def get(self, request, issue_id, **kwargs):
+        try:
+            issue = Issue.objects.get(pk=issue_id, journal=request.journal)
+        except Issue.DoesNotExist:
+            raise Http404
+
+        options = {
+            "include_notes": request.GET.get("include_notes", "1") == "1",
+            "include_reviews_detail": request.GET.get("include_reviews_detail", "1") == "1",
+            "include_articles_detail": request.GET.get("include_articles_detail", "1") == "1",
+            "include_documents": request.GET.get("include_documents", "1") == "1",
+        }
+
+        ctx = _build_report_context(request, issue, options)
+        html = render_to_string("issues/report.html", ctx, request=request)
+
+        if weasyprint is not None:
+            pdf = weasyprint.HTML(string=html).write_pdf()
+            filename = f"rapport_{request.journal.slug}_n{issue.number}_{timezone.now().date()}.pdf"
+            response = HttpResponse(pdf, content_type="application/pdf")
+            response["Content-Disposition"] = f'attachment; filename="{filename}"'
+            return response
+
+        return HttpResponse(html, content_type="text/html")
