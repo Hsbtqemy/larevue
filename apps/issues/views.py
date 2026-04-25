@@ -252,10 +252,23 @@ class IssueDetailView(JournalMemberRequiredMixin, DetailView):
             kwargs={"slug": journal.slug, "issue_id": issue.pk},
         )
 
+        _doc_kw = {"slug": journal.slug, "issue_id": issue.pk}
+        documents = list(issue.documents.select_related("uploaded_by").all())
+        for doc in documents:
+            doc.download_url = reverse(
+                "issues:document_download", kwargs={**_doc_kw, "doc_id": doc.pk}
+            )
+            doc.delete_url = reverse(
+                "issues:document_delete", kwargs={**_doc_kw, "doc_id": doc.pk}
+            )
+
         ctx.update({
             "journal": journal,
             "articles": articles,
-            "documents": issue.documents.select_related("uploaded_by").all(),
+            "documents": documents,
+            "doc_create_url": reverse("issues:document_create", kwargs=_doc_kw),
+            "doc_section_title": "Documents du numéro",
+            "doc_add_modal_title": "Ajouter un document au numéro",
             "is_editable": is_editable,
             "transitions": self._compute_transitions(issue),
             "transition_url": transition_url,
@@ -405,7 +418,7 @@ def _log_issue_action(issue, user, message):
 
 
 def _actor_name(user):
-    return user.first_name or user.email
+    return user.get_full_name() or user.email
 
 
 class IssueDocumentCreateView(JournalOwnedObjectMixin, JournalMemberRequiredMixin, View):

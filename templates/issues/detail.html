@@ -377,56 +377,8 @@
     </div>
 
     {# ===== Documents du numéro ===== #}
-    {% url 'issues:document_create' slug=journal.slug issue_id=issue.pk as doc_create_url %}
     <div class="main-content" style="padding-bottom:0">
-      <div class="section">
-        <div class="section-head">
-          <h2>Documents du numéro</h2>
-          <span class="meta">{{ documents|length }} document{{ documents|length|pluralize }}</span>
-          {% if is_editable %}
-            {% include "issues/_document_add_modal.html" with create_url=doc_create_url %}
-          {% endif %}
-        </div>
-
-        {% if documents %}
-          <div class="doc-list">
-            {% for doc in documents %}
-              <div class="doc-row">
-                <div class="doc-row-icon">{% icon "file" 16 %}</div>
-                <div class="doc-row-body">
-                  <div class="doc-row-name">
-                    <a href="{% url 'issues:document_download' slug=journal.slug issue_id=issue.pk doc_id=doc.pk %}">{{ doc.name }}</a>
-                  </div>
-                  {% if doc.description %}
-                    <div class="doc-row-desc">{{ doc.description }}</div>
-                  {% endif %}
-                  <div class="doc-row-meta">
-                    Ajouté par {{ doc.uploaded_by.get_full_name|default:doc.uploaded_by.email }}
-                    le {{ doc.uploaded_at|date:"j F Y" }}
-                  </div>
-                </div>
-                {% if is_editable %}
-                  <div class="doc-row-actions" x-data="{ open: false }">
-                    <button type="button"
-                            class="btn ghost sm"
-                            title="Supprimer ce document"
-                            @click="open = true">
-                      {% icon "trash" 14 %}
-                    </button>
-                    {% include "issues/_document_delete_modal.html" with doc=doc %}
-                  </div>
-                {% endif %}
-              </div>
-            {% endfor %}
-          </div>
-        {% else %}
-          <div class="empty">
-            <h4>Aucun document attaché</h4>
-            <p>Projet de numéro, appel à contributions, calendrier… ajoutez ici les documents de référence du numéro.</p>
-          </div>
-        {% endif %}
-
-      </div>
+      {% include "partials/_documents_panel.html" %}
     </div>
 
     {# ===== Articles ===== #}
