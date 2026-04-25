@@ -258,7 +258,7 @@ document.addEventListener("alpine:init", () => {
       this.zoom     = html.getAttribute("data-zoom")     || "normal";
     },
 
-    set(key, value) {
+    applyPref(key, value) {
       this[key] = value;
       document.documentElement.setAttribute("data-" + key, value);
       try {

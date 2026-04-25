@@ -32,13 +32,13 @@
         <button role="radio"
                 :aria-checked="theme === 'chaleureuse'"
                 :class="{ on: theme === 'chaleureuse' }"
-                @click="set('theme', 'chaleureuse')">
+                @click="applyPref('theme', 'chaleureuse')">
           {% icon "sun" 13 %} Clair
         </button>
         <button role="radio"
                 :aria-checked="theme === 'sombre'"
                 :class="{ on: theme === 'sombre' }"
-                @click="set('theme', 'sombre')">
+                @click="applyPref('theme', 'sombre')">
           {% icon "moon" 13 %} Sombre
         </button>
       </div>
@@ -50,7 +50,7 @@
               :class="{ on: contrast === 'eleve' }"
               role="switch"
               :aria-checked="contrast === 'eleve'"
-              @click="set('contrast', contrast === 'eleve' ? 'normal' : 'eleve')">
+              @click="applyPref('contrast', contrast === 'eleve' ? 'normal' : 'eleve')">
         <div class="prefs-toggle-label">
           <span class="prefs-toggle-title">Contraste élevé</span>
           <span class="prefs-toggle-sub">Bordures renforcées, texte plus contrasté</span>
@@ -66,21 +66,21 @@
         <button role="radio"
                 :aria-checked="zoom === 'normal'"
                 :class="{ on: zoom === 'normal' }"
-                @click="set('zoom', 'normal')">
+                @click="applyPref('zoom', 'normal')">
           <span style="font-size:12px">A</span>
           <span class="prefs-zoom-lbl">100&nbsp;%</span>
         </button>
         <button role="radio"
                 :aria-checked="zoom === 'grand'"
                 :class="{ on: zoom === 'grand' }"
-                @click="set('zoom', 'grand')">
+                @click="applyPref('zoom', 'grand')">
           <span style="font-size:15px">A</span>
           <span class="prefs-zoom-lbl">125&nbsp;%</span>
         </button>
         <button role="radio"
                 :aria-checked="zoom === 'tres-grand'"
                 :class="{ on: zoom === 'tres-grand' }"
-                @click="set('zoom', 'tres-grand')">
+                @click="applyPref('zoom', 'tres-grand')">
           <span style="font-size:18px">A</span>
           <span class="prefs-zoom-lbl">150&nbsp;%</span>
         </button>
