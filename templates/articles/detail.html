@@ -141,6 +141,17 @@
             <div>{% state_badge article %}</div>
             {% include "articles/_header_counters.html" %}
           </div>
+
+          <div class="article-abstract" style="margin-top:12px">
+            <span class="label-sm muted">Résumé</span>
+            <div class="abstract-body" style="margin-top:4px">
+              {% if not is_archived %}
+                {% inline_editable "abstract" article patch_url input_type="textarea" placeholder="Ajouter un résumé…" %}
+              {% else %}
+                {{ article.abstract|default:"—" }}
+              {% endif %}
+            </div>
+          </div>
         </div>
 
         {# Action buttons #}

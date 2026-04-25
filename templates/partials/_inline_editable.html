@@ -10,7 +10,7 @@
         @click="startEdit()"
         @keydown.enter.prevent="startEdit()"
         @keydown.space.prevent="startEdit()">
-    <span x-text="displayDraft || '—'"></span>
+    <span x-text="displayDraft || '{{ placeholder|escapejs }}'"></span>
     <span x-show="justSaved" class="saved-tick" aria-hidden="true">&nbsp;✓</span>
   </span>
 
@@ -35,7 +35,7 @@
     <textarea x-ref="inputTextarea"
               x-model="draft"
               class="editable-input textarea"
-              rows="4"
+              rows="6"
               @blur="commit()"
               @keydown.meta.enter.prevent="commit()"
               @keydown.ctrl.enter.prevent="commit()"

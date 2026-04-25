@@ -186,6 +186,15 @@ class TestArticlePatchView:
         assert res.status_code == 200
         assert Article.objects.get(pk=article.pk).article_type == "introduction"
 
+    def test_patch_abstract_valid(self, client, user, membership, journal, issue, article):
+        client.force_login(user)
+        res = _json_post(
+            client, _patch_url(journal, issue, article),
+            {"field": "abstract", "value": "Un résumé de l'article."},
+        )
+        assert res.status_code == 200
+        assert Article.objects.get(pk=article.pk).abstract == "Un résumé de l'article."
+
     def test_patch_article_type_invalid_value(self, client, user, membership, journal, issue, article):
         client.force_login(user)
         res = _json_post(
@@ -788,6 +797,16 @@ class TestArticleCreateView:
         a = Article.objects.get(issue=issue, title="Article avec fichier")
         assert a.state == Article.State.RECEIVED
         assert a.versions.count() == 1
+
+    def test_valid_post_saves_abstract(self, client, user, membership, journal, issue):
+        client.force_login(user)
+        client.post(_article_create_url(journal, issue), {
+            "title": "Avec résumé",
+            "article_type": Article.Type.ARTICLE,
+            "abstract": "Cet article traite de…",
+        })
+        a = Article.objects.get(issue=issue, title="Avec résumé")
+        assert a.abstract == "Cet article traite de…"
 
     def test_article_belongs_to_issue(self, client, user, membership, journal, issue):
         client.force_login(user)

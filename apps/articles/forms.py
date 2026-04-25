@@ -17,7 +17,8 @@ class ArticleEditForm(forms.ModelForm):
 
     class Meta:
         model = Article
-        fields = ["title", "author", "article_type"]
+        fields = ["title", "author", "article_type", "abstract"]
+        widgets = {"abstract": forms.Textarea(attrs={"rows": 4})}
 
 
 class ArticleCreateForm(forms.ModelForm):
@@ -33,7 +34,8 @@ class ArticleCreateForm(forms.ModelForm):
 
     class Meta:
         model = Article
-        fields = ["title", "author", "article_type"]
+        fields = ["title", "author", "article_type", "abstract"]
+        widgets = {"abstract": forms.Textarea(attrs={"rows": 4})}
 
 
 class ArticleCreateWithIssueForm(ArticleCreateForm):

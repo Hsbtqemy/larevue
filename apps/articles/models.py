@@ -51,6 +51,7 @@ class Article(BaseModel):
         default=Type.ARTICLE,
         verbose_name="Type",
     )
+    abstract = models.TextField(blank=True, verbose_name="Résumé")
     order = models.PositiveIntegerField(default=0, verbose_name="Ordre dans le numéro")
     state = FSMField(
         default=State.PENDING,

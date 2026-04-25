@@ -41,7 +41,7 @@ def verdict_badge(verdict):
 
 
 @register.inclusion_tag("partials/_inline_editable.html")
-def inline_editable(field, instance, url, input_type=None, options=None, datalist_id=None, datalist_options=None):
+def inline_editable(field, instance, url, input_type=None, options=None, datalist_id=None, datalist_options=None, placeholder=None):
     value = getattr(instance, field, "") or ""
     resolved_options = list(options) if options else []
 
@@ -65,6 +65,7 @@ def inline_editable(field, instance, url, input_type=None, options=None, datalis
         "options": resolved_options,
         "datalist_id": datalist_id,
         "datalist_options": datalist_options or [],
+        "placeholder": placeholder or "—",
     }
 
 
