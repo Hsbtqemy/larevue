@@ -17,6 +17,49 @@ from apps.journals.models import JournalDocument
 from apps.reviews.models import ReviewRequest
 
 
+_DEADLINE_TYPE = {
+    "deadline_articles": "articles",
+    "deadline_reviews": "reviews",
+    "deadline_v2": "v2",
+    "deadline_final_check": "final_check",
+    "deadline_sent_to_publisher": "publisher",
+    "planned_publication_date": "publication",
+}
+
+
+def _build_calendar_events(journal):
+    """Return flat list of event dicts for all active issues, used by the calendar view."""
+    active_issues = list(journal.issues.filter(state__in=Issue.ACTIVE_STATES))
+
+    events = []
+    for issue in active_issues:
+        url = reverse("issues:detail", kwargs={"slug": journal.slug, "issue_id": issue.pk})
+        for field, evt_type in _DEADLINE_TYPE.items():
+            d = getattr(issue, field)
+            if d:
+                events.append({
+                    "date": d.isoformat(),
+                    "type": evt_type,
+                    "label": f"{DEADLINE_LABELS[field]} · N°{issue.number}",
+                    "url": url,
+                })
+
+    for rr in (
+        ReviewRequest.objects
+        .filter(state=ReviewRequest.State.EXPECTED, article__issue__in=active_issues)
+        .select_related("article__issue")
+    ):
+        url = reverse("issues:detail", kwargs={"slug": journal.slug, "issue_id": rr.article.issue_id})
+        events.append({
+            "date": rr.deadline.isoformat(),
+            "type": "review_request",
+            "label": f"Relecture · {rr.reviewer_name_snapshot}",
+            "url": url,
+        })
+
+    return events
+
+
 def _get_journal_document_or_404(request, doc_id):
     try:
         return JournalDocument.objects.get(pk=doc_id, journal=request.journal)
@@ -156,6 +199,8 @@ class JournalDashboardView(JournalMemberRequiredMixin, TemplateView):
             "late_count": len(watch_items),
             "upcoming_deadlines": upcoming[:10],
             "user_journal_count": self.request.user.memberships.count(),
+            "calendar_events": _build_calendar_events(journal),
+            "today_iso": today.isoformat(),
         })
         return ctx
 
