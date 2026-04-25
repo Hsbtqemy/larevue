@@ -13,8 +13,8 @@
 <style>
   :root {
     --accent: {{ journal.accent_color }};
-    --accent-soft: color-mix(in srgb, {{ journal.accent_color }} 25%, #fbf8f1);
-    --accent-tint: color-mix(in srgb, {{ journal.accent_color }} 10%, #fbf8f1);
+    --accent-soft: color-mix(in srgb, {{ journal.accent_color }} 25%, var(--bg));
+    --accent-tint: color-mix(in srgb, {{ journal.accent_color }} 10%, var(--bg));
   }
 </style>
 {% endblock %}

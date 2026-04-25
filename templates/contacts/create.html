@@ -13,8 +13,8 @@
 <style>
   :root {
     --accent: {{ journal.accent_color }};
-    --accent-soft: color-mix(in srgb, {{ journal.accent_color }} 25%, #fbf8f1);
-    --accent-tint: color-mix(in srgb, {{ journal.accent_color }} 10%, #fbf8f1);
+    --accent-soft: color-mix(in srgb, {{ journal.accent_color }} 25%, var(--bg));
+    --accent-tint: color-mix(in srgb, {{ journal.accent_color }} 10%, var(--bg));
   }
 </style>
 {% endblock %}
@@ -86,11 +86,11 @@
 
     <div class="accent-strip" style="background:var(--accent)"></div>
 
-    <div style="padding:10px 40px;background:var(--surface);border-bottom:1px solid var(--line);font-size:12.5px;color:var(--ink-faint);display:flex;align-items:center;gap:6px">
-      <a href="{% url 'journal_dashboard' slug=journal.slug %}" style="color:var(--ink-muted);text-decoration:none">{{ journal.name }}</a>
-      {% icon "chevronR" 12 %}
-      <span style="color:var(--ink)">Nouveau contact</span>
-    </div>
+    <nav class="breadcrumb breadcrumb--bar" aria-label="Fil d'Ariane">
+      <a href="{% url 'journal_dashboard' slug=journal.slug %}">{{ journal.name }}</a>
+      <span class="sep">{% icon "chevronR" 12 %}</span>
+      <span aria-current="page">Nouveau contact</span>
+    </nav>
 
     <div class="main-content">
       <div class="section" style="max-width:640px">

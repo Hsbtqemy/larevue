@@ -13,8 +13,8 @@
 <style>
   :root {
     --accent: {{ journal.accent_color }};
-    --accent-soft: color-mix(in srgb, {{ journal.accent_color }} 25%, #fbf8f1);
-    --accent-tint: color-mix(in srgb, {{ journal.accent_color }} 10%, #fbf8f1);
+    --accent-soft: color-mix(in srgb, {{ journal.accent_color }} 25%, var(--bg));
+    --accent-tint: color-mix(in srgb, {{ journal.accent_color }} 10%, var(--bg));
   }
   .tab-bar { display:flex; gap:4px; margin-bottom:20px; border-bottom:1px solid var(--line); }
   .tab { padding:8px 16px; font-size:14px; font-weight:500; color:var(--ink-muted); text-decoration:none; border-bottom:2px solid transparent; margin-bottom:-1px; }
