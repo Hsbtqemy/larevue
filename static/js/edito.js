@@ -375,6 +375,82 @@ document.addEventListener("alpine:init", () => {
   });
 
 
+  Alpine.data("calendarView", (todayStr) => {
+    const events = JSON.parse(document.getElementById("calendar-events").textContent);
+    const [todayYear, todayMonth0, todayDay] = todayStr.split("-").map(Number);
+    const todayMonth = todayMonth0 - 1; // 0-based
+
+    const todayAbs = todayYear * 12 + todayMonth;
+    const minAbs = todayAbs - 6;
+    const maxAbs = todayAbs + 12;
+
+    function isoDate(d) {
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    }
+
+    return {
+      year: todayYear,
+      month: todayMonth,
+      expandedDate: null,
+
+      get isCurrentMonth() { return this.year === todayYear && this.month === todayMonth; },
+      get canPrev() { return this.year * 12 + this.month > minAbs; },
+      get canNext() { return this.year * 12 + this.month < maxAbs; },
+
+      get monthLabel() {
+        return new Date(this.year, this.month, 1)
+          .toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
+      },
+
+      prevMonth() {
+        if (!this.canPrev) return;
+        if (this.month === 0) { this.month = 11; this.year--; } else { this.month--; }
+        this.expandedDate = null;
+      },
+
+      nextMonth() {
+        if (!this.canNext) return;
+        if (this.month === 11) { this.month = 0; this.year++; } else { this.month++; }
+        this.expandedDate = null;
+      },
+
+      goToday() { this.year = todayYear; this.month = todayMonth; this.expandedDate = null; },
+
+      toggleExpand(dateStr) {
+        this.expandedDate = this.expandedDate === dateStr ? null : dateStr;
+      },
+
+      get cells() {
+        const year = this.year;
+        const month = this.month;
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        const startDow = (new Date(year, month, 1).getDay() + 6) % 7; // Mon=0…Sun=6
+
+        const cells = [];
+
+        for (let i = startDow; i > 0; i--) {
+          const d = new Date(year, month, 1 - i);
+          cells.push({ day: d.getDate(), inMonth: false, isToday: false, dateStr: isoDate(d), events: [] });
+        }
+
+        for (let d = 1; d <= daysInMonth; d++) {
+          const dateStr = isoDate(new Date(year, month, d));
+          const isToday = (year === todayYear && month === todayMonth && d === todayDay);
+          cells.push({ day: d, inMonth: true, isToday, dateStr, events: events.filter(e => e.date === dateStr) });
+        }
+
+        const trailing = (7 - cells.length % 7) % 7;
+        for (let d = 1; d <= trailing; d++) {
+          const dt = new Date(year, month + 1, d);
+          cells.push({ day: dt.getDate(), inMonth: false, isToday: false, dateStr: isoDate(dt), events: [] });
+        }
+
+        return cells;
+      },
+    };
+  });
+
+
   Alpine.data("savedBanner", () => {
     let timer = null;
     return {
