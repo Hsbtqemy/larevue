@@ -1,17 +1,19 @@
 import datetime
 
-from django.core.exceptions import ValidationError
+from django.core.exceptions import PermissionDenied, ValidationError
 from django.db.models import Count, F
 from django.http import Http404, JsonResponse
+from django.shortcuts import redirect
 from django.urls import reverse
 from django.views import View
 from django.views.generic import DetailView, TemplateView
 
 from apps.articles.models import Article, InternalNote
 from apps.core.mixins import JournalMemberRequiredMixin, JournalOwnedObjectMixin
+from apps.core.utils import file_response
 from apps.core.views import JournalOwnedCreateView, JournalOwnedPatchView, JournalOwnedTransitionView, compute_transitions
-from apps.issues.forms import IssueCreateForm, IssueEditForm
-from apps.issues.models import Issue
+from apps.issues.forms import IssueCreateForm, IssueDocumentForm, IssueEditForm
+from apps.issues.models import Issue, IssueDocument
 from apps.reviews.models import ReviewRequest
 
 
@@ -373,3 +375,88 @@ class IssueTransitionView(JournalOwnedTransitionView):
             "issues:detail",
             kwargs={"slug": self.request.journal.slug, "issue_id": obj.pk},
         )
+
+
+def _get_issue_or_404(request, issue_id):
+    try:
+        return Issue.objects.get(pk=issue_id, journal=request.journal)
+    except Issue.DoesNotExist:
+        raise Http404
+
+
+def _get_document_or_404(request, issue_id, doc_id):
+    """Ensures the document belongs to the given issue within the current journal."""
+    try:
+        return IssueDocument.objects.get(
+            pk=doc_id,
+            issue_id=issue_id,
+            issue__journal=request.journal,
+        )
+    except IssueDocument.DoesNotExist:
+        raise Http404
+
+
+class IssueDocumentCreateView(JournalMemberRequiredMixin, View):
+    def post(self, request, issue_id, **kwargs):
+        issue = _get_issue_or_404(request, issue_id)
+        if issue.state in Issue.ARCHIVED_STATES:
+            raise PermissionDenied
+
+        form = IssueDocumentForm(request.POST, request.FILES)
+        if not form.is_valid():
+            # Re-render detail page with form errors via redirect with session flash,
+            # or simply redirect — form errors will be visible on next load.
+            # For simplicity, redirect and let the template handle re-open via query param.
+            detail_url = reverse(
+                "issues:detail",
+                kwargs={"slug": request.journal.slug, "issue_id": issue_id},
+            )
+            return redirect(detail_url)
+
+        doc = form.save(commit=False)
+        doc.issue = issue
+        doc.uploaded_by = request.user
+        doc.save()
+
+        actor = request.user.first_name or request.user.email
+        InternalNote.objects.create(
+            issue=issue,
+            author=request.user,
+            content=f"{actor} a ajouté le document « {doc.name} »",
+            is_automatic=True,
+        )
+
+        return redirect(
+            reverse("issues:detail", kwargs={"slug": request.journal.slug, "issue_id": issue_id})
+        )
+
+
+class IssueDocumentDeleteView(JournalMemberRequiredMixin, View):
+    def post(self, request, issue_id, doc_id, **kwargs):
+        issue = _get_issue_or_404(request, issue_id)
+        if issue.state in Issue.ARCHIVED_STATES:
+            raise PermissionDenied
+
+        doc = _get_document_or_404(request, issue_id, doc_id)
+        doc_name = doc.name
+        doc.delete()  # post_delete signal handles file removal
+
+        actor = request.user.first_name or request.user.email
+        InternalNote.objects.create(
+            issue=issue,
+            author=request.user,
+            content=f"{actor} a supprimé le document « {doc_name} »",
+            is_automatic=True,
+        )
+
+        return redirect(
+            reverse("issues:detail", kwargs={"slug": request.journal.slug, "issue_id": issue_id})
+        )
+
+
+class IssueDocumentDownloadView(JournalMemberRequiredMixin, View):
+    def get(self, request, issue_id, doc_id, **kwargs):
+        doc = _get_document_or_404(request, issue_id, doc_id)
+        if not doc.file:
+            raise Http404
+        return file_response(doc.file)

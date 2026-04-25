@@ -1,6 +1,8 @@
 from django import forms
 
-from apps.issues.models import Issue
+from apps.issues.models import Issue, IssueDocument
+
+MAX_UPLOAD_MB = 25
 
 
 class IssueEditForm(forms.ModelForm):
@@ -28,3 +30,20 @@ class IssueCreateForm(forms.ModelForm):
             "deadline_articles": forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
             "description": forms.Textarea(attrs={"rows": 3}),
         }
+
+
+class IssueDocumentForm(forms.ModelForm):
+    class Meta:
+        model = IssueDocument
+        fields = ["name", "description", "file"]
+        widgets = {
+            "description": forms.Textarea(attrs={"rows": 3}),
+        }
+
+    def clean_file(self):
+        f = self.cleaned_data.get("file")
+        if f and f.size > MAX_UPLOAD_MB * 1024 * 1024:
+            raise forms.ValidationError(
+                f"Le fichier dépasse la taille maximale autorisée ({MAX_UPLOAD_MB} Mo)."
+            )
+        return f

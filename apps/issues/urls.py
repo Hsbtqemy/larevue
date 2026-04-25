@@ -13,4 +13,7 @@ urlpatterns = [
     path("<int:issue_id>/edit/", views.IssueEditView.as_view(), name="edit"),
     path("<int:issue_id>/delete/", views.IssueDeleteView.as_view(), name="delete"),
     path("<int:issue_id>/transition/", views.IssueTransitionView.as_view(), name="transition"),
+    path("<int:issue_id>/documents/create/", views.IssueDocumentCreateView.as_view(), name="document_create"),
+    path("<int:issue_id>/documents/<int:doc_id>/delete/", views.IssueDocumentDeleteView.as_view(), name="document_delete"),
+    path("<int:issue_id>/documents/<int:doc_id>/download/", views.IssueDocumentDownloadView.as_view(), name="document_download"),
 ]
