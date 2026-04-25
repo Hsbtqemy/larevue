@@ -377,9 +377,6 @@ class TestIssuePatchViewRegression:
 
 # ──────────────────────────── URL helpers E2 ────────────────────────────
 
-def _version_create_url(journal, issue, article):
-    return reverse("articles:version_create", kwargs={"slug": journal.slug, "issue_id": issue.pk, "article_id": article.pk})
-
 def _version_download_url(journal, issue, article, version):
     return reverse("articles:version_download", kwargs={"slug": journal.slug, "issue_id": issue.pk, "article_id": article.pk, "version_id": version.pk})
 
@@ -394,69 +391,6 @@ def _review_delete_url(journal, issue, article, review):
 
 def _review_patch_url(journal, issue, article, review):
     return reverse("articles:review_patch", kwargs={"slug": journal.slug, "issue_id": issue.pk, "article_id": article.pk, "review_id": review.pk})
-
-
-# ──────────────────────────── TestArticleVersionCreateView ────────────────────────────
-
-@pytest.mark.django_db
-class TestArticleVersionCreateView:
-    def _upload(self, client, journal, issue, article, filename="doc.pdf", content=b"pdf"):
-        return client.post(
-            _version_create_url(journal, issue, article),
-            {"file": ContentFile(content, name=filename), "comment": ""},
-        )
-
-    def test_requires_login(self, client, journal, issue, article):
-        res = self._upload(client, journal, issue, article)
-        assert res.status_code == 302
-
-    def test_creates_version(self, client, user, membership, journal, issue, article):
-        client.force_login(user)
-        res = self._upload(client, journal, issue, article)
-        assert res.status_code == 200
-        assert ArticleVersion.objects.filter(article=article).count() == 1
-
-    def test_auto_increments_version_number(self, client, user, membership, journal, issue, article):
-        client.force_login(user)
-        self._upload(client, journal, issue, article)
-        self._upload(client, journal, issue, article)
-        versions = list(ArticleVersion.objects.filter(article=article).order_by("version_number"))
-        assert [v.version_number for v in versions] == [1, 2]
-
-    def test_creates_audit_note(self, client, user, membership, journal, issue, article):
-        client.force_login(user)
-        self._upload(client, journal, issue, article)
-        assert InternalNote.objects.filter(article=article, is_automatic=True).exists()
-
-    def test_with_comment_included_in_note(self, client, user, membership, journal, issue, article):
-        client.force_login(user)
-        client.post(
-            _version_create_url(journal, issue, article),
-            {"file": ContentFile(b"pdf", name="f.pdf"), "comment": "Révision majeure"},
-        )
-        note = InternalNote.objects.filter(article=article, is_automatic=True).last()
-        assert "Révision majeure" in note.content
-
-    def test_missing_file_returns_400(self, client, user, membership, journal, issue, article):
-        client.force_login(user)
-        res = client.post(_version_create_url(journal, issue, article), {"comment": ""})
-        assert res.status_code == 400
-
-    def test_archived_article_returns_403(self, client, user, membership, journal, issue, article):
-        Issue.objects.filter(pk=issue.pk).update(state=Issue.State.PUBLISHED)
-        client.force_login(user)
-        res = self._upload(client, journal, issue, article)
-        assert res.status_code == 403
-
-    def test_response_contains_version_item_html(self, client, user, membership, journal, issue, article):
-        client.force_login(user)
-        res = self._upload(client, journal, issue, article)
-        assert b"version-entry" in res.content
-
-    def test_response_contains_oob_counter(self, client, user, membership, journal, issue, article):
-        client.force_login(user)
-        res = self._upload(client, journal, issue, article)
-        assert b"article-header-counters" in res.content
 
 
 # ──────────────────────────── TestArticleVersionDownloadView ────────────────────────────

@@ -270,43 +270,6 @@ document.addEventListener("alpine:init", () => {
   }));
 
 
-  Alpine.data("markReceived", (url) => ({
-    open: false,
-    file: null,
-    fileName: null,
-    error: null,
-    submitting: false,
-
-    show() { this.open = true; this.file = null; this.fileName = null; this.error = null; },
-    cancel() { this.open = false; },
-
-    onFileChange(e) {
-      this.file = e.target.files[0] || null;
-      this.fileName = this.file ? this.file.name : null;
-    },
-
-    async submit() {
-      if (!this.file) { this.error = "Veuillez sélectionner un fichier."; return; }
-      this.submitting = true;
-      this.error = null;
-      const fd = new FormData();
-      fd.append("file", this.file);
-      try {
-        const res = await fetch(url, {
-          method: "POST",
-          headers: { "X-CSRFToken": getCsrfToken() },
-          body: fd,
-        });
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok) { this.error = data.error || "Une erreur est survenue."; this.submitting = false; return; }
-        window.location.href = data.redirect_url;
-      } catch {
-        this.error = "Erreur réseau.";
-        this.submitting = false;
-      }
-    },
-  }));
-
 
   Alpine.data("fileInput", () => ({
     fileName: null,

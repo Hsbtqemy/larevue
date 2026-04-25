@@ -8,13 +8,10 @@ from django.urls import reverse
 from django.utils import timezone
 from django.views import View
 from django.views.generic import DetailView
-from django_fsm import can_proceed
-
 from apps.articles.forms import (
     ArticleCreateForm,
     ArticleCreateWithIssueForm,
     ArticleEditForm,
-    ArticleVersionUploadForm,
     ReviewRequestCreateForm,
     ReviewRequestReceiveForm,
 )
@@ -466,43 +463,6 @@ class ArticleFileUploadView(_ArticleJournalMixin, JournalMemberRequiredMixin, Vi
         ))
 
 
-class ArticleVersionCreateView(_ArticleJournalMixin, JournalMemberRequiredMixin, View):
-    def post(self, request, issue_id, article_id, **kwargs):
-        article = self.get_object_or_404()
-
-        guard = self._check_archived(article)
-        if guard:
-            return guard
-
-        form = ArticleVersionUploadForm(request.POST, request.FILES)
-        if not form.is_valid():
-            return JsonResponse({"error": "Fichier requis."}, status=400)
-
-        version = ArticleVersion.objects.create(
-            article=article,
-            file=form.cleaned_data["file"],
-            uploaded_by=request.user,
-            comment=form.cleaned_data.get("comment", ""),
-        )
-
-        actor_name = request.user.get_full_name() or request.user.email
-        comment = form.cleaned_data.get("comment", "").strip()
-        msg = f"{actor_name} a déposé la version v{version.version_number}"
-        if comment:
-            msg += f" — {comment}"
-        log_action(article, request.user, msg)
-
-        ctx = {
-            "version": version,
-            "is_latest": True,
-            "article": article,
-            "journal": request.journal,
-            "issue": article.issue,
-            "is_archived": False,
-        }
-        fragment = render_to_string("articles/_version_item.html", ctx, request=request)
-        return HttpResponse(fragment + oob_counters_html(article, request=request))
-
 
 class ArticleVersionDownloadView(_ArticleJournalMixin, JournalMemberRequiredMixin, View):
     def get(self, request, issue_id, article_id, version_id, **kwargs):
@@ -670,41 +630,3 @@ class ArticleTransitionView(_ArticleJournalMixin, JournalOwnedTransitionView):
         )
 
 
-class ArticleMarkReceivedView(_ArticleJournalMixin, JournalMemberRequiredMixin, View):
-    """Transition pending → received + création de la version v1."""
-
-    def post(self, request, issue_id, article_id, **kwargs):
-        article = self.get_object_or_404()
-
-        guard = self._check_archived(article)
-        if guard:
-            return guard
-
-        if article.state != Article.State.PENDING:
-            return JsonResponse({"error": "L'article n'est pas en attente de réception."}, status=400)
-
-        file = request.FILES.get("file")
-        if not file:
-            return JsonResponse({"error": "Un fichier est requis pour marquer l'article comme reçu."}, status=400)
-
-        article.mark_received()
-        article.save()
-
-        version = ArticleVersion.objects.create(
-            article=article,
-            file=file,
-            uploaded_by=request.user,
-        )
-
-        actor_name = request.user.get_full_name() or request.user.email
-        log_action(
-            article, request.user,
-            f"{actor_name} a marqué l'article comme reçu et déposé la version v{version.version_number}",
-        )
-
-        return JsonResponse({
-            "redirect_url": reverse(
-                "articles:detail",
-                kwargs={"slug": request.journal.slug, "issue_id": issue_id, "article_id": article_id},
-            )
-        })
