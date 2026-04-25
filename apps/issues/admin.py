@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django_fsm.admin import FSMAdminMixin
 
-from .models import Issue
+from .models import Issue, IssueDocument
 
 
 @admin.register(Issue)
@@ -34,3 +34,11 @@ class IssueAdmin(FSMAdminMixin, admin.ModelAdmin):
     @admin.display(description="Avancement")
     def get_progress(self, obj):
         return f"{obj.progress} %"
+
+
+@admin.register(IssueDocument)
+class IssueDocumentAdmin(admin.ModelAdmin):
+    list_display = ("name", "issue", "uploaded_by", "uploaded_at")
+    list_filter = ("issue__journal",)
+    search_fields = ("name", "issue__thematic_title")
+    readonly_fields = ("uploaded_at", "uploaded_by")
