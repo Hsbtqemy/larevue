@@ -44,3 +44,8 @@ class Contact(BaseModel):
     @property
     def full_name(self) -> str:
         return f"{self.first_name} {self.last_name}".strip()
+
+    @property
+    def usual_roles_display(self) -> list[str]:
+        role_map = dict(self.Role.choices)
+        return [role_map.get(r, r) for r in self.usual_roles]

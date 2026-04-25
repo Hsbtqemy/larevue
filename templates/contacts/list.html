@@ -1,0 +1,180 @@
+{% extends "base.html" %}
+{% load static edito %}
+
+{% block title %}Contacts — {{ journal.name }}{% endblock %}
+
+{% block body_class %}{% endblock %}
+
+{% block extra_head %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter+Tight:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{% static 'css/edito.css' %}?v=20260425b">
+<style>
+  :root {
+    --accent: {{ journal.accent_color }};
+    --accent-soft: color-mix(in srgb, {{ journal.accent_color }} 25%, var(--bg));
+    --accent-tint: color-mix(in srgb, {{ journal.accent_color }} 10%, var(--bg));
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="app-shell">
+
+  {# ===== SIDEBAR ===== #}
+  <aside class="sidebar">
+
+    <div class="sidebar-brand">
+      <div class="brand-mark">É</div>
+      <div class="brand-name">Edito</div>
+    </div>
+
+    <div class="revue-switcher">
+      <div class="revue-switcher-label">Revue courante</div>
+      {% if user_journal_count > 1 %}
+        <a href="{% url 'home' %}" class="revue-switcher-current" style="text-decoration:none">
+          <span class="revue-dot" style="background:var(--accent)"></span>
+          <span class="revue-name">{{ journal.name }}</span>
+          <span class="chev">{% icon "chevron" 14 %}</span>
+        </a>
+      {% else %}
+        <div class="revue-switcher-current" style="cursor:default">
+          <span class="revue-dot" style="background:var(--accent)"></span>
+          <span class="revue-name">{{ journal.name }}</span>
+        </div>
+      {% endif %}
+    </div>
+
+    <nav class="nav">
+      <a href="{% url 'journal_dashboard' slug=journal.slug %}" class="nav-item" style="text-decoration:none">
+        {% icon "home" 17 cls="icon" %}
+        Tableau de bord
+      </a>
+      <a href="{% url 'issues:list' slug=journal.slug %}" class="nav-item" style="text-decoration:none">
+        {% icon "file" 17 cls="icon" %}
+        Numéros en cours
+      </a>
+      <a href="{% url 'contacts:list' slug=journal.slug %}" class="nav-item active" style="text-decoration:none">
+        {% icon "users" 17 cls="icon" %}
+        Contacts
+      </a>
+      <a href="#" class="nav-item" style="text-decoration:none">
+        {% icon "archive" 17 cls="icon" %}
+        Archives
+      </a>
+    </nav>
+
+    <div class="sidebar-user">
+      <div class="avatar">{{ request.user.first_name|slice:":1" }}{{ request.user.last_name|slice:":1" }}</div>
+      <div class="sidebar-user-info">
+        <div class="n">{{ request.user.get_full_name }}</div>
+        <div class="e">{{ request.user.email }}</div>
+      </div>
+      <form method="post" action="{% url 'account_logout' %}" style="margin-left:auto;flex-shrink:0">
+        {% csrf_token %}
+        <button type="submit" class="btn ghost sm" title="Se déconnecter">
+          {% icon "back" 14 %}
+        </button>
+      </form>
+    </div>
+
+  </aside>
+
+  {# ===== MAIN ===== #}
+  <main class="main">
+
+    <div class="accent-strip" style="background:var(--accent)"></div>
+
+    <div class="accent-bandeau">
+      <div class="eyebrow">{{ journal.name }}</div>
+      <h1 style="font-size:32px;letter-spacing:-0.02em">Contacts</h1>
+    </div>
+
+    <div class="main-content"
+         x-data="{
+           q: '',
+           roleFilter: '',
+           show(roles, text) {
+             if (this.roleFilter && !roles.split(',').filter(Boolean).includes(this.roleFilter)) return false;
+             if (this.q.trim() && !text.includes(this.q.toLowerCase().trim())) return false;
+             return true;
+           }
+         }">
+
+      <div class="section">
+
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+          <input type="search"
+                 x-model="q"
+                 placeholder="Rechercher par nom ou affiliation…"
+                 class="text-input"
+                 style="flex:1;max-width:320px">
+          <a href="{% url 'contacts:create' slug=journal.slug %}"
+             class="btn primary sm"
+             style="text-decoration:none;margin-left:auto">
+            {% icon "plus" 14 cls="icon" %} Nouveau contact
+          </a>
+        </div>
+
+        <div class="filter-chips" style="margin-bottom:16px">
+          <button type="button" class="chip" :class="{on: !roleFilter}" @click="roleFilter=''">Tous</button>
+          {% for role in roles %}
+            <button type="button" class="chip" :class="{on: roleFilter==='{{ role.value }}'}" @click="roleFilter='{{ role.value }}'">{{ role.label }}</button>
+          {% endfor %}
+        </div>
+
+        {% if contacts %}
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Nom</th>
+                <th>Affiliation</th>
+                <th>Rôles</th>
+                <th style="text-align:center">Articles</th>
+                <th style="text-align:center">Relectures</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for contact in contacts %}
+                <tr x-show="show('{{ contact.usual_roles|join:',' }}', '{{ contact.full_name|lower }} {{ contact.affiliation|lower }}')"
+                    @click="window.location='{% url 'contacts:detail' slug=journal.slug pk=contact.pk %}'"
+                    style="cursor:pointer">
+                  <td>
+                    <div style="font-weight:500;color:var(--ink)">{{ contact.full_name }}</div>
+                    {% if contact.email %}
+                      <div style="font-size:12px;font-family:var(--font-mono);color:var(--ink-muted)">{{ contact.email }}</div>
+                    {% endif %}
+                  </td>
+                  <td style="color:var(--ink-muted);font-size:13px">{{ contact.affiliation|default:"—" }}</td>
+                  <td>
+                    <div style="display:flex;gap:4px;flex-wrap:wrap">
+                      {% for role_label in contact.usual_roles_display %}
+                        <span class="role-chip">{{ role_label }}</span>
+                      {% empty %}
+                        <span style="color:var(--ink-faint);font-size:12px">—</span>
+                      {% endfor %}
+                    </div>
+                  </td>
+                  <td style="text-align:center;font-size:13px;color:var(--ink-muted)">{{ contact.article_count }}</td>
+                  <td style="text-align:center;font-size:13px;color:var(--ink-muted)">{{ contact.review_count }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        {% else %}
+          <div class="empty">
+            <h4>Aucun contact</h4>
+            <p>
+              <a href="{% url 'contacts:create' slug=journal.slug %}" style="color:var(--accent)">Ajouter le premier contact</a>
+            </p>
+          </div>
+        {% endif %}
+
+      </div>
+    </div>
+
+  </main>
+
+</div>
+{% endblock %}

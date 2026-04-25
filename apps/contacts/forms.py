@@ -20,3 +20,6 @@ class ContactCreateForm(forms.ModelForm):
         widgets = {
             "notes": forms.Textarea(attrs={"rows": 3}),
         }
+
+
+ContactEditForm = ContactCreateForm

@@ -1,0 +1,301 @@
+{% extends "base.html" %}
+{% load static edito %}
+
+{% block title %}{{ contact.full_name }} — {{ journal.name }}{% endblock %}
+
+{% block body_class %}{% endblock %}
+
+{% block extra_head %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter+Tight:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{% static 'css/edito.css' %}?v=20260425b">
+<style>
+  :root {
+    --accent: {{ journal.accent_color }};
+    --accent-soft: color-mix(in srgb, {{ journal.accent_color }} 25%, var(--bg));
+    --accent-tint: color-mix(in srgb, {{ journal.accent_color }} 10%, var(--bg));
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="app-shell">
+
+  {# ===== SIDEBAR ===== #}
+  <aside class="sidebar">
+
+    <div class="sidebar-brand">
+      <div class="brand-mark">É</div>
+      <div class="brand-name">Edito</div>
+    </div>
+
+    <div class="revue-switcher">
+      <div class="revue-switcher-label">Revue courante</div>
+      {% if user_journal_count > 1 %}
+        <a href="{% url 'home' %}" class="revue-switcher-current" style="text-decoration:none">
+          <span class="revue-dot" style="background:var(--accent)"></span>
+          <span class="revue-name">{{ journal.name }}</span>
+          <span class="chev">{% icon "chevron" 14 %}</span>
+        </a>
+      {% else %}
+        <div class="revue-switcher-current" style="cursor:default">
+          <span class="revue-dot" style="background:var(--accent)"></span>
+          <span class="revue-name">{{ journal.name }}</span>
+        </div>
+      {% endif %}
+    </div>
+
+    <nav class="nav">
+      <a href="{% url 'journal_dashboard' slug=journal.slug %}" class="nav-item" style="text-decoration:none">
+        {% icon "home" 17 cls="icon" %}
+        Tableau de bord
+      </a>
+      <a href="{% url 'issues:list' slug=journal.slug %}" class="nav-item" style="text-decoration:none">
+        {% icon "file" 17 cls="icon" %}
+        Numéros en cours
+      </a>
+      <a href="{% url 'contacts:list' slug=journal.slug %}" class="nav-item active" style="text-decoration:none">
+        {% icon "users" 17 cls="icon" %}
+        Contacts
+      </a>
+      <a href="#" class="nav-item" style="text-decoration:none">
+        {% icon "archive" 17 cls="icon" %}
+        Archives
+      </a>
+    </nav>
+
+    <div class="sidebar-user">
+      <div class="avatar">{{ request.user.first_name|slice:":1" }}{{ request.user.last_name|slice:":1" }}</div>
+      <div class="sidebar-user-info">
+        <div class="n">{{ request.user.get_full_name }}</div>
+        <div class="e">{{ request.user.email }}</div>
+      </div>
+      <form method="post" action="{% url 'account_logout' %}" style="margin-left:auto;flex-shrink:0">
+        {% csrf_token %}
+        <button type="submit" class="btn ghost sm" title="Se déconnecter">
+          {% icon "back" 14 %}
+        </button>
+      </form>
+    </div>
+
+  </aside>
+
+  {# ===== MAIN ===== #}
+  <main class="main">
+
+    <div class="accent-strip" style="background:var(--accent)"></div>
+
+    <nav class="breadcrumb breadcrumb--bar" aria-label="Fil d'Ariane">
+      <a href="{% url 'journal_dashboard' slug=journal.slug %}">{{ journal.name }}</a>
+      <span class="sep">{% icon "chevronR" 12 %}</span>
+      <a href="{% url 'contacts:list' slug=journal.slug %}">Contacts</a>
+      <span class="sep">{% icon "chevronR" 12 %}</span>
+      <span aria-current="page">{{ contact.full_name }}</span>
+    </nav>
+
+    <div class="main-content">
+      <div class="section">
+
+        <div x-data="editModal('{{ edit_url|escapejs }}')">
+
+          <div class="contact-detail">
+
+            {# ===== LEFT: Contact card ===== #}
+            <div>
+              <div class="contact-card">
+                <div class="avatar lg">{{ contact.first_name|slice:":1" }}{{ contact.last_name|slice:":1" }}</div>
+
+                <h2>
+                  {% inline_editable "first_name" contact patch_url %}
+                  {% inline_editable "last_name" contact patch_url %}
+                </h2>
+
+                <div class="affil">
+                  {% inline_editable "affiliation" contact patch_url placeholder="Ajouter une affiliation…" %}
+                </div>
+
+                <div class="email">
+                  {% inline_editable "email" contact patch_url placeholder="Ajouter un e-mail…" %}
+                </div>
+
+                <div class="roles-row" style="margin-top:12px">
+                  {% for role_label in contact.usual_roles_display %}
+                    <span class="role-chip">{{ role_label }}</span>
+                  {% empty %}
+                    <span style="color:var(--ink-faint);font-size:12px">Aucun rôle défini</span>
+                  {% endfor %}
+                </div>
+
+                <div style="margin-top:12px">
+                  <button type="button" class="btn ghost sm" @click="openModal()">
+                    {% icon "edit" 13 cls="icon" %} Modifier les rôles
+                  </button>
+                </div>
+
+                {% if contact.notes %}
+                  <div class="notes">{% inline_editable "notes" contact patch_url input_type="textarea" placeholder="Ajouter des notes…" %}</div>
+                {% else %}
+                  <div class="notes" style="color:var(--ink-faint)">
+                    {% inline_editable "notes" contact patch_url input_type="textarea" placeholder="Ajouter des notes…" %}
+                  </div>
+                {% endif %}
+              </div>
+
+              <div style="margin-top:12px;display:flex;justify-content:center">
+                {% include "partials/_confirm_delete.html" with delete_url=delete_url title="Supprimer ce contact ?" require_typing=contact.full_name message="Les articles associés conserveront le nom mais ne seront plus liés au contact." trigger_label="" trigger_cls="btn danger-ghost sm" confirm_label="Supprimer le contact" %}
+              </div>
+            </div>
+
+            {# ===== RIGHT: History ===== #}
+            <div class="contact-history">
+
+              {# Articles as author #}
+              <h3>Articles en tant qu'auteur·ice</h3>
+              {% if articles %}
+                <div class="history-list" style="margin-bottom:28px">
+                  {% for article in articles %}
+                    <a href="{% url 'articles:detail' slug=journal.slug issue_id=article.issue.pk article_id=article.pk %}"
+                       class="history-row"
+                       style="text-decoration:none">
+                      <span class="history-role">N°{{ article.issue.number }}</span>
+                      <span class="history-title">
+                        {{ article.title }}
+                        <span class="s">{{ article.get_state_display }}</span>
+                      </span>
+                      <span class="history-issue">{{ article.issue.thematic_title }}</span>
+                    </a>
+                  {% endfor %}
+                </div>
+              {% else %}
+                <p class="muted" style="font-size:14px;margin-bottom:28px">Aucun article en tant qu'auteur·ice.</p>
+              {% endif %}
+
+              {# Reviews #}
+              <h3>Relectures</h3>
+              {% if reviews %}
+                <div class="history-list">
+                  {% for review in reviews %}
+                    <a href="{% url 'articles:detail' slug=journal.slug issue_id=review.article.issue.pk article_id=review.article.pk %}"
+                       class="history-row"
+                       style="text-decoration:none">
+                      <span class="history-role">N°{{ review.article.issue.number }}</span>
+                      <span class="history-title">
+                        {{ review.article.title }}
+                        <span class="s">{{ review.get_state_display }}</span>
+                      </span>
+                      <span class="history-issue">{{ review.deadline|date:"d/m/Y" }}</span>
+                    </a>
+                  {% endfor %}
+                </div>
+              {% else %}
+                <p class="muted" style="font-size:14px">Aucune relecture.</p>
+              {% endif %}
+
+            </div>{# /contact-history #}
+
+          </div>{# /contact-detail #}
+
+          {# ===== Edit roles modal ===== #}
+          <template x-teleport="body">
+            <div x-show="open"
+                 class="modal-backdrop"
+                 @click.self="close()"
+                 @keydown.escape.window="close()"
+                 x-transition.opacity>
+              <div class="modal" role="dialog" aria-modal="true">
+                <div class="modal-head">
+                  <h3>Modifier le contact</h3>
+                </div>
+                <div class="modal-body">
+                  <form x-ref="editForm" @submit.prevent="submit($refs.editForm)">
+                    {% csrf_token %}
+
+                    <div class="edit-meta-form">
+                      <div class="field">
+                        <label for="modal_first_name">{{ form.first_name.label }}</label>
+                        <input type="text" id="modal_first_name" name="first_name"
+                               value="{{ contact.first_name }}" class="text-input">
+                        <template x-if="fieldErrors('first_name').length">
+                          <div class="form-msg err" x-text="fieldErrors('first_name').join(' ')"></div>
+                        </template>
+                      </div>
+
+                      <div class="field">
+                        <label for="modal_last_name">{{ form.last_name.label }}</label>
+                        <input type="text" id="modal_last_name" name="last_name"
+                               value="{{ contact.last_name }}" class="text-input">
+                        <template x-if="fieldErrors('last_name').length">
+                          <div class="form-msg err" x-text="fieldErrors('last_name').join(' ')"></div>
+                        </template>
+                      </div>
+
+                      <div class="field">
+                        <label for="modal_email">{{ form.email.label }}</label>
+                        <input type="email" id="modal_email" name="email"
+                               value="{{ contact.email }}" class="text-input">
+                        <template x-if="fieldErrors('email').length">
+                          <div class="form-msg err" x-text="fieldErrors('email').join(' ')"></div>
+                        </template>
+                      </div>
+
+                      <div class="field">
+                        <label for="modal_affiliation">{{ form.affiliation.label }}</label>
+                        <input type="text" id="modal_affiliation" name="affiliation"
+                               value="{{ contact.affiliation }}" class="text-input">
+                        <template x-if="fieldErrors('affiliation').length">
+                          <div class="form-msg err" x-text="fieldErrors('affiliation').join(' ')"></div>
+                        </template>
+                      </div>
+
+                      <div class="field full">
+                        <label>{{ form.usual_roles.label }}</label>
+                        <div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:4px">
+                          {% for checkbox in form.usual_roles %}
+                            <label style="display:flex;align-items:center;gap:6px;font-size:14px;cursor:pointer">
+                              {{ checkbox.tag }}
+                              {{ checkbox.choice_label }}
+                            </label>
+                          {% endfor %}
+                        </div>
+                        <template x-if="fieldErrors('usual_roles').length">
+                          <div class="form-msg err" x-text="fieldErrors('usual_roles').join(' ')"></div>
+                        </template>
+                      </div>
+
+                      <div class="field full">
+                        <label for="modal_notes">{{ form.notes.label }}</label>
+                        <textarea id="modal_notes" name="notes" class="text-input" rows="3">{{ contact.notes }}</textarea>
+                        <template x-if="fieldErrors('notes').length">
+                          <div class="form-msg err" x-text="fieldErrors('notes').join(' ')"></div>
+                        </template>
+                      </div>
+
+                    </div>
+
+                    <template x-if="fieldErrors('__all__').length">
+                      <div class="form-msg err" style="margin-top:12px" x-text="fieldErrors('__all__').join(' ')"></div>
+                    </template>
+
+                  </form>
+                </div>
+                <div class="modal-foot">
+                  <button type="button" class="btn ghost" @click="close()">Annuler</button>
+                  <button type="button" class="btn primary" @click="submit($refs.editForm)" :disabled="saving">
+                    <span x-show="!saving">Enregistrer</span>
+                    <span x-show="saving">Enregistrement…</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </template>
+
+        </div>{# /editModal wrapper #}
+
+      </div>
+    </div>
+
+  </main>
+
+</div>
+{% endblock %}

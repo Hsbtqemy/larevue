@@ -55,7 +55,7 @@
         {% icon "file" 17 cls="icon" %}
         Numéros en cours
       </a>
-      <a href="{% url 'contacts:create' slug=journal.slug %}" class="nav-item active" style="text-decoration:none">
+      <a href="{% url 'contacts:list' slug=journal.slug %}" class="nav-item active" style="text-decoration:none">
         {% icon "users" 17 cls="icon" %}
         Contacts
       </a>
@@ -166,7 +166,7 @@
           {% endif %}
 
           <div style="display:flex;gap:8px;margin-top:24px">
-            <a href="{% url 'journal_dashboard' slug=journal.slug %}" class="btn ghost">Annuler</a>
+            <a href="{% url 'contacts:list' slug=journal.slug %}" class="btn ghost">Annuler</a>
             <button type="submit" class="btn primary">Créer le contact</button>
           </div>
 

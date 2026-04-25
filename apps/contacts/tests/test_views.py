@@ -59,7 +59,7 @@ class TestContactCreateView:
         c = Contact.objects.get(last_name="Dupont")
         assert c.journal == membership.journal
 
-    def test_redirects_to_dashboard_after_create(self, client, user, membership):
+    def test_redirects_to_list_after_create(self, client, user, membership):
         client.force_login(user)
         response = client.post(_create_url(membership.journal), {
             "first_name": "Anne",
@@ -71,7 +71,7 @@ class TestContactCreateView:
         })
         assert response.status_code == 302
         assert response["Location"] == reverse(
-            "journal_dashboard", kwargs={"slug": membership.journal.slug}
+            "contacts:list", kwargs={"slug": membership.journal.slug}
         )
 
     def test_flash_message_on_create(self, client, user, membership):
