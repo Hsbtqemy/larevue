@@ -12,6 +12,7 @@ urlpatterns = [
     path("<int:article_id>/delete/", views.ArticleDeleteView.as_view(), name="delete"),
     path("<int:article_id>/notes/", views.ArticleNoteCreateView.as_view(), name="note_create"),
     # Versions
+    path("<int:article_id>/file-upload/", views.ArticleFileUploadView.as_view(), name="file_upload"),
     path("<int:article_id>/versions/", views.ArticleVersionCreateView.as_view(), name="version_create"),
     path("<int:article_id>/versions/<int:version_id>/download/", views.ArticleVersionDownloadView.as_view(), name="version_download"),
     # Relectures

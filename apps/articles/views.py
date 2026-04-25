@@ -279,19 +279,12 @@ class ArticleDetailView(JournalMemberRequiredMixin, DetailView):
             },
         )
 
-        mark_received_url = reverse(
-            "articles:mark_received",
+        file_upload_url = reverse(
+            "articles:file_upload",
             kwargs={"slug": journal.slug, "issue_id": issue.pk, "article_id": article.pk},
         )
-        mark_received_spec = None
-        if not is_archived and can_proceed(article.mark_received):
-            mark_received_spec = {
-                "name": "mark_received",
-                "label": "Marquer comme reçu",
-                "description": "Le fichier est arrivé, l'article entre en phase éditoriale.",
-                "ui_variant": "primary",
-                "enabled": True,
-            }
+        show_file_upload = not is_archived and article.state not in _UPLOAD_BLOCKED_STATES
+        file_upload_is_first = article.state == Article.State.PENDING
 
         ctx.update({
             "issue": issue,
@@ -322,8 +315,9 @@ class ArticleDetailView(JournalMemberRequiredMixin, DetailView):
             ).isoformat(),
             "transitions": self._compute_transitions(article, is_archived),
             "transition_url": transition_url,
-            "mark_received_spec": mark_received_spec,
-            "mark_received_url": mark_received_url,
+            "file_upload_url": file_upload_url,
+            "show_file_upload": show_file_upload,
+            "file_upload_is_first": file_upload_is_first,
         })
         return ctx
 
@@ -421,6 +415,56 @@ class ArticleNoteCreateView(_ArticleJournalMixin, JournalMemberRequiredMixin, Vi
 
 
 # ──────────────────────────── Versions ────────────────────────────
+
+_UPLOAD_BLOCKED_STATES = {Article.State.IN_REVIEW, Article.State.VALIDATED}
+
+
+class ArticleFileUploadView(_ArticleJournalMixin, JournalMemberRequiredMixin, View):
+    # Upload bloqué en in_review pour garantir la cohérence entre fichier en
+    # relecture et fichier en base. Pour remplacer un fichier en cours de
+    # relecture, faire un rollback in_review → received, déposer, puis
+    # renvoyer en relecture.
+
+    def post(self, request, issue_id, article_id, **kwargs):
+        article = self.get_object_or_404()
+
+        guard = self._check_archived(article)
+        if guard:
+            return guard
+
+        if article.state in _UPLOAD_BLOCKED_STATES:
+            return JsonResponse({"error": "Le dépôt n'est pas autorisé dans cet état."}, status=403)
+
+        file = request.FILES.get("file")
+        if not file:
+            return JsonResponse({"error": "Un fichier est requis."}, status=400)
+
+        is_first = article.state == Article.State.PENDING
+        description = request.POST.get("comment", "").strip()
+
+        version = ArticleVersion.objects.create(
+            article=article,
+            file=file,
+            uploaded_by=request.user,
+            comment=description,
+        )
+
+        actor_name = request.user.get_full_name() or request.user.email
+        if is_first:
+            article.mark_received()
+            article.save()
+            msg = f"{actor_name} a déposé le fichier de l'article"
+        else:
+            msg = f"{actor_name} a déposé la version v{version.version_number}"
+        if description:
+            msg += f" — {description}"
+        log_action(article, request.user, msg)
+
+        return redirect(reverse(
+            "articles:detail",
+            kwargs={"slug": request.journal.slug, "issue_id": issue_id, "article_id": article_id},
+        ))
+
 
 class ArticleVersionCreateView(_ArticleJournalMixin, JournalMemberRequiredMixin, View):
     def post(self, request, issue_id, article_id, **kwargs):
