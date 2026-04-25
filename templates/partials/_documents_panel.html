@@ -1,11 +1,12 @@
 {% load edito %}
-{# Context variables expected:
+{% comment %}
+   Context variables expected:
    documents         — list, each item pre-annotated with .download_url and .delete_url
    is_editable       — bool
    doc_create_url    — POST URL for uploading a new document
    doc_section_title — section heading (default "Documents")
    doc_add_modal_title — add modal heading (default "Ajouter un document")
-#}
+{% endcomment %}
 <div class="section">
   <div class="section-head">
     <h2>{{ doc_section_title|default:"Documents" }}</h2>

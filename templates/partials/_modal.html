@@ -1,7 +1,9 @@
-{# Generic modal shell.
+{% comment %}
+   Generic modal shell.
    Expected context: modal_id (str), title (str), subtitle (str, optional),
    large (bool, optional). Body content via {% block modal_body %}.
-   Controlled by x-data on parent: open state referenced as 'open'. #}
+   Controlled by x-data on parent: open state referenced as 'open'.
+{% endcomment %}
 <template x-teleport="body">
   <div x-show="open"
        class="modal-backdrop"
