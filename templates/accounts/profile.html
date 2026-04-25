@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+{% load static edito %}
+
+{% block title %}Mon profil — Edito{% endblock %}
+
+{% block body_class %}{% endblock %}
+
+{% block extra_head %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter+Tight:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{% static 'css/edito.css' %}?v=20260425c">
+{% endblock %}
+
+{% block content %}
+<div style="min-height:100vh;background:var(--bg)">
+
+  {# ===== TOP NAV ===== #}
+  <nav style="display:flex;align-items:center;gap:16px;padding:14px 24px;border-bottom:1px solid var(--line);background:var(--surface)">
+    <a href="{% url 'home' %}" style="display:flex;align-items:center;gap:8px;text-decoration:none;color:var(--ink)">
+      <div class="brand-mark" style="width:24px;height:24px;font-size:13px;border-radius:6px">É</div>
+      <span style="font-family:var(--font-display);font-weight:500;font-size:14px">Edito</span>
+    </a>
+    <span style="color:var(--line-strong)">›</span>
+    <span style="font-size:13.5px;color:var(--ink-muted)">Mon profil</span>
+    <a href="{% url 'home' %}" style="margin-left:auto;font-size:13px;color:var(--ink-muted);text-decoration:none">
+      ← Retour au tableau de bord
+    </a>
+  </nav>
+
+  {# ===== CONTENT ===== #}
+  <main style="max-width:680px;margin:0 auto;padding:40px 24px">
+
+    <h1 style="font-family:var(--font-display);font-size:22px;font-weight:500;margin:0 0 28px">Mon profil</h1>
+
+    {# ===== Informations personnelles ===== #}
+    <div class="profile-section">
+      <div class="profile-section-head">
+        <h2>Informations personnelles</h2>
+      </div>
+      <div class="profile-row">
+        <div class="profile-avatar-lg" aria-hidden="true">
+          {{ request.user.first_name|slice:":1" }}{{ request.user.last_name|slice:":1" }}
+        </div>
+        <div style="flex:1;display:flex;flex-direction:column;gap:12px">
+
+          <div class="inline-field"
+               x-data="inlineEdit('{{ request.user.first_name|escapejs }}', '{{ patch_url }}', 'first_name')">
+            <label>Prénom</label>
+            <template x-if="!editing">
+              <button type="button" class="inline-display" @click="startEdit()">
+                <span x-text="draft || '—'"></span>
+                <span class="edit-hint">{% icon "edit" 12 %} Modifier</span>
+              </button>
+            </template>
+            <template x-if="editing">
+              <div class="inline-edit">
+                <input x-ref="inputText"
+                       type="text"
+                       x-model="draft"
+                       @blur="commit()"
+                       @keydown.enter.prevent="commit()"
+                       @keydown.escape.prevent="cancel()">
+              </div>
+            </template>
+            <span x-show="error" class="form-msg err" x-text="error" style="margin-top:4px"></span>
+          </div>
+
+          <div class="inline-field"
+               x-data="inlineEdit('{{ request.user.last_name|escapejs }}', '{{ patch_url }}', 'last_name')">
+            <label>Nom</label>
+            <template x-if="!editing">
+              <button type="button" class="inline-display" @click="startEdit()">
+                <span x-text="draft || '—'"></span>
+                <span class="edit-hint">{% icon "edit" 12 %} Modifier</span>
+              </button>
+            </template>
+            <template x-if="editing">
+              <div class="inline-edit">
+                <input x-ref="inputText"
+                       type="text"
+                       x-model="draft"
+                       @blur="commit()"
+                       @keydown.enter.prevent="commit()"
+                       @keydown.escape.prevent="cancel()">
+              </div>
+            </template>
+            <span x-show="error" class="form-msg err" x-text="error" style="margin-top:4px"></span>
+          </div>
+
+          <div class="inline-field">
+            <label>Adresse e-mail</label>
+            <div class="inline-display" style="cursor:default">
+              <span>{{ request.user.email }}</span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    {# ===== Mot de passe ===== #}
+    <div class="profile-section">
+      <div class="profile-section-head">
+        <h2>Mot de passe</h2>
+        <p style="font-size:13px;color:var(--ink-muted);margin:4px 0 0">Changement du mot de passe disponible prochainement.</p>
+      </div>
+    </div>
+
+    {# ===== Mes revues ===== #}
+    <div class="profile-section">
+      <div class="profile-section-head">
+        <h2>Mes revues</h2>
+        <p style="font-size:13px;color:var(--ink-muted);margin:4px 0 0">Liste des revues disponible prochainement.</p>
+      </div>
+    </div>
+
+    {# ===== Session ===== #}
+    <div class="profile-section danger">
+      <div class="profile-section-head">
+        <h2>Session</h2>
+      </div>
+      <form method="post" action="{% url 'account_logout' %}">
+        {% csrf_token %}
+        <button type="submit" class="btn danger">Se déconnecter</button>
+      </form>
+    </div>
+
+  </main>
+</div>
+{% endblock %}

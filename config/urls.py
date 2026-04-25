@@ -8,6 +8,7 @@ from apps.articles.views import ArticleCreateFromJournalView
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("accounts/", include("allauth.urls")),
+    path("", include("apps.accounts.urls")),
     path("", include("apps.journals.urls")),
     path("revues/<slug:slug>/numeros/", include("apps.issues.urls")),
     path("revues/<slug:slug>/numeros/<int:issue_id>/articles/", include("apps.articles.urls")),
