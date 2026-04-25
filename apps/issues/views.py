@@ -530,11 +530,11 @@ class IssueReportView(JournalMemberRequiredMixin, View):
         }
 
         ctx = _build_report_context(request, issue, options)
-        html = render_to_string("issues/report.html", ctx, request=request)
+        html = render_to_string("issues/report.html", ctx)
 
         if weasyprint is not None:
             pdf = weasyprint.HTML(string=html).write_pdf()
-            filename = f"rapport_{request.journal.slug}_n{issue.number}_{timezone.now().date()}.pdf"
+            filename = f"rapport_{request.journal.slug}_n{issue.number}_{ctx['generated_at'].date()}.pdf"
             response = HttpResponse(pdf, content_type="application/pdf")
             response["Content-Disposition"] = f'attachment; filename="{filename}"'
             return response

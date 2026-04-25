@@ -26,6 +26,15 @@ def mock_wp():
     return m
 
 
+@pytest.fixture
+def received_favorable_review(review_request):
+    ReviewRequest.objects.filter(pk=review_request.pk).update(
+        state=ReviewRequest.State.RECEIVED,
+        verdict=ReviewRequest.Verdict.FAVORABLE,
+    )
+    return ReviewRequest.objects.get(pk=review_request.pk)
+
+
 @pytest.mark.django_db
 class TestIssueReportAccess:
     def test_unauthenticated_redirects(self, client, journal, issue):
@@ -102,19 +111,11 @@ class TestIssueReportOptions:
         res = self._get(client, user, report_url, include_articles_detail=0)
         assert "Détail des articles" not in res.content.decode()
 
-    def test_include_reviews_detail_1_shows_verdict(self, client, user, membership, report_url, review_request):
-        ReviewRequest.objects.filter(pk=review_request.pk).update(
-            state=ReviewRequest.State.RECEIVED,
-            verdict=ReviewRequest.Verdict.FAVORABLE,
-        )
+    def test_include_reviews_detail_1_shows_verdict(self, client, user, membership, report_url, received_favorable_review):
         res = self._get(client, user, report_url, include_articles_detail=1, include_reviews_detail=1)
         assert "Favorable" in res.content.decode()
 
-    def test_include_reviews_detail_0_hides_verdict(self, client, user, membership, report_url, review_request):
-        ReviewRequest.objects.filter(pk=review_request.pk).update(
-            state=ReviewRequest.State.RECEIVED,
-            verdict=ReviewRequest.Verdict.FAVORABLE,
-        )
+    def test_include_reviews_detail_0_hides_verdict(self, client, user, membership, report_url, received_favorable_review):
         res = self._get(client, user, report_url, include_articles_detail=1, include_reviews_detail=0)
         assert "Favorable" not in res.content.decode()
 

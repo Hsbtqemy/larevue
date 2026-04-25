@@ -255,35 +255,31 @@
           </ul>
         {% endif %}
 
-        {% if options.include_reviews_detail %}
-          {% if a.reviews %}
-            <h3>Relectures ({{ a.reviews|length }})</h3>
-            <ul class="sub-list">
-              {% for rr in a.reviews %}
-                <li>
-                  <span class="sub-label">{{ rr.reviewer_name_snapshot }}</span>
-                  <span class="muted">deadline {{ rr.deadline|date:"d/m/Y" }}</span>
-                  {% if rr.state == "received" %}
-                    <span class="muted">— reçue{% if rr.received_at %} le {{ rr.received_at|date:"d/m/Y" }}{% endif %}</span>
-                    {% if rr.verdict == "favorable" %}<span class="verdict-F">Favorable</span>
-                    {% elif rr.verdict == "needs_revision" %}<span class="verdict-R">Révision requise</span>
-                    {% elif rr.verdict == "unfavorable" %}<span class="verdict-U">Défavorable</span>
-                    {% endif %}
-                  {% else %}
-                    <span class="muted">(attendue)</span>
+        {% if options.include_reviews_detail and a.reviews %}
+          <h3>Relectures ({{ a.reviews|length }})</h3>
+          <ul class="sub-list">
+            {% for rr in a.reviews %}
+              <li>
+                <span class="sub-label">{{ rr.reviewer_name_snapshot }}</span>
+                <span class="muted">deadline {{ rr.deadline|date:"d/m/Y" }}</span>
+                {% if rr.state == rr.State.RECEIVED %}
+                  <span class="muted">— reçue{% if rr.received_at %} le {{ rr.received_at|date:"d/m/Y" }}{% endif %}</span>
+                  {% if rr.verdict == rr.Verdict.FAVORABLE %}<span class="verdict-F">Favorable</span>
+                  {% elif rr.verdict == rr.Verdict.NEEDS_REVISION %}<span class="verdict-R">Révision requise</span>
+                  {% elif rr.verdict == rr.Verdict.UNFAVORABLE %}<span class="verdict-U">Défavorable</span>
                   {% endif %}
-                </li>
-              {% endfor %}
-            </ul>
-          {% else %}
-            <p class="empty">Aucune relecture.</p>
-          {% endif %}
-        {% else %}
-          {% if a.reviews_total %}
-            <p class="muted" style="font-size:9pt">
-              {{ a.reviews_received }} relecture{{ a.reviews_received|pluralize }} reçue{{ a.reviews_received|pluralize }} sur {{ a.reviews_total }}.
-            </p>
-          {% endif %}
+                {% else %}
+                  <span class="muted">(attendue)</span>
+                {% endif %}
+              </li>
+            {% endfor %}
+          </ul>
+        {% elif options.include_reviews_detail %}
+          <p class="empty">Aucune relecture.</p>
+        {% elif a.reviews_total %}
+          <p class="muted" style="font-size:9pt">
+            {{ a.reviews_received }} relecture{{ a.reviews_received|pluralize }} reçue{{ a.reviews_received|pluralize }} sur {{ a.reviews_total }}.
+          </p>
         {% endif %}
       </div>
     {% endfor %}
