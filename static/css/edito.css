@@ -3302,3 +3302,26 @@ html[data-zoom="tres-grand"] .prefs-anchor { zoom: 1; }
   .prefs-btn { width: 36px; height: 36px; }
   .prefs-popover { width: calc(100vw - 28px); max-width: 320px; }
 }
+
+/* ---------- Issue documents list ---------- */
+.doc-list { display: flex; flex-direction: column; }
+.doc-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+}
+.doc-row:last-child { border-bottom: none; }
+.doc-row-icon { color: var(--ink-faint); flex-shrink: 0; margin-top: 1px; }
+.doc-row-body { flex: 1; min-width: 0; }
+.doc-row-name a {
+  font-weight: 500;
+  font-size: 14px;
+  color: var(--ink);
+  text-decoration: none;
+}
+.doc-row-name a:hover { text-decoration: underline; }
+.doc-row-desc { font-size: 13px; color: var(--ink-muted); margin-top: 2px; }
+.doc-row-meta { font-size: 12px; color: var(--ink-faint); margin-top: 3px; }
+.doc-row-actions { flex-shrink: 0; align-self: center; }

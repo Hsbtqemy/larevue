@@ -255,6 +255,7 @@ class IssueDetailView(JournalMemberRequiredMixin, DetailView):
         ctx.update({
             "journal": journal,
             "articles": articles,
+            "documents": list(issue.documents.select_related("uploaded_by").all()),
             "is_editable": is_editable,
             "transitions": self._compute_transitions(issue),
             "transition_url": transition_url,

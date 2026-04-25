@@ -1,0 +1,28 @@
+{% load edito %}
+{# Delete-document confirmation modal.
+   Context: journal, issue, doc (IssueDocument instance).
+   Wrapped in x-data="{ open: false }" by the caller. #}
+<template x-teleport="body">
+  <div x-show="open"
+       class="modal-backdrop"
+       @click.self="open = false"
+       @keydown.escape.window="open = false"
+       x-transition.opacity>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title-doc-del-{{ doc.pk }}">
+      <div class="modal-head">
+        <h3 id="modal-title-doc-del-{{ doc.pk }}">Supprimer le document</h3>
+        <div class="sub">Cette action est définitive.</div>
+      </div>
+      <div class="modal-body">
+        <p>Supprimer le document <strong>« {{ doc.name }} »</strong> ?</p>
+      </div>
+      <div class="modal-foot">
+        <button type="button" class="btn ghost" @click="open = false">Annuler</button>
+        <form method="post" action="{% url 'issues:document_delete' slug=journal.slug issue_id=issue.pk doc_id=doc.pk %}">
+          {% csrf_token %}
+          <button type="submit" class="btn danger-ghost">Supprimer</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</template>
