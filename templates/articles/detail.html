@@ -209,19 +209,19 @@
             <h3>Relectures</h3>
           </div>
 
-          {% include "articles/_review_create_modal.html" with review_create_url=review_create_url version_count=version_count versions=versions reviewer_search_url=reviewer_search_url default_deadline=default_deadline is_archived=is_archived %}
+          {% include "articles/_review_create_modal.html" with review_create_url=review_create_url version_count=version_count reviewer_search_url=reviewer_search_url default_deadline=default_deadline is_archived=is_archived %}
 
-          {% if expected_reviews %}
+          {% if active_reviews %}
             <div style="margin-top:16px">
-              <div class="tiny muted" style="margin-bottom:8px;text-transform:uppercase;letter-spacing:.06em">Attendues</div>
-              <div id="reviews-expected-list">
-                {% for review in expected_reviews %}
+              <div class="tiny muted" style="margin-bottom:8px;text-transform:uppercase;letter-spacing:.06em">En cours</div>
+              <div id="reviews-active-list">
+                {% for review in active_reviews %}
                   {% include "articles/_review_item_expected.html" with review=review %}
                 {% endfor %}
               </div>
             </div>
           {% else %}
-            <div id="reviews-expected-list" style="display:none"></div>
+            <div id="reviews-active-list" style="display:none"></div>
           {% endif %}
 
           {% if received_reviews %}
@@ -237,9 +237,22 @@
             <div id="reviews-received-list" style="display:none"></div>
           {% endif %}
 
-          {% if not expected_reviews and not received_reviews %}
+          {% if declined_reviews %}
+            <div style="margin-top:20px">
+              <div class="tiny muted" style="margin-bottom:8px;text-transform:uppercase;letter-spacing:.06em">Refusées</div>
+              <div id="reviews-declined-list">
+                {% for review in declined_reviews %}
+                  {% include "articles/_review_item_declined.html" with review=review %}
+                {% endfor %}
+              </div>
+            </div>
+          {% else %}
+            <div id="reviews-declined-list" style="display:none"></div>
+          {% endif %}
+
+          {% if not active_reviews and not received_reviews and not declined_reviews %}
             <div class="empty" style="padding:16px 0;margin-top:8px">
-              <p style="font-size:13px">Aucune relecture demandée.</p>
+              <p style="font-size:13px">Aucune relecture désignée.</p>
             </div>
           {% endif %}
 

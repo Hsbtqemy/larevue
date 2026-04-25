@@ -171,13 +171,15 @@ class TestDashboardContext:
             file="test.pdf",
             uploaded_by=user,
         )
-        past_date = datetime.date.today() - datetime.timedelta(days=5)
+        from django.utils import timezone as tz
+        past_date = tz.now().date() - datetime.timedelta(days=5)
         ReviewRequest.objects.create(
             article=article,
             article_version=version,
             reviewer=article.author,
             reviewer_name_snapshot="Jean Dupont",
             deadline=past_date,
+            state=ReviewRequest.State.SENT,
         )
 
         client.force_login(user)

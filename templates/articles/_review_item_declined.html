@@ -1,0 +1,20 @@
+{% load edito %}
+
+<div class="review-card" id="review-declined-{{ review.pk }}">
+
+  <div class="review-head">
+    <span class="review-reviewer">
+      {% if review.reviewer %}
+        <a href="{% url 'contacts:detail' slug=journal.slug pk=review.reviewer_id %}" style="color:inherit;text-decoration:none">{{ review.reviewer_name_snapshot }}</a>
+      {% else %}
+        {{ review.reviewer_name_snapshot }}
+      {% endif %}
+    </span>
+    {% state_badge review %}
+  </div>
+
+  <div class="review-card-meta">
+    <span>v{{ review.article_version.version_number }}</span>
+  </div>
+
+</div>

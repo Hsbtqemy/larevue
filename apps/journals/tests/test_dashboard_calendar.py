@@ -42,11 +42,15 @@ class TestBuildCalendarEvents:
         assert len(events) == 1
         assert events[0]["type"] == "articles"
 
-    def test_review_request_expected_included(self, journal, review_request):
+    def test_review_request_sent_included(self, journal, review_request):
+        from apps.reviews.models import ReviewRequest
+        ReviewRequest.objects.filter(pk=review_request.pk).update(state=ReviewRequest.State.SENT)
         events = _build_calendar_events(journal)
         assert any(e["type"] == "review_request" for e in events)
 
     def test_review_request_on_archived_issue_excluded(self, journal, review_request):
+        from apps.reviews.models import ReviewRequest
+        ReviewRequest.objects.filter(pk=review_request.pk).update(state=ReviewRequest.State.SENT)
         Issue.objects.filter(pk=review_request.article.issue.pk).update(state=Issue.State.PUBLISHED)
         events = _build_calendar_events(journal)
         assert not any(e["type"] == "review_request" for e in events)
