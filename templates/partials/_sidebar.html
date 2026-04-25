@@ -51,6 +51,12 @@
       {% icon "archive" 17 cls="icon" %}
       Archives
     </a>
+    <a href="{% url 'journal_edit' slug=journal.slug %}"
+       class="nav-item{% if sidebar_active == 'journal_edit' %} active{% endif %}"
+       style="text-decoration:none">
+      {% icon "edit" 17 cls="icon" %}
+      Modifier la revue
+    </a>
   </nav>
 
   <div class="sidebar-user">

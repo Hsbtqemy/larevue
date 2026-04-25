@@ -1,7 +1,7 @@
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db.models import Count, F, Q
 from django.http import Http404
-from django.shortcuts import redirect
+from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.utils import timezone
 from django.views import View
@@ -12,7 +12,7 @@ from apps.core.display import DEADLINE_LABELS, MONTH_ABBR
 from apps.core.mixins import JournalMemberRequiredMixin
 from apps.core.utils import file_response
 from apps.issues.models import Issue
-from apps.journals.forms import JournalDocumentForm
+from apps.journals.forms import JournalDocumentForm, JournalEditForm
 from apps.journals.models import JournalDocument
 from apps.reviews.models import ReviewRequest
 
@@ -168,14 +168,14 @@ class JournalDocumentCreateView(JournalMemberRequiredMixin, View):
             doc.journal = request.journal
             doc.uploaded_by = request.user
             doc.save()
-        return redirect(reverse("journal_dashboard", kwargs={"slug": request.journal.slug}))
+        return redirect(reverse("journal_edit", kwargs={"slug": request.journal.slug}))
 
 
 class JournalDocumentDeleteView(JournalMemberRequiredMixin, View):
     def post(self, request, doc_id, **kwargs):
         doc = _get_journal_document_or_404(request, doc_id)
         doc.delete()
-        return redirect(reverse("journal_dashboard", kwargs={"slug": request.journal.slug}))
+        return redirect(reverse("journal_edit", kwargs={"slug": request.journal.slug}))
 
 
 class JournalDocumentDownloadView(JournalMemberRequiredMixin, View):
@@ -184,3 +184,36 @@ class JournalDocumentDownloadView(JournalMemberRequiredMixin, View):
         if not doc.file:
             raise Http404
         return file_response(doc.file)
+
+
+class JournalEditView(JournalMemberRequiredMixin, View):
+    template_name = "journals/edit.html"
+
+    def _context(self, form):
+        journal = self.request.journal
+        _kw = {"slug": journal.slug}
+        documents = list(journal.documents.select_related("uploaded_by").all())
+        for doc in documents:
+            doc.download_url = reverse("journal_document_download", kwargs={**_kw, "doc_id": doc.pk})
+            doc.delete_url = reverse("journal_document_delete", kwargs={**_kw, "doc_id": doc.pk})
+        return {
+            "journal": journal,
+            "form": form,
+            "documents": documents,
+            "doc_create_url": reverse("journal_document_create", kwargs=_kw),
+            "doc_section_title": "Documents de la revue",
+            "doc_add_modal_title": "Ajouter un document à la revue",
+            "is_editable": True,
+            "user_journal_count": self.request.user.memberships.count(),
+        }
+
+    def get(self, request, **kwargs):
+        form = JournalEditForm(instance=request.journal)
+        return render(request, self.template_name, self._context(form))
+
+    def post(self, request, **kwargs):
+        form = JournalEditForm(request.POST, request.FILES, instance=request.journal)
+        if form.is_valid():
+            form.save()
+            return redirect(reverse("journal_edit", kwargs={"slug": request.journal.slug}))
+        return render(request, self.template_name, self._context(form))

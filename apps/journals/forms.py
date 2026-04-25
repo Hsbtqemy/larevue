@@ -1,8 +1,21 @@
 from django import forms
 
-from apps.journals.models import JournalDocument
+from apps.journals.models import Journal, JournalDocument
 
 MAX_UPLOAD_MB = 25
+
+
+class JournalEditForm(forms.ModelForm):
+    class Meta:
+        model = Journal
+        fields = [
+            "name", "accent_color", "description", "logo",
+            "directors", "publisher", "issn_print", "issn_online",
+            "periodicity", "founded_year", "website",
+        ]
+        widgets = {
+            "description": forms.Textarea(attrs={"rows": 4}),
+        }
 
 
 class JournalDocumentForm(forms.ModelForm):

@@ -1,0 +1,184 @@
+{% extends "base.html" %}
+{% load static edito %}
+
+{% block title %}Modifier — {{ journal.name }}{% endblock %}
+
+{% block body_class %}{% endblock %}
+
+{% block extra_head %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter+Tight:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{% static 'css/edito.css' %}?v=20260425c">
+{% endblock %}
+
+{% block content %}
+<div class="app-shell" data-accent="{{ journal.accent_color }}">
+
+  {# ===== SIDEBAR ===== #}
+  {% include "partials/_sidebar.html" with sidebar_active="journal_edit" %}
+
+  {# ===== MAIN ===== #}
+  <main class="main">
+
+    <div class="accent-strip" style="background:var(--accent)"></div>
+
+    <nav class="breadcrumb breadcrumb--bar" aria-label="Fil d'Ariane">
+      <a href="{% url 'journal_dashboard' slug=journal.slug %}">{{ journal.name }}</a>
+      <span class="sep">{% icon "chevronR" 12 %}</span>
+      <span aria-current="page">Modifier la revue</span>
+    </nav>
+
+    <form method="post" enctype="multipart/form-data">
+      {% csrf_token %}
+
+      {# ===== Identité ===== #}
+      <div class="main-content" style="padding-bottom:0">
+        <div class="section">
+          <div class="section-head">
+            <h2>Identité</h2>
+          </div>
+          <div class="edit-meta-form">
+
+            <div class="field full">
+              <label for="id_name">Nom de la revue <span class="req">*</span></label>
+              <input type="text" id="id_name" name="name" class="text-input"
+                     value="{{ form.name.value|default:'' }}" required>
+              {% if form.name.errors %}
+                <div class="form-msg err">{{ form.name.errors|join:" " }}</div>
+              {% endif %}
+            </div>
+
+            <div class="field">
+              <label for="id_accent_color">Couleur d'accentuation</label>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px">
+                {% for val, label in form.fields.accent_color.choices %}
+                  <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px">
+                    <input type="radio" name="accent_color" value="{{ val }}"
+                           {% if form.accent_color.value == val %}checked{% endif %}>
+                    <span class="revue-dot" data-accent="{{ val }}" style="background:var(--accent-{{ val }})"></span>
+                    {{ label }}
+                  </label>
+                {% endfor %}
+              </div>
+              {% if form.accent_color.errors %}
+                <div class="form-msg err">{{ form.accent_color.errors|join:" " }}</div>
+              {% endif %}
+            </div>
+
+            <div class="field full">
+              <label for="id_description">Description</label>
+              <textarea id="id_description" name="description" class="text-input" rows="4">{{ form.description.value|default:'' }}</textarea>
+              {% if form.description.errors %}
+                <div class="form-msg err">{{ form.description.errors|join:" " }}</div>
+              {% endif %}
+            </div>
+
+            {% if form.non_field_errors %}
+              <div class="field full">
+                <div class="form-msg err">{{ form.non_field_errors|join:" " }}</div>
+              </div>
+            {% endif %}
+
+          </div>
+          <div style="margin-top:20px">
+            <button type="submit" class="btn primary">Enregistrer les modifications</button>
+          </div>
+        </div>
+      </div>
+
+      {# ===== Institutionnel ===== #}
+      <div class="main-content" style="padding-bottom:0">
+        <div class="section">
+          <div class="section-head">
+            <h2>Informations institutionnelles</h2>
+          </div>
+          <div class="edit-meta-form">
+
+            <div class="field full">
+              <label for="id_directors">Direction de la revue</label>
+              <input type="text" id="id_directors" name="directors" class="text-input"
+                     value="{{ form.directors.value|default:'' }}"
+                     placeholder="Ex : Marie Dupont, Jean Martin">
+              {% if form.directors.errors %}
+                <div class="form-msg err">{{ form.directors.errors|join:" " }}</div>
+              {% endif %}
+            </div>
+
+            <div class="field">
+              <label for="id_publisher">Éditeur</label>
+              <input type="text" id="id_publisher" name="publisher" class="text-input"
+                     value="{{ form.publisher.value|default:'' }}">
+              {% if form.publisher.errors %}
+                <div class="form-msg err">{{ form.publisher.errors|join:" " }}</div>
+              {% endif %}
+            </div>
+
+            <div class="field">
+              <label for="id_periodicity">Périodicité</label>
+              <input type="text" id="id_periodicity" name="periodicity" class="text-input"
+                     value="{{ form.periodicity.value|default:'' }}"
+                     placeholder="Ex : Semestrielle, Annuelle">
+              {% if form.periodicity.errors %}
+                <div class="form-msg err">{{ form.periodicity.errors|join:" " }}</div>
+              {% endif %}
+            </div>
+
+            <div class="field">
+              <label for="id_issn_print">ISSN papier</label>
+              <input type="text" id="id_issn_print" name="issn_print" class="text-input"
+                     value="{{ form.issn_print.value|default:'' }}"
+                     placeholder="XXXX-XXXX">
+              {% if form.issn_print.errors %}
+                <div class="form-msg err">{{ form.issn_print.errors|join:" " }}</div>
+              {% endif %}
+            </div>
+
+            <div class="field">
+              <label for="id_issn_online">ISSN en ligne</label>
+              <input type="text" id="id_issn_online" name="issn_online" class="text-input"
+                     value="{{ form.issn_online.value|default:'' }}"
+                     placeholder="XXXX-XXXX">
+              {% if form.issn_online.errors %}
+                <div class="form-msg err">{{ form.issn_online.errors|join:" " }}</div>
+              {% endif %}
+            </div>
+
+            <div class="field">
+              <label for="id_founded_year">Année de fondation</label>
+              <input type="number" id="id_founded_year" name="founded_year" class="text-input"
+                     value="{{ form.founded_year.value|default:'' }}"
+                     min="1800" max="2100" placeholder="Ex : 1998">
+              {% if form.founded_year.errors %}
+                <div class="form-msg err">{{ form.founded_year.errors|join:" " }}</div>
+              {% endif %}
+            </div>
+
+            <div class="field full">
+              <label for="id_website">Site web</label>
+              <input type="url" id="id_website" name="website" class="text-input"
+                     value="{{ form.website.value|default:'' }}"
+                     placeholder="https://…">
+              {% if form.website.errors %}
+                <div class="form-msg err">{{ form.website.errors|join:" " }}</div>
+              {% endif %}
+            </div>
+
+          </div>
+          <div style="margin-top:20px">
+            <button type="submit" class="btn primary">Enregistrer les modifications</button>
+          </div>
+        </div>
+      </div>
+
+    </form>
+
+    {# ===== Documents ===== #}
+    <div class="main-content">
+      {% include "partials/_documents_panel.html" %}
+    </div>
+
+  </main>
+
+</div>{# /app-shell #}
+{% endblock %}
