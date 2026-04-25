@@ -35,6 +35,16 @@ def received_favorable_review(review_request):
     return ReviewRequest.objects.get(pk=review_request.pk)
 
 
+@pytest.fixture
+def issue_document(issue, user):
+    return IssueDocument.objects.create(
+        issue=issue,
+        name="Budget prévisionnel 2026",
+        file=ContentFile(b"fake", name="budget.pdf"),
+        uploaded_by=user,
+    )
+
+
 @pytest.mark.django_db
 class TestIssueReportAccess:
     def test_unauthenticated_redirects(self, client, journal, issue):
@@ -119,22 +129,10 @@ class TestIssueReportOptions:
         res = self._get(client, user, report_url, include_articles_detail=1, include_reviews_detail=0)
         assert "Favorable" not in res.content.decode()
 
-    def test_include_documents_1_shows_document_name(self, client, user, membership, report_url, issue):
-        IssueDocument.objects.create(
-            issue=issue,
-            name="Budget prévisionnel 2026",
-            file=ContentFile(b"fake", name="budget.pdf"),
-            uploaded_by=user,
-        )
+    def test_include_documents_1_shows_document_name(self, client, user, membership, report_url, issue_document):
         res = self._get(client, user, report_url, include_documents=1)
         assert "Budget prévisionnel 2026" in res.content.decode()
 
-    def test_include_documents_0_hides_document_name(self, client, user, membership, report_url, issue):
-        IssueDocument.objects.create(
-            issue=issue,
-            name="Budget prévisionnel 2026",
-            file=ContentFile(b"fake", name="budget.pdf"),
-            uploaded_by=user,
-        )
+    def test_include_documents_0_hides_document_name(self, client, user, membership, report_url, issue_document):
         res = self._get(client, user, report_url, include_documents=0)
         assert "Budget prévisionnel 2026" not in res.content.decode()

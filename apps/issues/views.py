@@ -472,8 +472,6 @@ class IssueDocumentDownloadView(JournalMemberRequiredMixin, View):
 
 
 def _build_report_context(request, issue, options):
-    journal = request.journal
-
     articles = list(
         issue.articles
         .prefetch_related("versions", "review_requests", "review_requests__reviewer")
@@ -482,7 +480,6 @@ def _build_report_context(request, issue, options):
     for a in articles:
         versions = list(a.versions.all())
         a.all_versions = versions
-        a.latest_version = versions[-1] if versions else None
         rrs = list(a.review_requests.all())
         a.reviews = rrs
         a.reviews_received = sum(1 for r in rrs if r.state == ReviewRequest.State.RECEIVED)
@@ -504,7 +501,7 @@ def _build_report_context(request, issue, options):
     ]
 
     return {
-        "journal": journal,
+        "journal": request.journal,
         "issue": issue,
         "articles": articles,
         "issue_notes": issue_notes,

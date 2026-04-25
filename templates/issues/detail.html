@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter+Tight:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="{% static 'css/edito.css' %}?v=20260425c">
+<link rel="stylesheet" href="{% static 'css/edito.css' %}?v=20260425d">
 {% endblock %}
 
 {% block content %}
@@ -126,17 +126,17 @@
                     Choisissez les sections à inclure dans le rapport.
                   </p>
                   <div style="display:flex;flex-direction:column;gap:10px">
-                    <label style="display:flex;align-items:center;gap:10px;font-size:14px;cursor:pointer">
-                      <input type="checkbox" x-model="include_articles_detail"> Détail des articles (résumés, versions, relectures)
+                    <label class="check-label">
+                      <input type="checkbox" x-model="includeArticlesDetail"> Détail des articles (résumés, versions, relectures)
                     </label>
-                    <label style="display:flex;align-items:center;gap:10px;font-size:14px;cursor:pointer">
-                      <input type="checkbox" x-model="include_reviews_detail"> Verdicts des relectures
+                    <label class="check-label">
+                      <input type="checkbox" x-model="includeReviewsDetail"> Verdicts des relectures
                     </label>
-                    <label style="display:flex;align-items:center;gap:10px;font-size:14px;cursor:pointer">
-                      <input type="checkbox" x-model="include_notes"> Notes internes
+                    <label class="check-label">
+                      <input type="checkbox" x-model="includeNotes"> Notes internes
                     </label>
-                    <label style="display:flex;align-items:center;gap:10px;font-size:14px;cursor:pointer">
-                      <input type="checkbox" x-model="include_documents"> Documents attachés
+                    <label class="check-label">
+                      <input type="checkbox" x-model="includeDocuments"> Documents attachés
                     </label>
                   </div>
                 </div>

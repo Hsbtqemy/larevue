@@ -518,6 +518,19 @@ label {
   letter-spacing: 0.04em;
 }
 
+.check-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  font-weight: normal;
+  text-transform: none;
+  letter-spacing: 0;
+  margin-bottom: 0;
+  color: var(--ink);
+  cursor: pointer;
+}
+
 /* ---------- Accent colors par revue ---------- */
 [data-accent="terracotta"] { --accent: var(--accent-terracotta); --accent-soft: var(--accent-terracotta-soft); --accent-tint: var(--accent-terracotta-tint); }
 [data-accent="olive"]      { --accent: var(--accent-olive);      --accent-soft: var(--accent-olive-soft);      --accent-tint: var(--accent-olive-tint); }
