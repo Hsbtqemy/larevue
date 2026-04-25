@@ -27,6 +27,25 @@ class Journal(BaseModel):
         verbose_name="Couleur d'accentuation",
     )
 
+    directors = models.CharField(
+        max_length=500, blank=True, verbose_name="Direction de la revue",
+        help_text="Noms des directeurs/directrices, séparés par des virgules.",
+    )
+    publisher = models.CharField(max_length=200, blank=True, verbose_name="Éditeur")
+    issn_print = models.CharField(
+        max_length=9, blank=True, verbose_name="ISSN papier",
+        help_text="Format : XXXX-XXXX",
+    )
+    issn_online = models.CharField(
+        max_length=9, blank=True, verbose_name="ISSN en ligne",
+        help_text="Format : XXXX-XXXX",
+    )
+    periodicity = models.CharField(max_length=100, blank=True, verbose_name="Périodicité")
+    founded_year = models.PositiveSmallIntegerField(
+        null=True, blank=True, verbose_name="Année de fondation",
+    )
+    website = models.URLField(max_length=300, blank=True, verbose_name="Site web")
+
     class Meta:
         verbose_name = "Revue"
         verbose_name_plural = "Revues"

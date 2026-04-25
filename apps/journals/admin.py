@@ -22,6 +22,7 @@ class JournalAdmin(admin.ModelAdmin):
     fieldsets = (
         (None, {"fields": ("name", "slug", "description")}),
         ("Apparence", {"fields": ("logo", "accent_color")}),
+        ("Institutionnel", {"fields": ("directors", "publisher", "issn_print", "issn_online", "periodicity", "founded_year", "website")}),
         ("Métadonnées", {"fields": ("created_at", "updated_at"), "classes": ("collapse",)}),
     )
 
