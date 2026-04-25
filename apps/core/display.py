@@ -45,3 +45,12 @@ DEADLINE_LABELS: dict[str, str] = {
     "deadline_sent_to_publisher": "Limite envoi éditeur",
     "planned_publication_date": "Parution prévue",
 }
+
+DEADLINE_TYPES: dict[str, str] = {
+    "deadline_articles": "articles",
+    "deadline_reviews": "reviews",
+    "deadline_v2": "v2",
+    "deadline_final_check": "final_check",
+    "deadline_sent_to_publisher": "publisher",
+    "planned_publication_date": "publication",
+}

@@ -8,7 +8,7 @@ from django.views import View
 from django.views.generic import TemplateView
 
 from apps.articles.models import Article
-from apps.core.display import DEADLINE_LABELS, MONTH_ABBR
+from apps.core.display import DEADLINE_LABELS, DEADLINE_TYPES, MONTH_ABBR
 from apps.core.mixins import JournalMemberRequiredMixin
 from apps.core.utils import file_response
 from apps.issues.models import Issue
@@ -17,24 +17,15 @@ from apps.journals.models import JournalDocument
 from apps.reviews.models import ReviewRequest
 
 
-_DEADLINE_TYPE = {
-    "deadline_articles": "articles",
-    "deadline_reviews": "reviews",
-    "deadline_v2": "v2",
-    "deadline_final_check": "final_check",
-    "deadline_sent_to_publisher": "publisher",
-    "planned_publication_date": "publication",
-}
-
-
-def _build_calendar_events(journal):
+def _build_calendar_events(journal, active_issues=None):
     """Return flat list of event dicts for all active issues, used by the calendar view."""
-    active_issues = list(journal.issues.filter(state__in=Issue.ACTIVE_STATES))
+    if active_issues is None:
+        active_issues = list(journal.issues.filter(state__in=Issue.ACTIVE_STATES))
 
     events = []
     for issue in active_issues:
         url = reverse("issues:detail", kwargs={"slug": journal.slug, "issue_id": issue.pk})
-        for field, evt_type in _DEADLINE_TYPE.items():
+        for field, evt_type in DEADLINE_TYPES.items():
             d = getattr(issue, field)
             if d:
                 events.append({
@@ -199,7 +190,7 @@ class JournalDashboardView(JournalMemberRequiredMixin, TemplateView):
             "late_count": len(watch_items),
             "upcoming_deadlines": upcoming[:10],
             "user_journal_count": self.request.user.memberships.count(),
-            "calendar_events": _build_calendar_events(journal),
+            "calendar_events": _build_calendar_events(journal, active_issues),
             "today_iso": today.isoformat(),
         })
         return ctx

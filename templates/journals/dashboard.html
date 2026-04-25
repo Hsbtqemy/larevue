@@ -227,13 +227,14 @@
                    x-text="evt.label"
                    :aria-label="evt.label"></a>
               </template>
-              <div x-show="cell.events.length > 3"
+              <div x-show="overflowCount(cell) > 0"
                    class="cal-evt-more"
                    tabindex="0"
                    role="button"
                    @click.stop="toggleExpand(cell.dateStr)"
                    @keydown.enter.prevent="toggleExpand(cell.dateStr)"
-                   x-text="'+' + (cell.events.length - 3) + ' autre' + (cell.events.length - 3 > 1 ? 's' : '')"></div>
+                   @keydown.space.prevent="toggleExpand(cell.dateStr)"
+                   x-text="'+' + overflowCount(cell) + ' autre' + (overflowCount(cell) > 1 ? 's' : '')"></div>
               <div x-show="expandedDate === cell.dateStr"
                    class="cal-popover"
                    @click.stop

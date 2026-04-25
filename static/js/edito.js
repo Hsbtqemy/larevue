@@ -384,6 +384,13 @@ document.addEventListener("alpine:init", () => {
     const minAbs = todayAbs - 6;
     const maxAbs = todayAbs + 12;
 
+    // Pre-index events by ISO date string for O(1) lookup in the cells getter.
+    const eventsByDate = new Map();
+    for (const evt of events) {
+      if (!eventsByDate.has(evt.date)) eventsByDate.set(evt.date, []);
+      eventsByDate.get(evt.date).push(evt);
+    }
+
     function isoDate(d) {
       return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
     }
@@ -420,6 +427,8 @@ document.addEventListener("alpine:init", () => {
         this.expandedDate = this.expandedDate === dateStr ? null : dateStr;
       },
 
+      overflowCount(cell) { return cell.events.length - 3; },
+
       get cells() {
         const year = this.year;
         const month = this.month;
@@ -436,7 +445,7 @@ document.addEventListener("alpine:init", () => {
         for (let d = 1; d <= daysInMonth; d++) {
           const dateStr = isoDate(new Date(year, month, d));
           const isToday = (year === todayYear && month === todayMonth && d === todayDay);
-          cells.push({ day: d, inMonth: true, isToday, dateStr, events: events.filter(e => e.date === dateStr) });
+          cells.push({ day: d, inMonth: true, isToday, dateStr, events: eventsByDate.get(dateStr) ?? [] });
         }
 
         const trailing = (7 - cells.length % 7) % 7;
