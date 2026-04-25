@@ -36,6 +36,7 @@ class TestArticleTones:
         assert article_states == set(ARTICLE_TONES.keys())
 
     @pytest.mark.parametrize("state,expected_tone", [
+        (Article.State.PENDING, "neutral"),
         (Article.State.RECEIVED, "neutral"),
         (Article.State.IN_REVIEW, "active"),
         (Article.State.REVIEWS_RECEIVED, "info"),

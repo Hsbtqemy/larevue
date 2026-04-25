@@ -762,7 +762,7 @@ class TestArticleCreateView:
         assert response.status_code == 200
         assert "form" in response.context
 
-    def test_valid_post_creates_article(self, client, user, membership, journal, issue):
+    def test_valid_post_creates_article_in_pending_without_file(self, client, user, membership, journal, issue):
         client.force_login(user)
         response = client.post(_article_create_url(journal, issue), {
             "title": "Mon article",
@@ -770,10 +770,24 @@ class TestArticleCreateView:
         })
         assert response.status_code == 302
         a = Article.objects.get(issue=issue, title="Mon article")
-        assert a.state == Article.State.RECEIVED
+        assert a.state == Article.State.PENDING
         assert response["Location"] == reverse(
             "issues:detail", kwargs={"slug": journal.slug, "issue_id": issue.pk}
         )
+
+    def test_valid_post_creates_article_in_received_with_file(self, client, user, membership, journal, issue):
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        client.force_login(user)
+        f = SimpleUploadedFile("article.pdf", b"pdf content", content_type="application/pdf")
+        response = client.post(_article_create_url(journal, issue), {
+            "title": "Article avec fichier",
+            "article_type": Article.Type.ARTICLE,
+            "file": f,
+        })
+        assert response.status_code == 302
+        a = Article.objects.get(issue=issue, title="Article avec fichier")
+        assert a.state == Article.State.RECEIVED
+        assert a.versions.count() == 1
 
     def test_article_belongs_to_issue(self, client, user, membership, journal, issue):
         client.force_login(user)

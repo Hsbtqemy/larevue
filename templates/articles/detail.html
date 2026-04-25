@@ -147,9 +147,12 @@
         <div style="display:flex;gap:8px;align-items:flex-start;flex-shrink:0">
 
           {# ── FSM transition buttons ── #}
-          {% if transitions.primary %}
-            {% include "partials/_transition_confirm_modal.html" with spec=transitions.primary transition_url=transition_url %}
+          {% if mark_received_spec %}
+            {% include "partials/_mark_received_modal.html" with spec=mark_received_spec mark_received_url=mark_received_url %}
           {% endif %}
+          {% for spec in transitions.primary %}
+            {% include "partials/_transition_confirm_modal.html" with spec=spec transition_url=transition_url %}
+          {% endfor %}
           {% for spec in transitions.secondary %}
             {% include "partials/_transition_confirm_modal.html" with spec=spec transition_url=transition_url %}
           {% endfor %}

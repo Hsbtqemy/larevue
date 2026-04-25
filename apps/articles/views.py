@@ -8,6 +8,7 @@ from django.urls import reverse
 from django.utils import timezone
 from django.views import View
 from django.views.generic import DetailView
+from django_fsm import can_proceed
 
 from apps.articles.forms import (
     ArticleCreateForm,
@@ -60,6 +61,8 @@ class ArticleCreateView(JournalOwnedCreateView):
     def post_create(self, instance, form):
         f = form.cleaned_data.get("file")
         if f:
+            instance.mark_received()
+            instance.save()
             ArticleVersion.objects.create(article=instance, file=f, uploaded_by=self.request.user)
 
     def get_success_url(self, instance):
@@ -94,6 +97,8 @@ class ArticleCreateFromJournalView(JournalOwnedCreateView):
     def post_create(self, instance, form):
         f = form.cleaned_data.get("file")
         if f:
+            instance.mark_received()
+            instance.save()
             ArticleVersion.objects.create(article=instance, file=f, uploaded_by=self.request.user)
 
     def get_success_url(self, instance):
@@ -104,7 +109,7 @@ class ArticleCreateFromJournalView(JournalOwnedCreateView):
 
 
 _ARTICLE_TRANSITIONS = {
-    "send_to_review": {
+    "send_to_review": {  # sourced from received OR revised — not from pending
         "label": "Envoyer en relecture",
         "description": "L'article passe en phase de relecture.",
         "description_fn": lambda a: (
@@ -274,6 +279,20 @@ class ArticleDetailView(JournalMemberRequiredMixin, DetailView):
             },
         )
 
+        mark_received_url = reverse(
+            "articles:mark_received",
+            kwargs={"slug": journal.slug, "issue_id": issue.pk, "article_id": article.pk},
+        )
+        mark_received_spec = None
+        if not is_archived and can_proceed(article.mark_received):
+            mark_received_spec = {
+                "name": "mark_received",
+                "label": "Marquer comme reçu",
+                "description": "Le fichier est arrivé, l'article entre en phase éditoriale.",
+                "ui_variant": "primary",
+                "enabled": True,
+            }
+
         ctx.update({
             "issue": issue,
             "journal": journal,
@@ -303,6 +322,8 @@ class ArticleDetailView(JournalMemberRequiredMixin, DetailView):
             ).isoformat(),
             "transitions": self._compute_transitions(article, is_archived),
             "transition_url": transition_url,
+            "mark_received_spec": mark_received_spec,
+            "mark_received_url": mark_received_url,
         })
         return ctx
 
@@ -603,3 +624,43 @@ class ArticleTransitionView(_ArticleJournalMixin, JournalOwnedTransitionView):
                 "article_id": obj.pk,
             },
         )
+
+
+class ArticleMarkReceivedView(_ArticleJournalMixin, JournalMemberRequiredMixin, View):
+    """Transition pending → received + création de la version v1."""
+
+    def post(self, request, issue_id, article_id, **kwargs):
+        article = self.get_object_or_404()
+
+        guard = self._check_archived(article)
+        if guard:
+            return guard
+
+        if article.state != Article.State.PENDING:
+            return JsonResponse({"error": "L'article n'est pas en attente de réception."}, status=400)
+
+        file = request.FILES.get("file")
+        if not file:
+            return JsonResponse({"error": "Un fichier est requis pour marquer l'article comme reçu."}, status=400)
+
+        article.mark_received()
+        article.save()
+
+        version = ArticleVersion.objects.create(
+            article=article,
+            file=file,
+            uploaded_by=request.user,
+        )
+
+        actor_name = request.user.get_full_name() or request.user.email
+        log_action(
+            article, request.user,
+            f"{actor_name} a marqué l'article comme reçu et déposé la version v{version.version_number}",
+        )
+
+        return JsonResponse({
+            "redirect_url": reverse(
+                "articles:detail",
+                kwargs={"slug": request.journal.slug, "issue_id": issue_id, "article_id": article_id},
+            )
+        })

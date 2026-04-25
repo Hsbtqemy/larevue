@@ -8,6 +8,7 @@ from apps.core.storage import VersionedUploadTo
 
 class Article(BaseModel):
     class State(models.TextChoices):
+        PENDING = "pending", "En attente"
         RECEIVED = "received", "Reçu"
         IN_REVIEW = "in_review", "En relecture"
         REVIEWS_RECEIVED = "reviews_received", "Relectures reçues"
@@ -52,7 +53,7 @@ class Article(BaseModel):
     )
     order = models.PositiveIntegerField(default=0, verbose_name="Ordre dans le numéro")
     state = FSMField(
-        default=State.RECEIVED,
+        default=State.PENDING,
         choices=State.choices,
         protected=True,
         verbose_name="État",
@@ -79,6 +80,10 @@ class Article(BaseModel):
     # ------------------------------------------------------------------ #
     # Transitions FSM                                                      #
     # ------------------------------------------------------------------ #
+
+    @transition(field=state, source=State.PENDING, target=State.RECEIVED)
+    def mark_received(self):
+        pass
 
     # Source multiple : même méthode pour le 1er et les tours suivants.
     @transition(field=state, source=[State.RECEIVED, State.REVISED], target=State.IN_REVIEW)

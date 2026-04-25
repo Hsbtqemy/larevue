@@ -19,10 +19,10 @@ def _post(client, url, transition, note=""):
 # ── Fixtures ──────────────────────────────────────────────────────────────────
 
 @pytest.fixture
-def in_review_article(article):
-    article.send_to_review()
-    article.save()
-    return article
+def in_review_article(received_article):
+    received_article.send_to_review()
+    received_article.save()
+    return received_article
 
 
 @pytest.fixture
@@ -89,32 +89,32 @@ class TestArticleTransitionView:
 
     # ── send_to_review (from received) ───────────────────────────────────────
 
-    def test_send_to_review_changes_state(self, client, user, membership, journal, issue, article):
+    def test_send_to_review_changes_state(self, client, user, membership, journal, issue, received_article):
         client.force_login(user)
-        _post(client, _url(journal, issue, article), "send_to_review")
-        assert Article.objects.get(pk=article.pk).state == Article.State.IN_REVIEW
+        _post(client, _url(journal, issue, received_article), "send_to_review")
+        assert Article.objects.get(pk=received_article.pk).state == Article.State.IN_REVIEW
 
-    def test_send_to_review_returns_redirect_url(self, client, user, membership, journal, issue, article):
+    def test_send_to_review_returns_redirect_url(self, client, user, membership, journal, issue, received_article):
         client.force_login(user)
-        res = _post(client, _url(journal, issue, article), "send_to_review")
+        res = _post(client, _url(journal, issue, received_article), "send_to_review")
         assert res.status_code == 200
         assert "redirect_url" in res.json()
 
-    def test_send_to_review_creates_audit_note(self, client, user, membership, journal, issue, article):
+    def test_send_to_review_creates_audit_note(self, client, user, membership, journal, issue, received_article):
         client.force_login(user)
-        _post(client, _url(journal, issue, article), "send_to_review")
-        assert InternalNote.objects.filter(article=article, is_automatic=True).exists()
+        _post(client, _url(journal, issue, received_article), "send_to_review")
+        assert InternalNote.objects.filter(article=received_article, is_automatic=True).exists()
 
-    def test_send_to_review_includes_actor_name_in_note(self, client, user, membership, journal, issue, article):
+    def test_send_to_review_includes_actor_name_in_note(self, client, user, membership, journal, issue, received_article):
         client.force_login(user)
-        _post(client, _url(journal, issue, article), "send_to_review")
-        note = InternalNote.objects.get(article=article, is_automatic=True)
+        _post(client, _url(journal, issue, received_article), "send_to_review")
+        note = InternalNote.objects.get(article=received_article, is_automatic=True)
         assert user.first_name in note.content or user.email in note.content
 
-    def test_send_to_review_with_user_note_appended(self, client, user, membership, journal, issue, article):
+    def test_send_to_review_with_user_note_appended(self, client, user, membership, journal, issue, received_article):
         client.force_login(user)
-        _post(client, _url(journal, issue, article), "send_to_review", note="Deux relecteurs minimum")
-        note = InternalNote.objects.get(article=article, is_automatic=True)
+        _post(client, _url(journal, issue, received_article), "send_to_review", note="Deux relecteurs minimum")
+        note = InternalNote.objects.get(article=received_article, is_automatic=True)
         assert "Deux relecteurs minimum" in note.content
 
     def test_send_to_review_from_wrong_state_returns_400(self, client, user, membership, journal, issue, in_review_article):
@@ -195,13 +195,24 @@ class TestArticleTransitionView:
 
     # ── context: transitions in view context ──────────────────────────────────
 
-    def test_context_primary_transition_for_received(self, client, user, membership, journal, issue, article):
+    def test_context_primary_transition_for_pending(self, client, user, membership, journal, issue, article):
+        """Pending article exposes mark_received_spec, not a standard primary transition."""
         client.force_login(user)
         ctx = client.get(
             reverse("articles:detail", kwargs={"slug": journal.slug, "issue_id": issue.pk, "article_id": article.pk})
         ).context
+        assert ctx["mark_received_spec"] is not None
+        assert ctx["mark_received_spec"]["name"] == "mark_received"
+        assert ctx["transitions"]["primary"] == []
+
+    def test_context_primary_transition_for_received(self, client, user, membership, journal, issue, received_article):
+        client.force_login(user)
+        ctx = client.get(
+            reverse("articles:detail", kwargs={"slug": journal.slug, "issue_id": issue.pk, "article_id": received_article.pk})
+        ).context
         primary_names = [t["name"] for t in ctx["transitions"]["primary"]]
         assert "send_to_review" in primary_names
+        assert ctx["mark_received_spec"] is None
 
     def test_context_primary_transition_for_in_review(self, client, user, membership, journal, issue, in_review_article):
         client.force_login(user)

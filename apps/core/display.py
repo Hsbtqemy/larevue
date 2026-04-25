@@ -16,6 +16,7 @@ ISSUE_TONES: dict[str, str] = {
 }
 
 ARTICLE_TONES: dict[str, str] = {
+    "pending": "neutral",
     "received": "neutral",
     "in_review": "active",
     "reviews_received": "info",

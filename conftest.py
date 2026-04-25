@@ -37,6 +37,15 @@ def issue(db, journal):
 
 
 @pytest.fixture
+def received_article(db, issue, contact):
+    """Article already in 'received' state (bypasses FSM for test setup)."""
+    from apps.articles.models import Article
+    article = Article.objects.create(issue=issue, title="Article reçu", author=contact)
+    Article.objects.filter(pk=article.pk).update(state=Article.State.RECEIVED)
+    return Article.objects.get(pk=article.pk)
+
+
+@pytest.fixture
 def contact(db, journal):
     return Contact.objects.create(
         journal=journal,

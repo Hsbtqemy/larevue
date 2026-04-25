@@ -21,4 +21,5 @@ urlpatterns = [
     path("<int:article_id>/reviews/<int:review_id>/download/", views.ReviewRequestFileDownloadView.as_view(), name="review_download"),
     path("<int:article_id>/reviews/<int:review_id>/patch/", views.ReviewRequestPatchView.as_view(), name="review_patch"),
     path("<int:article_id>/transition/", views.ArticleTransitionView.as_view(), name="transition"),
+    path("<int:article_id>/mark-received/", views.ArticleMarkReceivedView.as_view(), name="mark_received"),
 ]
