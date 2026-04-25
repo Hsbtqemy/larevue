@@ -104,6 +104,53 @@
 
       <div class="issue-header-right">
 
+        {# ── Rapport PDF ── #}
+        {% url 'issues:report' slug=journal.slug issue_id=issue.pk as report_url %}
+        <div x-data="reportModal('{{ report_url|escapejs }}')">
+          <button type="button" class="btn ghost sm" @click="openModal()">
+            {% icon "file" 14 cls="icon" %} Générer le rapport
+          </button>
+          <template x-teleport="body">
+            <div x-show="open"
+                 class="modal-backdrop"
+                 @click.self="close()"
+                 @keydown.escape.window="close()"
+                 x-transition.opacity>
+              <div class="modal" role="dialog" aria-modal="true">
+                <div class="modal-head">
+                  <h3>Générer le rapport</h3>
+                  <div class="sub">N°{{ issue.number }} — {{ issue.thematic_title }}</div>
+                </div>
+                <div class="modal-body">
+                  <p style="font-size:14px;color:var(--ink-muted);margin-bottom:16px">
+                    Choisissez les sections à inclure dans le rapport.
+                  </p>
+                  <div style="display:flex;flex-direction:column;gap:10px">
+                    <label style="display:flex;align-items:center;gap:10px;font-size:14px;cursor:pointer">
+                      <input type="checkbox" x-model="include_articles_detail"> Détail des articles (résumés, versions, relectures)
+                    </label>
+                    <label style="display:flex;align-items:center;gap:10px;font-size:14px;cursor:pointer">
+                      <input type="checkbox" x-model="include_reviews_detail"> Verdicts des relectures
+                    </label>
+                    <label style="display:flex;align-items:center;gap:10px;font-size:14px;cursor:pointer">
+                      <input type="checkbox" x-model="include_notes"> Notes internes
+                    </label>
+                    <label style="display:flex;align-items:center;gap:10px;font-size:14px;cursor:pointer">
+                      <input type="checkbox" x-model="include_documents"> Documents attachés
+                    </label>
+                  </div>
+                </div>
+                <div class="modal-foot">
+                  <button type="button" class="btn ghost" @click="close()">Annuler</button>
+                  <button type="button" class="btn primary" @click="generate()">
+                    {% icon "file" 14 cls="icon" %} Générer le PDF
+                  </button>
+                </div>
+              </div>
+            </div>
+          </template>
+        </div>
+
         {# ── FSM transition buttons ── #}
         {% for spec in transitions.primary %}
           {% include "partials/_transition_confirm_modal.html" with spec=spec transition_url=transition_url %}

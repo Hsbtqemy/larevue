@@ -460,6 +460,25 @@ document.addEventListener("alpine:init", () => {
   });
 
 
+  Alpine.data("reportModal", (baseUrl) => ({
+    open: false,
+    include_notes: true,
+    include_reviews_detail: true,
+    include_articles_detail: true,
+    include_documents: true,
+    openModal() { this.open = true; },
+    close() { this.open = false; },
+    generate() {
+      const p = new URLSearchParams({
+        include_notes:           this.include_notes           ? "1" : "0",
+        include_reviews_detail:  this.include_reviews_detail  ? "1" : "0",
+        include_articles_detail: this.include_articles_detail ? "1" : "0",
+        include_documents:       this.include_documents       ? "1" : "0",
+      });
+      window.location.href = `${baseUrl}?${p}`;
+    },
+  }));
+
   Alpine.data("savedBanner", () => {
     let timer = null;
     return {
