@@ -2,14 +2,26 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db.models import Count, F, Q
 from django.http import Http404
 from django.shortcuts import redirect
+from django.urls import reverse
 from django.utils import timezone
+from django.views import View
 from django.views.generic import TemplateView
 
 from apps.articles.models import Article
 from apps.core.display import DEADLINE_LABELS, MONTH_ABBR
 from apps.core.mixins import JournalMemberRequiredMixin
+from apps.core.utils import file_response
 from apps.issues.models import Issue
+from apps.journals.forms import JournalDocumentForm
+from apps.journals.models import JournalDocument
 from apps.reviews.models import ReviewRequest
+
+
+def _get_journal_document_or_404(request, doc_id):
+    try:
+        return JournalDocument.objects.get(pk=doc_id, journal=request.journal)
+    except JournalDocument.DoesNotExist:
+        raise Http404
 
 
 class HomeView(LoginRequiredMixin, TemplateView):
@@ -146,3 +158,29 @@ class JournalDashboardView(JournalMemberRequiredMixin, TemplateView):
             "user_journal_count": self.request.user.memberships.count(),
         })
         return ctx
+
+
+class JournalDocumentCreateView(JournalMemberRequiredMixin, View):
+    def post(self, request, **kwargs):
+        form = JournalDocumentForm(request.POST, request.FILES)
+        if form.is_valid():
+            doc = form.save(commit=False)
+            doc.journal = request.journal
+            doc.uploaded_by = request.user
+            doc.save()
+        return redirect(reverse("journal_dashboard", kwargs={"slug": request.journal.slug}))
+
+
+class JournalDocumentDeleteView(JournalMemberRequiredMixin, View):
+    def post(self, request, doc_id, **kwargs):
+        doc = _get_journal_document_or_404(request, doc_id)
+        doc.delete()
+        return redirect(reverse("journal_dashboard", kwargs={"slug": request.journal.slug}))
+
+
+class JournalDocumentDownloadView(JournalMemberRequiredMixin, View):
+    def get(self, request, doc_id, **kwargs):
+        doc = _get_journal_document_or_404(request, doc_id)
+        if not doc.file:
+            raise Http404
+        return file_response(doc.file)
