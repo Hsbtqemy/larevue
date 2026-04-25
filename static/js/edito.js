@@ -299,6 +299,59 @@ document.addEventListener("alpine:init", () => {
     },
   }));
 
+  Alpine.data("contactAutocomplete", ({ searchUrl, initialName = "", initialId = "" } = {}) => {
+    let debounceTimer = null;
+    return {
+      query: initialName,
+      selectedId: String(initialId),
+      selectedName: initialName,
+      results: [],
+      open: false,
+      loading: false,
+
+      init() {
+        this.$watch("query", (val) => {
+          if (this.selectedId && val === this.selectedName) return;
+          this.selectedId = "";
+          this.selectedName = "";
+          clearTimeout(debounceTimer);
+          debounceTimer = setTimeout(() => this._search(val), 200);
+        });
+      },
+
+      async _search(q) {
+        if (!q.trim()) { this.results = []; this.open = false; return; }
+        this.loading = true;
+        try {
+          const url = new URL(searchUrl, window.location.origin);
+          url.searchParams.set("q", q);
+          const res = await fetch(url);
+          const data = await res.json();
+          this.results = data.results || [];
+          this.open = this.results.length > 0;
+        } catch (_) {
+          this.results = [];
+          this.open = false;
+        } finally {
+          this.loading = false;
+        }
+      },
+
+      select(item) {
+        this.selectedId = String(item.id);
+        this.selectedName = item.name;
+        this.query = item.name;
+        this.open = false;
+        this.results = [];
+      },
+
+      onBlur() {
+        setTimeout(() => { this.open = false; }, 150);
+      },
+    };
+  });
+
+
   Alpine.data("savedBanner", () => {
     let timer = null;
     return {

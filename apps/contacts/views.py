@@ -1,4 +1,5 @@
 from django.contrib import messages
+from django.db import models as db_models
 from django.db import transaction
 from django.db.models import Count
 from django.http import JsonResponse
@@ -115,6 +116,28 @@ class ContactEditView(JournalOwnedObjectMixin, JournalMemberRequiredMixin, View)
             for field, errs in form.errors.as_data().items()
         }
         return JsonResponse({"errors": errors}, status=400)
+
+
+class ContactSearchAPIView(JournalMemberRequiredMixin, View):
+    def get(self, request, **kwargs):
+        q = request.GET.get("q", "").strip()
+        role = request.GET.get("role", "")
+
+        contacts = Contact.objects.filter(journal=request.journal)
+        if q:
+            contacts = contacts.filter(
+                db_models.Q(first_name__icontains=q)
+                | db_models.Q(last_name__icontains=q)
+                | db_models.Q(affiliation__icontains=q)
+            )
+        if role and role in Contact.Role.values:
+            contacts = contacts.filter(usual_roles__contains=[role])
+
+        results = [
+            {"id": c.pk, "name": c.full_name, "affiliation": c.affiliation}
+            for c in contacts.order_by("last_name", "first_name")[:10]
+        ]
+        return JsonResponse({"results": results})
 
 
 class ContactDeleteView(JournalOwnedObjectMixin, JournalMemberRequiredMixin, View):
