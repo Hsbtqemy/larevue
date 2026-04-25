@@ -63,13 +63,6 @@ class ArticleVersionUploadForm(forms.Form):
 class ReviewRequestCreateForm(forms.ModelForm):
     def __init__(self, *args, journal=None, article=None, **kwargs):
         super().__init__(*args, **kwargs)
-        if journal:
-            self.fields["reviewer"].queryset = journal.contacts.filter(
-                usual_roles__overlap=[
-                    Contact.Role.INTERNAL_REVIEWER,
-                    Contact.Role.EXTERNAL_REVIEWER,
-                ]
-            ).order_by("last_name", "first_name")
         if article:
             qs = article.versions.order_by("-version_number")
             self.fields["article_version"].queryset = qs
@@ -81,7 +74,7 @@ class ReviewRequestCreateForm(forms.ModelForm):
 
     class Meta:
         model = ReviewRequest
-        fields = ["reviewer", "article_version", "deadline"]
+        fields = ["article_version", "deadline"]
         labels = {"article_version": "Version à relire"}
 
 

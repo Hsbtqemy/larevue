@@ -35,13 +35,7 @@
             <div class="edit-meta-form">
               <div class="field full">
                 <label>Relecteur·ice *</label>
-                <select name="reviewer" class="text-input" required>
-                  <option value="">— Choisir —</option>
-                  {% for c in reviewer_options %}
-                    <option value="{{ c.pk }}">{{ c.full_name }}</option>
-                  {% endfor %}
-                </select>
-              </div>
+                {% include "partials/_contact_autocomplete.html" with search_url=reviewer_search_url id_field="reviewer_id" name_field="reviewer_name" initial_id="" initial_name="" placeholder="Nom ou affiliation…" create_url="" %}</div>
               <div class="field">
                 <label>Version à relire *</label>
                 <select name="article_version" class="text-input" required>

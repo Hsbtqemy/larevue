@@ -440,7 +440,12 @@ class TestReviewRequestCreateView:
             deadline = (datetime.date.today() + datetime.timedelta(days=28)).isoformat()
         return client.post(
             _review_create_url(journal, issue, article),
-            {"reviewer": contact.pk, "article_version": version.pk, "deadline": deadline},
+            {
+                "reviewer_id": contact.pk,
+                "reviewer_name": contact.full_name,
+                "article_version": version.pk,
+                "deadline": deadline,
+            },
         )
 
     def test_requires_login(self, client, journal, issue, article, article_version, contact):
@@ -468,7 +473,7 @@ class TestReviewRequestCreateView:
         client.force_login(user)
         res = client.post(
             _review_create_url(journal, issue, article),
-            {"reviewer": contact.pk, "article_version": 9999, "deadline": "2030-01-01"},
+            {"reviewer_id": contact.pk, "reviewer_name": contact.full_name, "article_version": 9999, "deadline": "2030-01-01"},
         )
         assert res.status_code == 400
 
@@ -479,7 +484,7 @@ class TestReviewRequestCreateView:
         client.force_login(user)
         res = client.post(
             _review_create_url(journal, issue, article),
-            {"reviewer": other_contact.pk, "article_version": article_version.pk, "deadline": "2030-01-01"},
+            {"reviewer_id": other_contact.pk, "article_version": article_version.pk, "deadline": "2030-01-01"},
         )
         assert res.status_code == 400
 

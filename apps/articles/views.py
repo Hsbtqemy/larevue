@@ -336,13 +336,9 @@ class ArticleDetailView(JournalMemberRequiredMixin, DetailView):
             "received_reviews": received_reviews,
             "article_count_in_issue": issue.articles.count(),
             "user_journal_count": self.request.user.memberships.count(),
-            "reviewer_options": list(
-                journal.contacts.filter(
-                    usual_roles__overlap=[
-                        Contact.Role.INTERNAL_REVIEWER,
-                        Contact.Role.EXTERNAL_REVIEWER,
-                    ]
-                ).order_by("last_name", "first_name")
+            "reviewer_search_url": (
+                reverse("contacts:search", kwargs={"slug": journal.slug})
+                + "?role=external_reviewer"
             ),
             "default_deadline": (
                 timezone.now().date() + timezone.timedelta(days=28)
@@ -541,12 +537,29 @@ class ReviewRequestCreateView(_ArticleJournalMixin, JournalMemberRequiredMixin, 
             errors = {f: [str(e.message) for e in errs] for f, errs in form.errors.as_data().items()}
             return JsonResponse({"errors": errors}, status=400)
 
-        reviewer = form.cleaned_data["reviewer"]
+        reviewer_id = request.POST.get("reviewer_id", "").strip()
+        reviewer_name = request.POST.get("reviewer_name", "").strip()
+        reviewer = None
+        reviewer_name_snapshot = reviewer_name
+
+        if reviewer_id:
+            try:
+                contact = Contact.objects.get(pk=int(reviewer_id))
+                if contact.journal != request.journal:
+                    return JsonResponse({"error": "Ce contact n'appartient pas à cette revue."}, status=400)
+                reviewer = contact
+                reviewer_name_snapshot = contact.full_name
+            except (Contact.DoesNotExist, ValueError):
+                return JsonResponse({"error": "Relecteur·ice introuvable."}, status=400)
+
+        if not reviewer_name_snapshot:
+            return JsonResponse({"error": "Le nom du relecteur·ice est requis."}, status=400)
+
         review = ReviewRequest.objects.create(
             article=article,
             article_version=form.cleaned_data["article_version"],
             reviewer=reviewer,
-            reviewer_name_snapshot=reviewer.full_name,
+            reviewer_name_snapshot=reviewer_name_snapshot,
             deadline=form.cleaned_data["deadline"],
             state=ReviewRequest.State.EXPECTED,
         )
@@ -555,7 +568,7 @@ class ReviewRequestCreateView(_ArticleJournalMixin, JournalMemberRequiredMixin, 
         deadline_str = review.deadline.strftime("%d/%m/%Y")
         log_action(
             article, request.user,
-            f"{actor_name} a demandé une relecture à {reviewer.full_name} pour le {deadline_str}",
+            f"{actor_name} a demandé une relecture à {reviewer_name_snapshot} pour le {deadline_str}",
         )
 
         ctx = {
