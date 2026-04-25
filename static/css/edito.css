@@ -120,6 +120,7 @@
 
 /* ---------- Base ---------- */
 * { box-sizing: border-box; }
+[x-cloak] { display: none !important; }
 html, body, #app {
   margin: 0; padding: 0;
   background: var(--bg);
@@ -2399,3 +2400,849 @@ textarea.text-input {
   border-color: var(--tone-warn-ink);
 }
 .timeline-date--late { color: var(--tone-warn-ink); font-weight: 500; }
+
+
+/* ===============================================================
+   ACCESSIBILITÉ — Mode sombre, mode contraste élevé, grossissement
+   Conforme WCAG 2.1 AA (et AAA en mode contraste élevé)
+   - Ratios de contraste ≥ 4.5:1 (texte courant) / ≥ 3:1 (UI)
+   - Indicateurs de focus visibles partout
+   - prefers-reduced-motion respecté
+   - prefers-color-scheme & prefers-contrast comme valeurs par défaut
+   =============================================================== */
+
+/* ---------- Mode SOMBRE ---------- */
+[data-theme="sombre"] {
+  /* Surfaces — gris très sombre tirant sur le bleu/neutre */
+  --bg:          #14171c;
+  --bg-raised:   #1b1f25;
+  --bg-sunken:   #0f1216;
+  --surface:     #1d2128;
+  --surface-2:   #252a32;
+
+  /* Encres — blanc cassé, ratios ≥ 7:1 sur --bg */
+  --ink:         #f1ece2;       /* AAA sur --bg (≈ 14.8:1) */
+  --ink-muted:   #b8b1a4;       /* AA  sur --bg (≈ 7.6:1) */
+  --ink-faint:   #8a8478;       /* AA  pour texte large (≈ 4.6:1) */
+  --ink-inverse: #14171c;
+
+  /* Séparations plus visibles que dans le clair */
+  --line:        #353a44;
+  --line-strong: #4d535f;
+
+  --primary:     #f1ece2;
+  --primary-ink: #14171c;
+
+  /* Accents par revue — recalibrés pour rester lisibles sur fond sombre */
+  --accent-terracotta:      #e08a66;
+  --accent-terracotta-soft: #4a2e22;
+  --accent-terracotta-tint: #2c1d16;
+  --accent-olive:           #b3c374;
+  --accent-olive-soft:      #353e21;
+  --accent-olive-tint:      #232818;
+  --accent-slate:           #8fb0c5;
+  --accent-slate-soft:      #2a3942;
+  --accent-slate-tint:      #1c252b;
+
+  /* Sémantique — fonds plus saturés, encres pâles pour ratio AA */
+  --tone-neutral-bg:  #2c3038;  --tone-neutral-ink:  #e3ddd0;
+  --tone-active-bg:   #4a3220;  --tone-active-ink:   #f3c89e;
+  --tone-info-bg:     #2a3520;  --tone-info-ink:     #c8d8a4;
+  --tone-progress-bg: #3d2e18;  --tone-progress-ink: #e8c490;
+  --tone-done-bg:     #283a25;  --tone-done-ink:     #b9d39c;
+  --tone-refused-bg:  #422820;  --tone-refused-ink:  #efb6a0;
+  --tone-warn-bg:     #4a2818;  --tone-warn-ink:     #f0a87e;
+
+  /* Ombres plus marquées car peu visibles sur fond sombre */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.45), 0 1px 2px rgba(0, 0, 0, 0.35);
+  --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.55), 0 2px 8px rgba(0, 0, 0, 0.40);
+}
+
+/* Inversions ciblées dans le mode sombre */
+[data-theme="sombre"] .nav-item:hover { background: rgba(255,255,255,0.05); }
+[data-theme="sombre"] .btn.ghost:hover { background: rgba(255,255,255,0.06); }
+[data-theme="sombre"] input:focus,
+[data-theme="sombre"] textarea:focus,
+[data-theme="sombre"] select:focus {
+  box-shadow: 0 0 0 3px rgba(255,255,255,0.10);
+}
+[data-theme="sombre"] .modal-backdrop {
+  background: rgba(0,0,0,0.70);
+}
+[data-theme="sombre"] .login-stage {
+  background-image:
+    radial-gradient(circle at 25% 20%, rgba(224, 138, 102, 0.06), transparent 45%),
+    radial-gradient(circle at 75% 80%, rgba(179, 195, 116, 0.05), transparent 40%);
+}
+/* Le rapport (document A4) reste un papier blanc, même en mode sombre — c'est un document imprimable */
+[data-theme="sombre"] .report-doc {
+  background: #ffffff;
+  color: #1a1a1a;
+}
+[data-theme="sombre"] .report-screen { background: #0f1216; }
+
+/* Image upload : overlay garde toujours fond sombre car il superpose une image */
+[data-theme="sombre"] .image-upload-fallback-cta {
+  background: rgba(29, 33, 40, 0.92);
+  color: var(--ink);
+  border-color: var(--line);
+}
+
+/* ---------- Mode CONTRASTE ÉLEVÉ ---------- */
+/* S'applique en surcouche de n'importe quel thème (clair ou sombre).
+   Cible un ratio AAA (≥ 7:1 texte courant, ≥ 4.5:1 grand texte). */
+[data-contrast="eleve"] {
+  /* Ratios extrêmes */
+  --bg:          #ffffff;
+  --bg-raised:   #ffffff;
+  --bg-sunken:   #f2f2f2;
+  --surface:     #ffffff;
+  --surface-2:   #f2f2f2;
+
+  --ink:         #000000;        /* 21:1 */
+  --ink-muted:   #1a1a1a;        /* 18:1 — on supprime la nuance "muted" */
+  --ink-faint:   #2e2e2e;        /* 13:1 */
+  --ink-inverse: #ffffff;
+
+  --line:        #000000;
+  --line-strong: #000000;
+
+  --primary:     #000000;
+  --primary-ink: #ffffff;
+
+  /* Accents : noir pour les bandes et étiquettes, plus de tons doux */
+  --accent-terracotta:      #8a3210;
+  --accent-terracotta-soft: #ffe6d6;
+  --accent-terracotta-tint: #fff3eb;
+  --accent-olive:           #3d4d10;
+  --accent-olive-soft:      #e6ecd0;
+  --accent-olive-tint:      #f3f6e6;
+  --accent-slate:           #1f3a4f;
+  --accent-slate-soft:      #d6e3eb;
+  --accent-slate-tint:      #ebf1f5;
+
+  /* Sémantique : fonds très clairs, encres très foncées (AAA) */
+  --tone-neutral-bg:  #e8e8e8;  --tone-neutral-ink:  #000000;
+  --tone-active-bg:   #ffe1c2;  --tone-active-ink:   #6a2d00;
+  --tone-info-bg:     #d8e6c2;  --tone-info-ink:     #2a3a00;
+  --tone-progress-bg: #ffd9a8;  --tone-progress-ink: #5a3000;
+  --tone-done-bg:     #c8e0b8;  --tone-done-ink:     #1f3d10;
+  --tone-refused-bg:  #ffc8b8;  --tone-refused-ink:  #6a1500;
+  --tone-warn-bg:     #ffd0b0;  --tone-warn-ink:     #6a1f00;
+
+  --shadow-sm: 0 0 0 1px #000;
+  --shadow-md: 0 0 0 1px #000;
+  --shadow-lg: 0 0 0 2px #000;
+}
+
+/* Variante contraste élevé sur fond sombre */
+[data-theme="sombre"][data-contrast="eleve"] {
+  --bg:          #000000;
+  --bg-raised:   #000000;
+  --bg-sunken:   #0a0a0a;
+  --surface:     #000000;
+  --surface-2:   #0d0d0d;
+
+  --ink:         #ffffff;        /* 21:1 */
+  --ink-muted:   #f0f0f0;
+  --ink-faint:   #d8d8d8;
+  --ink-inverse: #000000;
+
+  --line:        #ffffff;
+  --line-strong: #ffffff;
+
+  --primary:     #ffffff;
+  --primary-ink: #000000;
+
+  --accent-terracotta:      #ffb392;
+  --accent-terracotta-soft: #4a1e0a;
+  --accent-terracotta-tint: #2a1308;
+  --accent-olive:           #d8e89a;
+  --accent-olive-soft:      #2a3510;
+  --accent-olive-tint:      #1a2008;
+  --accent-slate:           #b6d4e6;
+  --accent-slate-soft:      #1a2c38;
+  --accent-slate-tint:      #0e1820;
+
+  --tone-neutral-bg:  #1f1f1f;  --tone-neutral-ink:  #ffffff;
+  --tone-active-bg:   #4a2a10;  --tone-active-ink:   #ffd9a8;
+  --tone-info-bg:     #2a3a10;  --tone-info-ink:     #d8e6b0;
+  --tone-progress-bg: #4a3010;  --tone-progress-ink: #ffd0a0;
+  --tone-done-bg:     #20381a;  --tone-done-ink:     #c8e8a8;
+  --tone-refused-bg:  #4a1a10;  --tone-refused-ink:  #ffc0a8;
+  --tone-warn-bg:     #4a2010;  --tone-warn-ink:     #ffc090;
+}
+
+/* Bordures partout en contraste élevé — supprime les surfaces "flottantes" */
+[data-contrast="eleve"] .card,
+[data-contrast="eleve"] .issue-card,
+[data-contrast="eleve"] .article-list,
+[data-contrast="eleve"] .article-row,
+[data-contrast="eleve"] .watch-item,
+[data-contrast="eleve"] .calendar,
+[data-contrast="eleve"] .qa-btn,
+[data-contrast="eleve"] .table,
+[data-contrast="eleve"] .login-card,
+[data-contrast="eleve"] .revue-big-card,
+[data-contrast="eleve"] .modal,
+[data-contrast="eleve"] .popover,
+[data-contrast="eleve"] .tweaks-panel,
+[data-contrast="eleve"] .review-card,
+[data-contrast="eleve"] .note-item,
+[data-contrast="eleve"] .my-revue-row,
+[data-contrast="eleve"] .profile-section,
+[data-contrast="eleve"] .archive-row,
+[data-contrast="eleve"] .history-row,
+[data-contrast="eleve"] .badge,
+[data-contrast="eleve"] .chip,
+[data-contrast="eleve"] .btn,
+[data-contrast="eleve"] input,
+[data-contrast="eleve"] textarea,
+[data-contrast="eleve"] select {
+  border-width: 2px !important;
+}
+
+[data-contrast="eleve"] .nav-item.active {
+  outline: 2px solid var(--ink);
+  outline-offset: -2px;
+}
+
+/* Badges en contraste élevé : bordure 2px et police plus grasse */
+[data-contrast="eleve"] .badge {
+  font-weight: 600;
+  border: 2px solid currentColor;
+  padding: 3px 9px;
+}
+
+/* Supprime les fonds décoratifs très clairs en haut de cartes */
+[data-contrast="eleve"] .login-stage { background-image: none; }
+
+/* Indicateurs de focus visibles (WCAG 2.4.7 — Visible Focus AA) */
+[data-contrast="eleve"] *:focus-visible {
+  outline: 3px solid var(--ink) !important;
+  outline-offset: 2px !important;
+  box-shadow: 0 0 0 2px var(--bg) !important;
+}
+
+/* ---------- Indicateur de focus universel (tous modes) ---------- */
+/* Tous les contrôles interactifs doivent avoir un focus visible. */
+button:focus-visible,
+a:focus-visible,
+.nav-item:focus-visible,
+.tab:focus-visible,
+.chip:focus-visible,
+.qa-btn:focus-visible,
+.cal-row:focus-visible,
+.watch-item:focus-visible,
+.issue-card:focus-visible,
+.archive-row:focus-visible,
+.history-row:focus-visible,
+.article-row:focus-visible,
+.revue-big-card:focus-visible,
+.popover-item:focus-visible,
+.color-swatch:focus-visible,
+.editable-display:focus-visible,
+.inline-display:focus-visible,
+.revue-switcher-current:focus-visible,
+.sidebar-user-btn:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+[data-theme="sombre"] button:focus-visible,
+[data-theme="sombre"] a:focus-visible {
+  outline-color: var(--ink);
+}
+
+/* ---------- GROSSISSEMENT (zoom) ---------- */
+/* Trois niveaux. Multiplie la taille de base et adapte les éléments d'UI
+   pour respecter la cible de 44×44 px (WCAG 2.5.5 Target Size AAA). */
+:root { --zoom: 1; }
+[data-zoom="normal"]     { --zoom: 1;    }
+[data-zoom="grand"]      { --zoom: 1.25; }
+[data-zoom="tres-grand"] { --zoom: 1.5;  }
+
+[data-zoom="grand"] html,
+[data-zoom="grand"] body,
+[data-zoom="grand"] #app,
+html[data-zoom="grand"],
+html[data-zoom="grand"] body { font-size: 18px; }
+
+[data-zoom="tres-grand"] html,
+[data-zoom="tres-grand"] body,
+[data-zoom="tres-grand"] #app,
+html[data-zoom="tres-grand"],
+html[data-zoom="tres-grand"] body { font-size: 21px; }
+
+/* Approche universelle : on agrandit TOUT proportionnellement via la propriété
+   `zoom` sur les conteneurs racines. Cela met à l'échelle tous les px (texte
+   petit, padding, icônes, grilles…) sans avoir à patcher chaque sélecteur.
+   On l'applique aux écrans qui ne sont PAS l'app-shell (login, sélection)
+   ainsi qu'à .main (pour ne pas affecter le rapport imprimable qui doit
+   rester en taille fixe). La sidebar est zoomée séparément. */
+html[data-zoom="grand"] .app-shell > .main,
+html[data-zoom="grand"] .login-stage,
+html[data-zoom="grand"] .revue-select-stage {
+  zoom: 1.25;
+}
+html[data-zoom="tres-grand"] .app-shell > .main,
+html[data-zoom="tres-grand"] .login-stage,
+html[data-zoom="tres-grand"] .revue-select-stage {
+  zoom: 1.5;
+}
+html[data-zoom="grand"] .sidebar { zoom: 1.15; }
+html[data-zoom="tres-grand"] .sidebar { zoom: 1.3; }
+
+/* Le rapport (document A4) reste à sa taille d'origine — c'est imprimable */
+html[data-zoom="grand"] .report-screen,
+html[data-zoom="tres-grand"] .report-screen { zoom: 1; }
+html[data-zoom="grand"] .main:has(.report-screen),
+html[data-zoom="tres-grand"] .main:has(.report-screen) { zoom: 1; }
+
+/* Le panneau Tweaks lui-même reste à sa taille (sinon il devient gigantesque
+   et inutilisable) */
+html[data-zoom="grand"] .tweaks-panel,
+html[data-zoom="tres-grand"] .tweaks-panel { zoom: 1; }
+
+/* Les modales et popovers : zoom appliqué pour cohérence */
+html[data-zoom="grand"] .modal-backdrop { zoom: 1.25; }
+html[data-zoom="tres-grand"] .modal-backdrop { zoom: 1.5; }
+
+/* Tous les ajustements granulaires (boutons, nav, inputs, articles…) sont
+   gérés par la propriété `zoom` ci-dessus, qui multiplie uniformément les
+   tailles. Pas besoin de surcharger sélecteur par sélecteur. */
+
+/* ---------- Réduction des animations (WCAG 2.3.3) ---------- */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ---------- Skip-link ---------- */
+.skip-link {
+  position: absolute;
+  top: -100px;
+  left: 12px;
+  background: var(--ink);
+  color: var(--ink-inverse);
+  padding: 10px 16px;
+  border-radius: 6px;
+  font-weight: 500;
+  z-index: 1000;
+  text-decoration: none;
+  transition: top 150ms;
+}
+.skip-link:focus {
+  top: 12px;
+  outline: 3px solid var(--ink);
+  outline-offset: 2px;
+}
+
+/* ---------- Tweaks panel — section accessibilité ---------- */
+.tweaks-panel {
+  width: 308px;
+}
+.tweaks-section {
+  border-top: 1px solid var(--line);
+  padding-top: 12px;
+  margin-top: 12px;
+}
+.tweaks-section:first-of-type { border-top: none; padding-top: 0; margin-top: 0; }
+.tweaks-section-title {
+  font-size: 10.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink-faint);
+  margin-bottom: 10px;
+}
+.zoom-control {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+  background: var(--bg-sunken);
+  border-radius: 8px;
+  padding: 3px;
+}
+.zoom-control button {
+  border: none;
+  background: transparent;
+  border-radius: 6px;
+  cursor: pointer;
+  color: var(--ink-muted);
+  font-family: inherit;
+  font-weight: 500;
+  padding: 7px 4px;
+  display: grid;
+  place-items: center;
+  line-height: 1;
+}
+.zoom-control button.on {
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: var(--shadow-sm);
+}
+.zoom-control button .lbl-A {
+  font-family: var(--font-display);
+}
+
+.toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 0;
+}
+.toggle-row .toggle-info {
+  flex: 1;
+  min-width: 0;
+}
+.toggle-row .toggle-info .t {
+  font-size: 13px;
+  color: var(--ink);
+  font-weight: 500;
+  margin-bottom: 1px;
+}
+.toggle-row .toggle-info .d {
+  font-size: 11.5px;
+  color: var(--ink-faint);
+  line-height: 1.35;
+}
+.toggle-switch {
+  --tw: 38px;
+  --th: 22px;
+  width: var(--tw);
+  height: var(--th);
+  border-radius: 100px;
+  background: var(--line-strong);
+  border: none;
+  position: relative;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 150ms;
+}
+.toggle-switch::after {
+  content: "";
+  position: absolute;
+  top: 2px; left: 2px;
+  width: calc(var(--th) - 4px);
+  height: calc(var(--th) - 4px);
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.25);
+  transition: left 150ms;
+}
+.toggle-switch[aria-pressed="true"] {
+  background: var(--ink);
+}
+.toggle-switch[aria-pressed="true"]::after {
+  left: calc(var(--tw) - var(--th) + 2px);
+}
+[data-contrast="eleve"] .toggle-switch {
+  border: 2px solid var(--ink);
+  background: var(--bg);
+}
+[data-contrast="eleve"] .toggle-switch[aria-pressed="true"] { background: var(--ink); }
+[data-contrast="eleve"] .toggle-switch::after { background: var(--ink); }
+[data-contrast="eleve"] .toggle-switch[aria-pressed="true"]::after { background: var(--bg); }
+
+
+
+/* ===============================================================
+   ZOOM-COMPENSATING BREAKPOINTS
+   La propriété CSS `zoom` agrandit le contenu mais NE déplace PAS les
+   media queries (qui restent en pixels CSS du viewport). On dupliquedonc les breakpoints critiques à des largeurs proportionnellement
+   plus grandes pour qu'ils se déclenchent au bon moment quand le contenu
+   est zoomé.
+   - zoom 1.25 → seuils × 1.25 (1024→1280, 900→1125, 720→900, 480→600)
+   - zoom 1.5  → seuils × 1.5  (1024→1536, 900→1350, 720→1080, 480→720)
+   =============================================================== */
+
+/* ---------- Zoom 1.25 (grand) ---------- */
+html[data-zoom="grand"] .app-shell { grid-template-columns: 200px 1fr; }
+
+@media (max-width: 1280px) {
+  html[data-zoom="grand"] .main-header { flex-direction: column; align-items: flex-start; gap: 14px; }
+  html[data-zoom="grand"] .issue-header { flex-direction: column; gap: 16px; }
+  html[data-zoom="grand"] .issue-header-right { flex-direction: row; align-items: stretch; flex-wrap: wrap; }
+  html[data-zoom="grand"] .article-zones { grid-template-columns: 1fr; }
+  html[data-zoom="grand"] .contact-detail { grid-template-columns: 1fr; }
+  html[data-zoom="grand"] .contact-card { max-width: 420px; }
+  html[data-zoom="grand"] .edit-meta-form { grid-template-columns: 1fr; }
+  html[data-zoom="grand"] .report-dl { grid-template-columns: repeat(2, 1fr); }
+  html[data-zoom="grand"] .report-overview { grid-template-columns: repeat(2, 1fr); }
+  html[data-zoom="grand"] .quick-actions { grid-template-columns: repeat(2, 1fr); }
+  html[data-zoom="grand"] .dash-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 1125px) {
+  html[data-zoom="grand"] .issue-grid { grid-template-columns: 1fr; }
+  html[data-zoom="grand"] .revue-select-grid { grid-template-columns: 1fr; }
+  html[data-zoom="grand"] .archive-row { grid-template-columns: auto 1fr auto; gap: 14px; padding: 14px 16px; }
+  html[data-zoom="grand"] .archive-row .btn.sm { display: none; }
+  html[data-zoom="grand"] .history-row { grid-template-columns: auto 1fr auto; gap: 12px; }
+}
+
+@media (max-width: 900px) {
+  /* Sidebar bascule en barre haute */
+  html[data-zoom="grand"] .app-shell { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
+  html[data-zoom="grand"] .sidebar {
+    position: static; height: auto; flex-direction: row;
+    align-items: center; gap: 12px; padding: 12px 16px;
+    overflow-x: auto; border-right: none; border-bottom: 1px solid var(--line);
+    zoom: 1; /* on annule le zoom de la sidebar pour ne pas la rendre énorme */
+  }
+  html[data-zoom="grand"] .sidebar-brand { border-bottom: none; padding: 0; flex-shrink: 0; }
+  html[data-zoom="grand"] .revue-switcher { flex: 1; min-width: 180px; }
+  html[data-zoom="grand"] .revue-switcher-label { display: none; }
+  html[data-zoom="grand"] .nav { flex-direction: row; flex-shrink: 0; gap: 4px; }
+  html[data-zoom="grand"] .nav-item { padding: 8px 10px; font-size: 13px; white-space: nowrap; }
+  html[data-zoom="grand"] .nav-item .nav-item-label { display: none; }
+  html[data-zoom="grand"] .sidebar-user { margin-top: 0; border-top: none; padding: 0; flex-shrink: 0; }
+  html[data-zoom="grand"] .sidebar-user-btn { padding: 6px 8px; }
+  html[data-zoom="grand"] .sidebar-user-btn .sidebar-user-info { display: none; }
+  html[data-zoom="grand"] .sidebar-user-btn .chev { display: none; }
+}
+
+/* ---------- Zoom 1.5 (très grand) ---------- */
+html[data-zoom="tres-grand"] .app-shell { grid-template-columns: 200px 1fr; }
+
+@media (max-width: 1536px) {
+  html[data-zoom="tres-grand"] .main-header { flex-direction: column; align-items: flex-start; gap: 14px; }
+  html[data-zoom="tres-grand"] .issue-header { flex-direction: column; gap: 16px; }
+  html[data-zoom="tres-grand"] .issue-header-right { flex-direction: row; align-items: stretch; flex-wrap: wrap; }
+  html[data-zoom="tres-grand"] .article-zones { grid-template-columns: 1fr; }
+  html[data-zoom="tres-grand"] .contact-detail { grid-template-columns: 1fr; }
+  html[data-zoom="tres-grand"] .contact-card { max-width: 420px; }
+  html[data-zoom="tres-grand"] .edit-meta-form { grid-template-columns: 1fr; }
+  html[data-zoom="tres-grand"] .report-dl { grid-template-columns: repeat(2, 1fr); }
+  html[data-zoom="tres-grand"] .report-overview { grid-template-columns: repeat(2, 1fr); }
+  html[data-zoom="tres-grand"] .quick-actions { grid-template-columns: repeat(2, 1fr); }
+  html[data-zoom="tres-grand"] .dash-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 1350px) {
+  html[data-zoom="tres-grand"] .issue-grid { grid-template-columns: 1fr; }
+  html[data-zoom="tres-grand"] .revue-select-grid { grid-template-columns: 1fr; }
+  html[data-zoom="tres-grand"] .archive-row { grid-template-columns: auto 1fr auto; gap: 14px; padding: 14px 16px; }
+  html[data-zoom="tres-grand"] .archive-row .btn.sm { display: none; }
+  html[data-zoom="tres-grand"] .history-row { grid-template-columns: auto 1fr auto; gap: 12px; }
+}
+
+@media (max-width: 1080px) {
+  /* Sidebar bascule en barre haute */
+  html[data-zoom="tres-grand"] .app-shell { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
+  html[data-zoom="tres-grand"] .sidebar {
+    position: static; height: auto; flex-direction: row;
+    align-items: center; gap: 12px; padding: 12px 16px;
+    overflow-x: auto; border-right: none; border-bottom: 1px solid var(--line);
+    zoom: 1; /* on annule le zoom interne de la sidebar */
+  }
+  html[data-zoom="tres-grand"] .sidebar-brand { border-bottom: none; padding: 0; flex-shrink: 0; }
+  html[data-zoom="tres-grand"] .revue-switcher { flex: 1; min-width: 180px; }
+  html[data-zoom="tres-grand"] .revue-switcher-label { display: none; }
+  html[data-zoom="tres-grand"] .nav { flex-direction: row; flex-shrink: 0; gap: 4px; }
+  html[data-zoom="tres-grand"] .nav-item { padding: 8px 10px; font-size: 13px; white-space: nowrap; }
+  html[data-zoom="tres-grand"] .nav-item .nav-item-label { display: none; }
+  html[data-zoom="tres-grand"] .sidebar-user { margin-top: 0; border-top: none; padding: 0; flex-shrink: 0; }
+  html[data-zoom="tres-grand"] .sidebar-user-btn { padding: 6px 8px; }
+  html[data-zoom="tres-grand"] .sidebar-user-btn .sidebar-user-info { display: none; }
+  html[data-zoom="tres-grand"] .sidebar-user-btn .chev { display: none; }
+}
+
+/* ---------- Corrections de wrap pour métadonnées et boutons ---------- */
+/* Les méta-infos d'un numéro / d'un article ont tendance à se chevaucher
+   lorsque le contenu wrappe. On force une rangée flex avec align-items
+   propre et on autorise les items à grandir. */
+.issue-header-meta { align-items: flex-start; }
+.issue-header-meta > div { line-height: 1.45; }
+
+/* Boutons : ne plus wrapper en multiple lignes */
+.btn { white-space: nowrap; }
+.btn.lg, .btn.md { white-space: nowrap; }
+
+/* Bouton retour : laisser le label se compresser plutôt que de wrapper */
+.back-btn { white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+
+/* En-tête de section avec compteur "3 actifs" : ne pas wrapper */
+.section-head { align-items: center; flex-wrap: wrap; gap: 10px; }
+.section-head .meta { white-space: nowrap; flex-shrink: 0; }
+
+/* ============================================================
+   Préférences utilisateur (bouton flottant + popover)
+
+   Bouton permanent en haut-droite, accessible depuis n'importe
+   quelle page (login, sélection de revue, app principale).
+   Permet à l'utilisateur final de basculer mode clair/sombre,
+   contraste élevé, et taille du texte. Persistance localStorage.
+
+   Le bouton lui-même ne suit PAS le zoom (sinon il deviendrait
+   énorme à 150 %). Le popover non plus, mais reste lisible
+   grâce à des tailles intrinsèquement généreuses.
+   ============================================================ */
+
+.prefs-anchor {
+  position: fixed;
+  top: 14px;
+  right: 14px;
+  z-index: 250;        /* au-dessus du contenu, sous les modales (1000) */
+  zoom: 1;
+  font-family: var(--font-ui);
+}
+
+/* Réserver un peu d'espace dans l'en-tête principal pour que le bouton flottant
+   ne masque pas un éventuel bouton aligné à droite. */
+.main-header { padding-right: 76px; }
+@media (max-width: 720px) {
+  .main-header { padding-right: 56px; }
+}
+
+.prefs-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid var(--line-strong);
+  background: var(--surface);
+  color: var(--ink);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  transition: background 120ms, border-color 120ms, transform 120ms;
+}
+.prefs-btn:hover {
+  background: var(--surface-2);
+  border-color: var(--ink-muted);
+}
+.prefs-btn:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+.prefs-btn:active { transform: scale(0.96); }
+
+.prefs-popover {
+  position: absolute;
+  top: 48px;
+  right: 0;
+  width: 300px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  padding: 14px 14px 12px;
+  animation: prefs-pop 140ms ease-out;
+}
+@keyframes prefs-pop {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .prefs-popover { animation: none; }
+}
+
+.prefs-popover-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+.prefs-popover-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.prefs-close {
+  width: 26px; height: 26px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--ink-muted);
+  display: grid; place-items: center;
+  cursor: pointer;
+}
+.prefs-close:hover { background: var(--bg-sunken); color: var(--ink); }
+.prefs-close:focus-visible { outline: 2px solid var(--ink); outline-offset: 1px; }
+
+.prefs-section {
+  margin-bottom: 12px;
+}
+.prefs-section:last-of-type { margin-bottom: 6px; }
+
+.prefs-section-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink-faint);
+  margin-bottom: 6px;
+}
+
+/* Segmented (clair / sombre) */
+.prefs-segmented {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  background: var(--bg-sunken);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 3px;
+}
+.prefs-segmented button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: var(--ink-muted);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 100ms, color 100ms;
+}
+.prefs-segmented button:hover { color: var(--ink); }
+.prefs-segmented button.on {
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: var(--shadow-sm);
+}
+.prefs-segmented button:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+/* Toggle ligne (contraste élevé) */
+.prefs-toggle-row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--bg-sunken);
+  border: 1px solid var(--line);
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+  color: var(--ink);
+  transition: background 100ms;
+}
+.prefs-toggle-row:hover { background: var(--surface-2); }
+.prefs-toggle-row:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+.prefs-toggle-label {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+.prefs-toggle-title { font-size: 13.5px; font-weight: 500; }
+.prefs-toggle-sub { font-size: 11.5px; color: var(--ink-faint); }
+
+.prefs-switch {
+  flex-shrink: 0;
+  width: 32px;
+  height: 18px;
+  border-radius: 100px;
+  background: var(--ink-faint);
+  position: relative;
+  transition: background 120ms;
+}
+.prefs-switch::after {
+  content: "";
+  position: absolute;
+  top: 2px; left: 2px;
+  width: 14px; height: 14px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform 140ms ease-out;
+}
+.prefs-toggle-row.on .prefs-switch { background: var(--ink); }
+.prefs-toggle-row.on .prefs-switch::after { transform: translateX(14px); }
+@media (prefers-reduced-motion: reduce) {
+  .prefs-switch, .prefs-switch::after { transition: none; }
+}
+
+/* Zoom : 3 boutons avec lettre A de tailles croissantes */
+.prefs-zoom {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 6px;
+}
+.prefs-zoom button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 8px 6px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  cursor: pointer;
+  font-family: inherit;
+  font-weight: 500;
+  transition: border-color 100ms, background 100ms;
+}
+.prefs-zoom button > :first-child {
+  font-family: var(--font-display);
+  line-height: 1;
+}
+.prefs-zoom .prefs-zoom-lbl {
+  font-size: 10px;
+  color: var(--ink-faint);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+.prefs-zoom button:hover { border-color: var(--ink-muted); }
+.prefs-zoom button.on {
+  border-color: var(--ink);
+  background: var(--bg-sunken);
+}
+.prefs-zoom button.on .prefs-zoom-lbl { color: var(--ink-muted); }
+.prefs-zoom button:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+.prefs-foot {
+  margin-top: 8px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+}
+.prefs-foot-hint {
+  font-size: 11px;
+  color: var(--ink-faint);
+  font-style: italic;
+}
+
+/* Mode contraste élevé : renforcer les bordures */
+[data-contrast="eleve"] .prefs-btn,
+[data-contrast="eleve"] .prefs-popover { border-width: 2px; }
+[data-contrast="eleve"] .prefs-segmented,
+[data-contrast="eleve"] .prefs-toggle-row,
+[data-contrast="eleve"] .prefs-zoom button { border-width: 2px; }
+
+/* Le bouton de prefs ne doit pas être agrandi par data-zoom (contrôle UI) */
+html[data-zoom="grand"] .prefs-anchor,
+html[data-zoom="tres-grand"] .prefs-anchor { zoom: 1; }
+
+/* Mobile : éviter de chevaucher le bouton header de la sidebar */
+@media (max-width: 720px) {
+  .prefs-anchor { top: 10px; right: 10px; }
+  .prefs-btn { width: 36px; height: 36px; }
+  .prefs-popover { width: calc(100vw - 28px); max-width: 320px; }
+}

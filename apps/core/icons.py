@@ -35,6 +35,9 @@ ICONS: dict[str, str] = {
     "eye":      '<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
     "lock":     '<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/>',
     "history":  '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/><path d="M3 12H1"/>',
-    "grip":     '<circle cx="9" cy="6" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="9" cy="18" r="1"/><circle cx="15" cy="6" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="18" r="1"/>',
-    "trash":    '<path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/>',
+    "grip":          '<circle cx="9" cy="6" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="9" cy="18" r="1"/><circle cx="15" cy="6" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="18" r="1"/>',
+    "trash":         '<path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/>',
+    "sun":           '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>',
+    "moon":          '<path d="M21 12.5A9 9 0 1111.5 3a7 7 0 009.5 9.5z"/>',
+    "accessibility": '<circle cx="12" cy="4" r="2"/><path d="M5 8h14M12 6v8M9 14l-2 6M15 14l2 6M9 11h6"/>',
 }

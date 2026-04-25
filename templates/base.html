@@ -1,9 +1,33 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="fr" data-theme="chaleureuse" data-contrast="normal" data-zoom="normal">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{% block title %}Outil éditorial{% endblock %}</title>
+  <script>
+    (function () {
+      try {
+        var html = document.documentElement;
+        var prefs = JSON.parse(localStorage.getItem('edito-prefs') || '{}');
+        if (!localStorage.getItem('edito-a11y-init')) {
+          if (!prefs.theme && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            prefs.theme = 'sombre';
+          }
+          if (!prefs.contrast && window.matchMedia('(prefers-contrast: more)').matches) {
+            prefs.contrast = 'eleve';
+          }
+          localStorage.setItem('edito-a11y-init', '1');
+          if (prefs.theme || prefs.contrast || prefs.zoom) {
+            localStorage.setItem('edito-prefs', JSON.stringify(prefs));
+          }
+        }
+        if (prefs.theme)   html.setAttribute('data-theme',    prefs.theme);
+        if (prefs.contrast) html.setAttribute('data-contrast', prefs.contrast);
+        if (prefs.zoom)    html.setAttribute('data-zoom',     prefs.zoom);
+      } catch (e) {}
+    })();
+  </script>
+  <style>[x-cloak]{display:none !important}</style>
   <script src="https://cdn.tailwindcss.com"></script>
   {% load static %}
   <script defer src="{% static 'js/edito.js' %}"></script>
@@ -11,14 +35,18 @@
   {% block extra_head %}{% endblock %}
 </head>
 <body class="{% block body_class %}min-h-screen bg-gray-50 text-gray-900{% endblock %}">
+  <a href="#main-content" class="skip-link">Aller au contenu principal</a>
+  {% include "partials/_prefs_button.html" %}
   {% include "partials/_saved_banner.html" %}
   {% if messages %}
-    <div style="position:fixed;top:20px;right:20px;z-index:400;display:flex;flex-direction:column;gap:8px">
+    <div style="position:fixed;top:20px;right:80px;z-index:400;display:flex;flex-direction:column;gap:8px">
       {% for message in messages %}
         <div class="saved-banner" style="background:{% if 'error' in message.tags %}#c0392b{% else %}#2d6a4f{% endif %}">{{ message }}</div>
       {% endfor %}
     </div>
   {% endif %}
-  {% block content %}{% endblock %}
+  <div id="main-content" tabindex="-1">
+    {% block content %}{% endblock %}
+  </div>
 </body>
 </html>

@@ -1,0 +1,95 @@
+{% load edito %}
+<div x-data="prefs()"
+     style="position:fixed;top:14px;right:14px;z-index:250;font-family:var(--font-ui)">
+
+  <button class="prefs-btn"
+          aria-label="Préférences d'affichage et d'accessibilité"
+          aria-haspopup="dialog"
+          :aria-expanded="open"
+          @click="open = !open"
+          @keydown.escape.window="open = false">
+    {% icon "accessibility" 16 %}
+  </button>
+
+  <div x-show="open"
+       x-cloak
+       class="prefs-popover"
+       role="dialog"
+       aria-label="Préférences"
+       @click.outside="open = false"
+       @keydown.escape="open = false">
+
+    <div class="prefs-popover-head">
+      <span class="prefs-popover-title">Préférences</span>
+      <button class="prefs-close" aria-label="Fermer" @click="open = false">
+        {% icon "close" 14 %}
+      </button>
+    </div>
+
+    {# Mode clair / sombre #}
+    <div class="prefs-section">
+      <div class="prefs-section-label" id="prefs-mode-label">Mode</div>
+      <div class="prefs-segmented" role="radiogroup" aria-labelledby="prefs-mode-label">
+        <button role="radio"
+                :aria-checked="theme === 'chaleureuse'"
+                :class="{ on: theme === 'chaleureuse' }"
+                @click="set('theme', 'chaleureuse')">
+          {% icon "sun" 13 %} Clair
+        </button>
+        <button role="radio"
+                :aria-checked="theme === 'sombre'"
+                :class="{ on: theme === 'sombre' }"
+                @click="set('theme', 'sombre')">
+          {% icon "moon" 13 %} Sombre
+        </button>
+      </div>
+    </div>
+
+    {# Contraste élevé #}
+    <div class="prefs-section">
+      <button class="prefs-toggle-row"
+              :class="{ on: contrast === 'eleve' }"
+              role="switch"
+              :aria-checked="contrast === 'eleve'"
+              @click="set('contrast', contrast === 'eleve' ? 'normal' : 'eleve')">
+        <div class="prefs-toggle-label">
+          <span class="prefs-toggle-title">Contraste élevé</span>
+          <span class="prefs-toggle-sub">Bordures renforcées, texte plus contrasté</span>
+        </div>
+        <span class="prefs-switch" aria-hidden="true"></span>
+      </button>
+    </div>
+
+    {# Grossissement #}
+    <div class="prefs-section">
+      <div class="prefs-section-label" id="prefs-zoom-label">Taille du texte</div>
+      <div class="prefs-zoom" role="radiogroup" aria-labelledby="prefs-zoom-label">
+        <button role="radio"
+                :aria-checked="zoom === 'normal'"
+                :class="{ on: zoom === 'normal' }"
+                @click="set('zoom', 'normal')">
+          <span style="font-size:12px">A</span>
+          <span class="prefs-zoom-lbl">100&nbsp;%</span>
+        </button>
+        <button role="radio"
+                :aria-checked="zoom === 'grand'"
+                :class="{ on: zoom === 'grand' }"
+                @click="set('zoom', 'grand')">
+          <span style="font-size:15px">A</span>
+          <span class="prefs-zoom-lbl">125&nbsp;%</span>
+        </button>
+        <button role="radio"
+                :aria-checked="zoom === 'tres-grand'"
+                :class="{ on: zoom === 'tres-grand' }"
+                @click="set('zoom', 'tres-grand')">
+          <span style="font-size:18px">A</span>
+          <span class="prefs-zoom-lbl">150&nbsp;%</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="prefs-foot">
+      <span class="prefs-foot-hint">Réglages enregistrés sur cet appareil.</span>
+    </div>
+  </div>
+</div>

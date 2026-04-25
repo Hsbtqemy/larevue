@@ -245,6 +245,31 @@ document.addEventListener("alpine:init", () => {
   }));
 
 
+  Alpine.data("prefs", () => ({
+    theme:    "chaleureuse",
+    contrast: "normal",
+    zoom:     "normal",
+    open:     false,
+
+    init() {
+      const html = document.documentElement;
+      this.theme    = html.getAttribute("data-theme")    || "chaleureuse";
+      this.contrast = html.getAttribute("data-contrast") || "normal";
+      this.zoom     = html.getAttribute("data-zoom")     || "normal";
+    },
+
+    set(key, value) {
+      this[key] = value;
+      document.documentElement.setAttribute("data-" + key, value);
+      try {
+        const saved = JSON.parse(localStorage.getItem("edito-prefs") || "{}");
+        saved[key] = value;
+        localStorage.setItem("edito-prefs", JSON.stringify(saved));
+      } catch (e) {}
+    },
+  }));
+
+
   Alpine.data("savedBanner", () => {
     let timer = null;
     return {
