@@ -88,11 +88,40 @@
             <span x-show="error" class="form-msg err" x-text="error" style="margin-top:4px"></span>
           </div>
 
-          <div class="inline-field">
+          <div class="inline-field"
+               x-data="inlineEdit('{{ request.user.email|escapejs }}', '{{ patch_url }}', 'email', 'text', [], 'Confirmer le changement d\'e-mail ? Cela modifiera votre identifiant de connexion.')">
             <label>Adresse e-mail</label>
-            <div class="inline-display" style="cursor:default">
-              <span>{{ request.user.email }}</span>
-            </div>
+            <template x-if="!editing && !confirming">
+              <button type="button" class="inline-display" @click="startEdit()">
+                <span x-text="draft || '—'"></span>
+                <span class="edit-hint">{% icon "edit" 12 %} Modifier</span>
+              </button>
+            </template>
+            <template x-if="editing && !confirming">
+              <div class="inline-edit">
+                <input x-ref="inputText"
+                       type="email"
+                       x-model="draft"
+                       @blur="commit()"
+                       @keydown.enter.prevent="commit()"
+                       @keydown.escape.prevent="cancel()">
+              </div>
+            </template>
+            <template x-if="confirming">
+              <div>
+                <div class="inline-display" style="cursor:default">
+                  <span x-text="draft"></span>
+                </div>
+                <div class="confirm-change" style="margin-top:8px">
+                  <p style="margin:0 0 10px;font-size:13.5px">Confirmer le changement d'e-mail&nbsp;? Cela modifiera votre identifiant de connexion.</p>
+                  <div style="display:flex;gap:8px">
+                    <button type="button" class="btn primary sm" :disabled="saving" @click="confirmAndSave()">Confirmer</button>
+                    <button type="button" class="btn ghost sm" @click="cancel()">Annuler</button>
+                  </div>
+                </div>
+              </div>
+            </template>
+            <span x-show="error" class="form-msg err" x-text="error" style="margin-top:4px"></span>
           </div>
 
         </div>

@@ -18,7 +18,7 @@ class ProfileView(LoginRequiredMixin, View):
 
 
 class ProfilePatchView(LoginRequiredMixin, View):
-    ALLOWED_FIELDS = {"first_name", "last_name"}
+    ALLOWED_FIELDS = {"first_name", "last_name", "email"}
 
     def post(self, request):
         try:

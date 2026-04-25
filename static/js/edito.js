@@ -14,8 +14,9 @@ function getCsrfToken() {
 
 document.addEventListener("alpine:init", () => {
 
-  Alpine.data("inlineEdit", (value, patchUrl, fieldName, inputType = "text", options = []) => ({
+  Alpine.data("inlineEdit", (value, patchUrl, fieldName, inputType = "text", options = [], confirmMessage = null) => ({
     editing: false,
+    confirming: false,
     draft: value,
     type: inputType,
     saving: false,
@@ -44,11 +45,24 @@ document.addEventListener("alpine:init", () => {
     cancel() {
       this.draft = value;
       this.editing = false;
+      this.confirming = false;
       this.error = null;
     },
 
     async commit() {
       if (this.draft === value) { this.editing = false; return; }
+      if (confirmMessage && !this.confirming) {
+        this.confirming = true;
+        return;
+      }
+      await this._save();
+    },
+
+    async confirmAndSave() {
+      await this._save();
+    },
+
+    async _save() {
       this.saving = true;
       this.error = null;
       try {
@@ -60,15 +74,18 @@ document.addEventListener("alpine:init", () => {
         if (!res.ok) {
           const data = await res.json().catch(() => ({}));
           this.error = data.error || "Erreur lors de l'enregistrement.";
+          this.confirming = false;
         } else {
           value = this.draft;
           this.justSaved = true;
+          this.confirming = false;
+          this.editing = false;
           setTimeout(() => { this.justSaved = false; }, 1200);
           this.$dispatch("saved", { label: "Enregistré" });
-          this.editing = false;
         }
       } catch (e) {
         this.error = "Erreur lors de l'enregistrement.";
+        this.confirming = false;
       } finally {
         this.saving = false;
       }

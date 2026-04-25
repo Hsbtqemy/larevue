@@ -101,3 +101,38 @@ class TestProfilePatchView:
         assert user.first_name != "Hacked"
         other.refresh_from_db()
         assert other.first_name == "Hacked"
+
+    def test_patch_email(self, client, user):
+        client.force_login(user)
+        res = _patch(client, "email", "nouveau@example.com")
+        assert res.status_code == 200
+        user.refresh_from_db()
+        assert user.email == "nouveau@example.com"
+
+    def test_duplicate_email_returns_error(self, client, user):
+        other = User.objects.create_user(
+            email="taken@example.com", password="pass",
+            first_name="X", last_name="Y",
+        )
+        client.force_login(user)
+        original = user.email
+        res = _patch(client, "email", other.email)
+        assert res.status_code == 400
+        user.refresh_from_db()
+        assert user.email == original
+
+    def test_empty_email_returns_error(self, client, user):
+        client.force_login(user)
+        original = user.email
+        res = _patch(client, "email", "")
+        assert res.status_code == 400
+        user.refresh_from_db()
+        assert user.email == original
+
+    def test_invalid_email_returns_error(self, client, user):
+        client.force_login(user)
+        original = user.email
+        res = _patch(client, "email", "not-an-email")
+        assert res.status_code == 400
+        user.refresh_from_db()
+        assert user.email == original
