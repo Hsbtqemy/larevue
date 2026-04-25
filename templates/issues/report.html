@@ -1,5 +1,336 @@
-<!DOCTYPE html>
+{% load i18n %}<!DOCTYPE html>
 <html lang="fr">
-<head><meta charset="UTF-8"><title>Rapport</title></head>
-<body>placeholder</body>
+<head>
+  <meta charset="UTF-8">
+  <title>Rapport — N°{{ issue.number }} {{ issue.thematic_title }}</title>
+  <style>
+    /* ── Page setup ── */
+    @page {
+      size: A4;
+      margin: 2cm 1.5cm 2.2cm;
+      @top-left   { content: "{{ journal.name|escapejs }}"; font-size: 8.5pt; color: #888; font-family: Helvetica, Arial, sans-serif; }
+      @top-right  { content: "N°{{ issue.number }}"; font-size: 8.5pt; color: #888; font-family: Helvetica, Arial, sans-serif; }
+      @bottom-right { content: counter(page) " / " counter(pages); font-size: 8pt; color: #aaa; font-family: Helvetica, Arial, sans-serif; }
+    }
+    @page :first {
+      @top-left { content: ""; }
+      @top-right { content: ""; }
+    }
+
+    /* ── Reset & base ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { background: white; color: #1a1a1a; }
+    body {
+      font-family: -apple-system, "Helvetica Neue", Arial, sans-serif;
+      font-size: 10pt;
+      line-height: 1.55;
+    }
+    a { color: inherit; text-decoration: none; }
+    h1 { font-size: 20pt; font-weight: 600; letter-spacing: -0.02em; line-height: 1.2; }
+    h2 { font-size: 13pt; font-weight: 600; margin-bottom: 10pt; }
+    h3 { font-size: 10.5pt; font-weight: 600; margin-bottom: 4pt; }
+    p  { margin-bottom: 6pt; }
+
+    /* ── Cover ── */
+    .cover { margin-bottom: 28pt; padding-bottom: 18pt; border-bottom: 2px solid #1a1a1a; }
+    .cover-overline { font-size: 9pt; text-transform: uppercase; letter-spacing: 0.1em; color: #555; margin-bottom: 6pt; }
+    .cover-title { margin: 4pt 0 8pt; }
+    .cover-meta  { font-size: 9pt; color: #666; margin-top: 10pt; }
+
+    /* ── Sections ── */
+    .section { margin-bottom: 22pt; }
+    .section-title {
+      font-size: 9pt;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #666;
+      border-bottom: 1px solid #ccc;
+      padding-bottom: 4pt;
+      margin-bottom: 10pt;
+    }
+
+    /* ── Metadata grid ── */
+    .meta-grid {
+      display: grid;
+      grid-template-columns: 140pt 1fr;
+      gap: 5pt 12pt;
+      font-size: 9.5pt;
+    }
+    .meta-label { color: #555; }
+    .meta-value { font-weight: 500; }
+    .badge {
+      display: inline-block;
+      padding: 1.5pt 6pt;
+      border-radius: 3pt;
+      font-size: 8.5pt;
+      background: #eee;
+      color: #333;
+      font-weight: 500;
+    }
+    .badge.validated { background: #d4edda; color: #1a5c2e; }
+    .badge.in_review, .badge.reviews_received { background: #fde8cc; color: #7a3a00; }
+
+    /* ── Articles table ── */
+    .articles-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 9pt;
+      margin-bottom: 6pt;
+    }
+    .articles-table th {
+      text-align: left;
+      font-weight: 600;
+      font-size: 8pt;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #666;
+      border-bottom: 1.5px solid #1a1a1a;
+      padding: 4pt 6pt 4pt 0;
+    }
+    .articles-table td {
+      padding: 5pt 6pt 5pt 0;
+      border-bottom: 1px solid #ebebeb;
+      vertical-align: top;
+    }
+    .articles-table tr:last-child td { border-bottom: none; }
+    .col-num   { width: 20pt; }
+    .col-type  { width: 70pt; }
+    .col-state { width: 86pt; }
+    .col-rev   { width: 52pt; text-align: center; }
+
+    /* ── Article detail blocks ── */
+    .article-block {
+      margin-bottom: 16pt;
+      page-break-inside: avoid;
+    }
+    .article-block-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 5pt;
+      padding-bottom: 4pt;
+      border-bottom: 1px solid #ddd;
+    }
+    .article-num { font-size: 8pt; color: #aaa; margin-right: 4pt; }
+    .article-abstract { font-size: 9pt; color: #444; font-style: italic; margin-bottom: 6pt; }
+
+    .sub-list { list-style: none; font-size: 9pt; margin-bottom: 6pt; }
+    .sub-list li {
+      padding: 3pt 0;
+      border-bottom: 1px solid #f0f0f0;
+      display: flex;
+      gap: 10pt;
+      align-items: baseline;
+    }
+    .sub-list li:last-child { border-bottom: none; }
+    .sub-label { color: #666; min-width: 65pt; flex-shrink: 0; }
+    .verdict-F { color: #1a5c2e; font-weight: 600; }
+    .verdict-R { color: #7a4a00; font-weight: 600; }
+    .verdict-U { color: #7a0000; font-weight: 600; }
+
+    /* ── Notes ── */
+    .note-item {
+      padding: 6pt 0;
+      border-bottom: 1px solid #f0f0f0;
+      font-size: 9.5pt;
+    }
+    .note-item:last-child { border-bottom: none; }
+    .note-meta { font-size: 8pt; color: #888; margin-bottom: 2pt; }
+    .note-auto { color: #aaa; font-style: italic; }
+
+    /* ── Documents ── */
+    .doc-item {
+      padding: 5pt 0;
+      border-bottom: 1px solid #f0f0f0;
+      font-size: 9.5pt;
+    }
+    .doc-item:last-child { border-bottom: none; }
+    .doc-name { font-weight: 500; }
+    .doc-desc { color: #555; font-size: 9pt; margin-top: 1pt; }
+
+    /* ── Utilities ── */
+    .empty { color: #aaa; font-style: italic; font-size: 9pt; }
+    .muted { color: #666; }
+    .page-break { page-break-before: always; }
+  </style>
+</head>
+<body>
+
+{# ── Couverture ── #}
+<div class="cover">
+  <div class="cover-overline">{{ journal.name }}</div>
+  <h1 class="cover-title">N°{{ issue.number }} — {{ issue.thematic_title }}</h1>
+  <div class="cover-meta">
+    Rapport généré le {{ generated_at|date:"d/m/Y à H\hi" }}
+  </div>
+</div>
+
+{# ── Métadonnées ── #}
+<div class="section">
+  <div class="section-title">Métadonnées du numéro</div>
+  <div class="meta-grid">
+    <span class="meta-label">Responsable</span>
+    <span class="meta-value">{{ issue.editor_name|default:"—" }}</span>
+
+    <span class="meta-label">État</span>
+    <span class="meta-value"><span class="badge">{{ issue.get_state_display }}</span></span>
+
+    {% for label, date in deadlines %}
+      <span class="meta-label">{{ label }}</span>
+      <span class="meta-value">{{ date|date:"d/m/Y" }}</span>
+    {% endfor %}
+
+    {% if issue.description %}
+      <span class="meta-label">Description</span>
+      <span class="meta-value">{{ issue.description }}</span>
+    {% endif %}
+  </div>
+</div>
+
+{# ── Tableau des articles ── #}
+<div class="section">
+  <div class="section-title">Articles ({{ articles|length }})</div>
+  {% if articles %}
+    <table class="articles-table">
+      <thead>
+        <tr>
+          <th class="col-num">#</th>
+          <th>Titre</th>
+          <th>Auteur·ice</th>
+          <th class="col-type">Type</th>
+          <th class="col-state">État</th>
+          <th class="col-rev">Relectures</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for a in articles %}
+          <tr>
+            <td class="muted">{{ forloop.counter }}</td>
+            <td>{{ a.title }}</td>
+            <td>{{ a.displayed_author_name }}</td>
+            <td>{{ a.get_article_type_display }}</td>
+            <td><span class="badge {{ a.state }}">{{ a.get_state_display }}</span></td>
+            <td style="text-align:center">
+              {% if a.reviews_total %}{{ a.reviews_received }}/{{ a.reviews_total }}{% else %}—{% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p class="empty">Aucun article dans ce numéro.</p>
+  {% endif %}
+</div>
+
+{# ── Détail par article ── #}
+{% if options.include_articles_detail and articles %}
+  <div class="section page-break">
+    <div class="section-title">Détail des articles</div>
+    {% for a in articles %}
+      <div class="article-block">
+        <div class="article-block-head">
+          <div>
+            <span class="article-num">{{ forloop.counter }}.</span>
+            <strong>{{ a.title }}</strong>
+            <span class="muted" style="font-size:9pt;margin-left:5pt">— {{ a.displayed_author_name }}</span>
+          </div>
+          <span class="badge {{ a.state }}">{{ a.get_state_display }}</span>
+        </div>
+
+        {% if a.abstract %}
+          <p class="article-abstract">{{ a.abstract }}</p>
+        {% endif %}
+
+        {% if a.all_versions %}
+          <h3>Versions ({{ a.all_versions|length }})</h3>
+          <ul class="sub-list">
+            {% for v in a.all_versions %}
+              <li>
+                <span class="sub-label">Version {{ v.version_number }}</span>
+                <span class="muted">{{ v.created_at|date:"d/m/Y" }}</span>
+                {% if v.uploaded_by %}<span class="muted">— {{ v.uploaded_by.get_full_name }}</span>{% endif %}
+              </li>
+            {% endfor %}
+          </ul>
+        {% endif %}
+
+        {% if options.include_reviews_detail %}
+          {% if a.reviews %}
+            <h3>Relectures ({{ a.reviews|length }})</h3>
+            <ul class="sub-list">
+              {% for rr in a.reviews %}
+                <li>
+                  <span class="sub-label">{{ rr.reviewer_name_snapshot }}</span>
+                  <span class="muted">deadline {{ rr.deadline|date:"d/m/Y" }}</span>
+                  {% if rr.state == "received" %}
+                    <span class="muted">— reçue{% if rr.received_at %} le {{ rr.received_at|date:"d/m/Y" }}{% endif %}</span>
+                    {% if rr.verdict == "favorable" %}<span class="verdict-F">Favorable</span>
+                    {% elif rr.verdict == "needs_revision" %}<span class="verdict-R">Révision requise</span>
+                    {% elif rr.verdict == "unfavorable" %}<span class="verdict-U">Défavorable</span>
+                    {% endif %}
+                  {% else %}
+                    <span class="muted">(attendue)</span>
+                  {% endif %}
+                </li>
+              {% endfor %}
+            </ul>
+          {% else %}
+            <p class="empty">Aucune relecture.</p>
+          {% endif %}
+        {% else %}
+          {% if a.reviews_total %}
+            <p class="muted" style="font-size:9pt">
+              {{ a.reviews_received }} relecture{{ a.reviews_received|pluralize }} reçue{{ a.reviews_received|pluralize }} sur {{ a.reviews_total }}.
+            </p>
+          {% endif %}
+        {% endif %}
+      </div>
+    {% endfor %}
+  </div>
+{% endif %}
+
+{# ── Notes internes ── #}
+{% if options.include_notes %}
+  <div class="section">
+    <div class="section-title">Notes internes ({{ issue_notes|length }})</div>
+    {% if issue_notes %}
+      {% for note in issue_notes %}
+        <div class="note-item{% if note.is_automatic %} note-auto{% endif %}">
+          <div class="note-meta">
+            {{ note.created_at|date:"d/m/Y à H\hi" }}
+            {% if note.author %}— {{ note.author.get_full_name }}{% endif %}
+            {% if note.is_automatic %}— automatique{% endif %}
+          </div>
+          {{ note.content }}
+        </div>
+      {% endfor %}
+    {% else %}
+      <p class="empty">Aucune note interne.</p>
+    {% endif %}
+  </div>
+{% endif %}
+
+{# ── Documents ── #}
+{% if options.include_documents %}
+  <div class="section">
+    <div class="section-title">Documents attachés ({{ documents|length }})</div>
+    {% if documents %}
+      {% for doc in documents %}
+        <div class="doc-item">
+          <div class="doc-name">{{ doc.name }}</div>
+          {% if doc.description %}<div class="doc-desc">{{ doc.description }}</div>{% endif %}
+          <div class="muted" style="font-size:8.5pt;margin-top:2pt">
+            Ajouté le {{ doc.uploaded_at|date:"d/m/Y" }}
+            {% if doc.uploaded_by %}par {{ doc.uploaded_by.get_full_name }}{% endif %}
+          </div>
+        </div>
+      {% endfor %}
+    {% else %}
+      <p class="empty">Aucun document attaché.</p>
+    {% endif %}
+  </div>
+{% endif %}
+
+</body>
 </html>

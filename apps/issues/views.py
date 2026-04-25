@@ -497,15 +497,21 @@ def _build_report_context(request, issue, options):
         if options["include_documents"] else []
     )
 
+    deadlines = [
+        (label, getattr(issue, field))
+        for field, label in DEADLINE_LABELS.items()
+        if getattr(issue, field)
+    ]
+
     return {
         "journal": journal,
         "issue": issue,
         "articles": articles,
         "issue_notes": issue_notes,
         "documents": documents,
+        "deadlines": deadlines,
         "options": options,
         "generated_at": timezone.now(),
-        "deadline_labels": DEADLINE_LABELS,
     }
 
 
