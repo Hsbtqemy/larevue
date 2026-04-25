@@ -33,13 +33,25 @@ class TestReviewRequest:
         assert "Jean Dupont" in str(review_request)
         assert "Article de test" in str(review_request)
 
-    def test_is_overdue_when_deadline_passed(self, review_request):
+    def test_default_state_is_assigned(self, review_request):
+        assert review_request.state == ReviewRequest.State.ASSIGNED
+
+    def test_is_overdue_when_sent_and_deadline_passed(self, review_request):
         from datetime import timedelta
 
+        review_request.state = ReviewRequest.State.SENT
         review_request.deadline = timezone.now().date() - timedelta(days=1)
         assert review_request.is_overdue
 
-    def test_not_overdue_when_deadline_today(self, review_request):
+    def test_not_overdue_when_assigned_and_deadline_passed(self, review_request):
+        from datetime import timedelta
+
+        review_request.state = ReviewRequest.State.ASSIGNED
+        review_request.deadline = timezone.now().date() - timedelta(days=1)
+        assert not review_request.is_overdue
+
+    def test_not_overdue_when_sent_deadline_today(self, review_request):
+        review_request.state = ReviewRequest.State.SENT
         review_request.deadline = timezone.now().date()
         assert not review_request.is_overdue
 
@@ -48,6 +60,13 @@ class TestReviewRequest:
 
         review_request.deadline = timezone.now().date() - timedelta(days=5)
         review_request.state = ReviewRequest.State.RECEIVED
+        assert not review_request.is_overdue
+
+    def test_not_overdue_when_declined(self, review_request):
+        from datetime import timedelta
+
+        review_request.state = ReviewRequest.State.DECLINED
+        review_request.deadline = timezone.now().date() - timedelta(days=5)
         assert not review_request.is_overdue
 
     def test_reviewer_name_snapshot_preserved(self, review_request):

@@ -7,8 +7,10 @@ from apps.core.storage import VersionedUploadTo
 
 class ReviewRequest(BaseModel):
     class State(models.TextChoices):
-        EXPECTED = "expected", "Attendue"
+        ASSIGNED = "assigned", "Désignée"
+        SENT = "sent", "Envoyée"
         RECEIVED = "received", "Reçue"
+        DECLINED = "declined", "Refusée"
 
     class Verdict(models.TextChoices):
         FAVORABLE = "favorable", "Favorable"
@@ -32,7 +34,6 @@ class ReviewRequest(BaseModel):
         null=True,
         verbose_name="Relecteur·ice",
     )
-    # Snapshot du nom pour préserver l'historique si le Contact est modifié ou supprimé.
     reviewer_name_snapshot = models.CharField(
         max_length=200, verbose_name="Nom du relecteur·ice (snapshot)"
     )
@@ -40,9 +41,10 @@ class ReviewRequest(BaseModel):
     state = models.CharField(
         max_length=20,
         choices=State.choices,
-        default=State.EXPECTED,
+        default=State.ASSIGNED,
         verbose_name="État",
     )
+    sent_at = models.DateTimeField(blank=True, null=True, verbose_name="Envoyée le")
     received_file = models.FileField(
         upload_to=VersionedUploadTo("reviews/files"),
         blank=True,
@@ -68,4 +70,4 @@ class ReviewRequest(BaseModel):
 
     @property
     def is_overdue(self) -> bool:
-        return self.state == self.State.EXPECTED and self.deadline < timezone.now().date()
+        return self.state == self.State.SENT and self.deadline < timezone.now().date()
