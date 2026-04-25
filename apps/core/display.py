@@ -25,6 +25,13 @@ ARTICLE_TONES: dict[str, str] = {
     "validated": "done",
 }
 
+REVIEW_STATE_TONES: dict[str, str] = {
+    "assigned": "neutral",
+    "sent": "active",
+    "received": "done",
+    "declined": "refused",
+}
+
 VERDICT_TONES: dict[str, str] = {
     "favorable": "done",
     "needs_revision": "progress-tone",

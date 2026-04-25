@@ -62,19 +62,12 @@ class ArticleVersionUploadForm(forms.Form):
 class ReviewRequestCreateForm(forms.ModelForm):
     def __init__(self, *args, journal=None, article=None, **kwargs):
         super().__init__(*args, **kwargs)
-        if article:
-            qs = article.versions.order_by("-version_number")
-            self.fields["article_version"].queryset = qs
-            latest = qs.first()
-            if latest:
-                self.fields["article_version"].initial = latest.pk
         self.fields["deadline"].widget = forms.DateInput(attrs={"type": "date"})
         self.fields["deadline"].initial = datetime.date.today() + datetime.timedelta(days=28)
 
     class Meta:
         model = ReviewRequest
-        fields = ["article_version", "deadline"]
-        labels = {"article_version": "Version à relire"}
+        fields = ["deadline"]
 
 
 class ReviewRequestReceiveForm(forms.ModelForm):

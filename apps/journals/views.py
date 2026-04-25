@@ -36,7 +36,7 @@ def _build_calendar_events(journal, active_issues=None):
 
     for rr in (
         ReviewRequest.objects
-        .filter(state=ReviewRequest.State.EXPECTED, article__issue__in=active_issues)
+        .filter(state=ReviewRequest.State.SENT, article__issue__in=active_issues)
         .select_related("article__issue")
     ):
         url = reverse("issues:detail", kwargs={"slug": journal.slug, "issue_id": rr.article.issue_id})
@@ -110,7 +110,7 @@ class JournalDashboardView(JournalMemberRequiredMixin, TemplateView):
         all_expected = list(
             ReviewRequest.objects
             .filter(
-                state=ReviewRequest.State.EXPECTED,
+                state=ReviewRequest.State.SENT,
                 article__issue__in=active_issues,
             )
             .select_related("article", "article__issue")

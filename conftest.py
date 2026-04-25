@@ -86,5 +86,5 @@ def review_request(db, article, article_version, contact):
         reviewer=contact,
         reviewer_name_snapshot=contact.full_name,
         deadline=datetime.date.today() + datetime.timedelta(days=14),
-        state=ReviewRequest.State.EXPECTED,
+        state=ReviewRequest.State.ASSIGNED,
     )

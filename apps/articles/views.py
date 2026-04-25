@@ -278,12 +278,16 @@ class ArticleDetailView(JournalMemberRequiredMixin, DetailView):
         versions = list(article.versions.all())
         review_requests = list(article.review_requests.all())
         reviews_received_count = sum(1 for r in review_requests if r.state == ReviewRequest.State.RECEIVED)
-        expected_reviews = [r for r in review_requests if r.state == ReviewRequest.State.EXPECTED]
+        active_reviews = [
+            r for r in review_requests
+            if r.state in (ReviewRequest.State.ASSIGNED, ReviewRequest.State.SENT)
+        ]
         received_reviews = sorted(
             [r for r in review_requests if r.state == ReviewRequest.State.RECEIVED],
             key=lambda r: r.received_at or timezone.datetime.min.replace(tzinfo=timezone.utc),
             reverse=True,
         )
+        declined_reviews = [r for r in review_requests if r.state == ReviewRequest.State.DECLINED]
 
         internal_notes = list(article.internal_notes.all())
 
@@ -323,8 +327,9 @@ class ArticleDetailView(JournalMemberRequiredMixin, DetailView):
             "latest_version_number": latest_version.version_number if latest_version else None,
             "review_request_count": len(review_requests),
             "reviews_received": reviews_received_count,
-            "expected_reviews": expected_reviews,
+            "active_reviews": active_reviews,
             "received_reviews": received_reviews,
+            "declined_reviews": declined_reviews,
             "article_count_in_issue": issue.articles.count(),
             "user_journal_count": self.request.user.memberships.count(),
             "reviewer_search_url": (
@@ -553,18 +558,18 @@ class ReviewRequestCreateView(_ArticleJournalMixin, JournalMemberRequiredMixin, 
 
         review = ReviewRequest.objects.create(
             article=article,
-            article_version=form.cleaned_data["article_version"],
+            article_version=article.versions.order_by("-version_number").first(),
             reviewer=reviewer,
             reviewer_name_snapshot=reviewer_name_snapshot,
             deadline=form.cleaned_data["deadline"],
-            state=ReviewRequest.State.EXPECTED,
+            state=ReviewRequest.State.ASSIGNED,
         )
 
         actor_name = request.user.get_full_name() or request.user.email
         deadline_str = review.deadline.strftime("%d/%m/%Y")
         log_action(
             article, request.user,
-            f"{actor_name} a demandé une relecture à {reviewer_name_snapshot} pour le {deadline_str}",
+            f"{actor_name} a désigné {reviewer_name_snapshot} comme relecteur·ice (échéance : {deadline_str})",
         )
 
         ctx = {
@@ -578,6 +583,69 @@ class ReviewRequestCreateView(_ArticleJournalMixin, JournalMemberRequiredMixin, 
         return HttpResponse(fragment + oob_counters_html(article, request=request))
 
 
+class ReviewRequestSendView(_ReviewRequestMixin, JournalMemberRequiredMixin, View):
+    def post(self, request, issue_id, article_id, review_id, **kwargs):
+        review = self.get_object_or_404()
+        article = review.article
+
+        guard = self._check_archived(article)
+        if guard:
+            return guard
+        if review.state != ReviewRequest.State.ASSIGNED:
+            return JsonResponse({"error": "Cette demande ne peut pas être envoyée."}, status=400)
+
+        review.state = ReviewRequest.State.SENT
+        review.sent_at = timezone.now()
+        review.save(update_fields=["state", "sent_at"])
+
+        actor_name = request.user.get_full_name() or request.user.email
+        log_action(
+            article, request.user,
+            f"{actor_name} a envoyé la demande de relecture à {review.reviewer_name_snapshot}",
+        )
+
+        ctx = {
+            "review": review,
+            "article": article,
+            "journal": request.journal,
+            "issue": article.issue,
+            "is_archived": False,
+        }
+        fragment = render_to_string("articles/_review_item_expected.html", ctx, request=request)
+        return HttpResponse(fragment)
+
+
+class ReviewRequestDeclineView(_ReviewRequestMixin, JournalMemberRequiredMixin, View):
+    def post(self, request, issue_id, article_id, review_id, **kwargs):
+        review = self.get_object_or_404()
+        article = review.article
+
+        guard = self._check_archived(article)
+        if guard:
+            return guard
+        if review.state not in (ReviewRequest.State.ASSIGNED, ReviewRequest.State.SENT):
+            return JsonResponse({"error": "Cette demande ne peut pas être refusée."}, status=400)
+
+        review.state = ReviewRequest.State.DECLINED
+        review.save(update_fields=["state"])
+
+        log_action(
+            article, request.user,
+            f"Relecture de {review.reviewer_name_snapshot} refusée",
+        )
+
+        ctx = {
+            "review": review,
+            "article": article,
+            "journal": request.journal,
+            "issue": article.issue,
+            "is_archived": False,
+        }
+        declined_html = render_to_string("articles/_review_item_declined.html", ctx, request=request)
+        oob_declined = f'<div hx-swap-oob="afterbegin:#reviews-declined-list">{declined_html}</div>'
+        return HttpResponse(oob_declined + oob_counters_html(article, request=request))
+
+
 class ReviewRequestReceiveView(_ReviewRequestMixin, JournalMemberRequiredMixin, View):
     def post(self, request, issue_id, article_id, review_id, **kwargs):
         review = self.get_object_or_404()
@@ -586,8 +654,8 @@ class ReviewRequestReceiveView(_ReviewRequestMixin, JournalMemberRequiredMixin, 
 
         if is_archived:
             return JsonResponse({"error": "Cet article ne peut plus être modifié."}, status=403)
-        if review.state == ReviewRequest.State.RECEIVED:
-            return JsonResponse({"error": "Cette relecture a déjà été enregistrée."}, status=400)
+        if review.state not in (ReviewRequest.State.ASSIGNED, ReviewRequest.State.SENT):
+            return JsonResponse({"error": "Cette relecture ne peut pas être enregistrée."}, status=400)
 
         form = ReviewRequestReceiveForm(request.POST, request.FILES, instance=review)
         if not form.is_valid():
@@ -627,12 +695,12 @@ class ReviewRequestDeleteView(_ReviewRequestMixin, JournalMemberRequiredMixin, V
         guard = self._check_archived(article)
         if guard:
             return guard
-        if review.state == ReviewRequest.State.RECEIVED:
-            return JsonResponse({"error": "Une relecture reçue ne peut pas être supprimée."}, status=400)
+        if review.state != ReviewRequest.State.ASSIGNED:
+            return JsonResponse({"error": "Seule une demande désignée peut être annulée."}, status=400)
 
         name = review.reviewer_name_snapshot
         review.delete()
-        log_action(article, request.user, f"Demande de relecture à {name} annulée")
+        log_action(article, request.user, f"Désignation de {name} annulée")
 
         return HttpResponse(oob_counters_html(article, request=request))
 
@@ -655,7 +723,7 @@ class ReviewRequestPatchView(_ReviewRequestMixin, JournalOwnedPatchView):
         return self._check_archived(obj.article)
 
     def get_allowed_fields(self, obj):
-        if obj.state == ReviewRequest.State.EXPECTED:
+        if obj.state in (ReviewRequest.State.ASSIGNED, ReviewRequest.State.SENT):
             return {"deadline", "internal_notes"}
         if obj.state == ReviewRequest.State.RECEIVED:
             return {"internal_notes", "verdict"}

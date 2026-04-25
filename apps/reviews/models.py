@@ -68,6 +68,10 @@ class ReviewRequest(BaseModel):
     def __str__(self):
         return f"Relecture de « {self.article} » par {self.reviewer_name_snapshot}"
 
+    def get_badge_tone(self) -> str:
+        from apps.core.display import REVIEW_STATE_TONES
+        return REVIEW_STATE_TONES.get(self.state, "neutral")
+
     @property
     def is_overdue(self) -> bool:
         return self.state == self.State.SENT and self.deadline < timezone.now().date()
