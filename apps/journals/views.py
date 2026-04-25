@@ -1,5 +1,5 @@
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.db.models import Count, Q
+from django.db.models import Count, F, Q
 from django.http import Http404
 from django.shortcuts import redirect
 from django.utils import timezone
@@ -52,7 +52,7 @@ class JournalDashboardView(JournalMemberRequiredMixin, TemplateView):
                     "articles", filter=Q(articles__state=Article.State.VALIDATED)
                 ),
             )
-            .order_by("-number")
+            .order_by(F("planned_publication_date").asc(nulls_last=True))
         )
         for issue in active_issues:
             issue.pct = (

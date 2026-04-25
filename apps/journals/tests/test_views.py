@@ -229,3 +229,57 @@ class TestDashboardContext:
         )
         active_issues = response.context["active_issues"]
         assert all(i.journal_id == journal1.pk for i in active_issues)
+
+    def test_active_issues_sorted_by_planned_date_asc_nulls_last(self, client, user, membership):
+        import datetime
+
+        from apps.issues.models import Issue as IssueModel
+
+        journal = membership.journal
+        today = datetime.date.today()
+
+        near  = IssueModel.objects.create(journal=journal, number="10", thematic_title="Proche",   editor_name="E", planned_publication_date=today + datetime.timedelta(days=30))
+        far   = IssueModel.objects.create(journal=journal, number="11", thematic_title="Lointain", editor_name="E", planned_publication_date=today + datetime.timedelta(days=365))
+        null  = IssueModel.objects.create(journal=journal, number="12", thematic_title="Sans date", editor_name="E", planned_publication_date=None)
+
+        # Ensure all three are in ACTIVE_STATES (default state is UNDER_REVIEW)
+        assert near.state in IssueModel.ACTIVE_STATES
+        assert far.state  in IssueModel.ACTIVE_STATES
+        assert null.state in IssueModel.ACTIVE_STATES
+
+        client.force_login(user)
+        response = client.get(
+            reverse("journal_dashboard", kwargs={"slug": journal.slug})
+        )
+        issues = response.context["active_issues"]
+        ids = [i.pk for i in issues]
+        assert ids == [near.pk, far.pk, null.pk], f"Expected [near, far, null], got {ids}"
+
+    def test_archived_issues_excluded_from_active_issues(self, client, user, membership):
+        import datetime
+
+        from apps.issues.models import Issue as IssueModel
+
+        journal = membership.journal
+
+        active  = IssueModel.objects.create(journal=journal, number="20", thematic_title="Actif",    editor_name="E")
+        IssueModel.objects.filter(pk=active.pk).update(state=IssueModel.State.IN_REVIEW)
+
+        for state in (IssueModel.State.PUBLISHED, IssueModel.State.REFUSED):
+            IssueModel.objects.create(
+                journal=journal,
+                number=f"2{state.value[:1]}",
+                thematic_title=f"Archivé {state}",
+                editor_name="E",
+                state=state,
+            )
+
+        client.force_login(user)
+        response = client.get(
+            reverse("journal_dashboard", kwargs={"slug": journal.slug})
+        )
+        active_issues = response.context["active_issues"]
+        states = {i.state for i in active_issues}
+        assert IssueModel.State.PUBLISHED not in states
+        assert IssueModel.State.REFUSED   not in states
+        assert active.pk in [i.pk for i in active_issues]
