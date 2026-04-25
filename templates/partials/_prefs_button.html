@@ -1,13 +1,14 @@
 {% load edito %}
 <div x-data="prefs()"
-     style="position:fixed;top:14px;right:14px;z-index:250;font-family:var(--font-ui)">
+     class="prefs-anchor"
+     @click.outside="open = false"
+     @keydown.escape.window="open = false">
 
   <button class="prefs-btn"
           aria-label="Préférences d'affichage et d'accessibilité"
           aria-haspopup="dialog"
           :aria-expanded="open"
-          @click="open = !open"
-          @keydown.escape.window="open = false">
+          @click="open = !open">
     {% icon "accessibility" 16 %}
   </button>
 
@@ -15,9 +16,7 @@
        x-cloak
        class="prefs-popover"
        role="dialog"
-       aria-label="Préférences"
-       @click.outside="open = false"
-       @keydown.escape="open = false">
+       aria-label="Préférences">
 
     <div class="prefs-popover-head">
       <span class="prefs-popover-title">Préférences</span>
