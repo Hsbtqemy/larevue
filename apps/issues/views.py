@@ -255,7 +255,7 @@ class IssueDetailView(JournalMemberRequiredMixin, DetailView):
         ctx.update({
             "journal": journal,
             "articles": articles,
-            "documents": list(issue.documents.select_related("uploaded_by").all()),
+            "documents": issue.documents.select_related("uploaded_by").all(),
             "is_editable": is_editable,
             "transitions": self._compute_transitions(issue),
             "transition_url": transition_url,
@@ -378,17 +378,9 @@ class IssueTransitionView(JournalOwnedTransitionView):
         )
 
 
-def _get_issue_or_404(request, issue_id):
-    try:
-        return Issue.objects.get(pk=issue_id, journal=request.journal)
-    except Issue.DoesNotExist:
-        raise Http404
-
-
 def _get_document_or_404(request, issue_id, doc_id):
-    """Ensures the document belongs to the given issue within the current journal."""
     try:
-        return IssueDocument.objects.get(
+        return IssueDocument.objects.select_related("issue").get(
             pk=doc_id,
             issue_id=issue_id,
             issue__journal=request.journal,
@@ -397,62 +389,57 @@ def _get_document_or_404(request, issue_id, doc_id):
         raise Http404
 
 
-class IssueDocumentCreateView(JournalMemberRequiredMixin, View):
+def _assert_issue_editable(issue):
+    if issue.state in Issue.ARCHIVED_STATES:
+        raise PermissionDenied
+
+
+def _detail_redirect(request, issue_id):
+    return redirect(
+        reverse("issues:detail", kwargs={"slug": request.journal.slug, "issue_id": issue_id})
+    )
+
+
+def _log_issue_action(issue, user, message):
+    InternalNote.objects.create(issue=issue, author=user, content=message, is_automatic=True)
+
+
+def _actor_name(user):
+    return user.first_name or user.email
+
+
+class IssueDocumentCreateView(JournalOwnedObjectMixin, JournalMemberRequiredMixin, View):
+    model = Issue
+    pk_url_kwarg = "issue_id"
+
     def post(self, request, issue_id, **kwargs):
-        issue = _get_issue_or_404(request, issue_id)
-        if issue.state in Issue.ARCHIVED_STATES:
-            raise PermissionDenied
+        issue = self.get_object_or_404()
+        _assert_issue_editable(issue)
 
         form = IssueDocumentForm(request.POST, request.FILES)
         if not form.is_valid():
-            # Re-render detail page with form errors via redirect with session flash,
-            # or simply redirect — form errors will be visible on next load.
-            # For simplicity, redirect and let the template handle re-open via query param.
-            detail_url = reverse(
-                "issues:detail",
-                kwargs={"slug": request.journal.slug, "issue_id": issue_id},
-            )
-            return redirect(detail_url)
+            return _detail_redirect(request, issue_id)
 
         doc = form.save(commit=False)
         doc.issue = issue
         doc.uploaded_by = request.user
         doc.save()
 
-        actor = request.user.first_name or request.user.email
-        InternalNote.objects.create(
-            issue=issue,
-            author=request.user,
-            content=f"{actor} a ajouté le document « {doc.name} »",
-            is_automatic=True,
-        )
-
-        return redirect(
-            reverse("issues:detail", kwargs={"slug": request.journal.slug, "issue_id": issue_id})
-        )
+        _log_issue_action(issue, request.user, f"{_actor_name(request.user)} a ajouté le document « {doc.name} »")
+        return _detail_redirect(request, issue_id)
 
 
 class IssueDocumentDeleteView(JournalMemberRequiredMixin, View):
     def post(self, request, issue_id, doc_id, **kwargs):
-        issue = _get_issue_or_404(request, issue_id)
-        if issue.state in Issue.ARCHIVED_STATES:
-            raise PermissionDenied
-
         doc = _get_document_or_404(request, issue_id, doc_id)
+        _assert_issue_editable(doc.issue)
+
         doc_name = doc.name
-        doc.delete()  # post_delete signal handles file removal
+        issue = doc.issue
+        doc.delete()
 
-        actor = request.user.first_name or request.user.email
-        InternalNote.objects.create(
-            issue=issue,
-            author=request.user,
-            content=f"{actor} a supprimé le document « {doc_name} »",
-            is_automatic=True,
-        )
-
-        return redirect(
-            reverse("issues:detail", kwargs={"slug": request.journal.slug, "issue_id": issue_id})
-        )
+        _log_issue_action(issue, request.user, f"{_actor_name(request.user)} a supprimé le document « {doc_name} »")
+        return _detail_redirect(request, issue_id)
 
 
 class IssueDocumentDownloadView(JournalMemberRequiredMixin, View):
