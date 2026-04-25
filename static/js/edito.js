@@ -14,7 +14,7 @@ function getCsrfToken() {
 
 document.addEventListener("alpine:init", () => {
 
-  Alpine.data("inlineEdit", (value, patchUrl, fieldName, inputType = "text", options = [], confirmMessage = null) => ({
+  Alpine.data("inlineEdit", (value, patchUrl, fieldName, inputType = "text", options = [], requireConfirm = false) => ({
     editing: false,
     confirming: false,
     draft: value,
@@ -51,7 +51,7 @@ document.addEventListener("alpine:init", () => {
 
     async commit() {
       if (this.draft === value) { this.editing = false; return; }
-      if (confirmMessage && !this.confirming) {
+      if (requireConfirm && !this.confirming) {
         this.confirming = true;
         return;
       }

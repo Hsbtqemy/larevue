@@ -73,7 +73,7 @@ class ProfilePasswordView(LoginRequiredMixin, View):
             request.user.save()
             update_session_auth_hash(request, request.user)
             return redirect(reverse("accounts:profile") + "?pw=ok")
-        return render(request, "accounts/profile.html", {
+        return render(request, ProfileView.template_name, {
             "patch_url": reverse("accounts:profile_patch"),
             "pw_form": form,
             "pw_open": True,

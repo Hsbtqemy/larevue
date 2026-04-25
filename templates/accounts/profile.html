@@ -89,7 +89,7 @@
           </div>
 
           <div class="inline-field"
-               x-data="inlineEdit('{{ request.user.email|escapejs }}', '{{ patch_url }}', 'email', 'text', [], 'Confirmer le changement d\'e-mail ? Cela modifiera votre identifiant de connexion.')">
+               x-data="inlineEdit('{{ request.user.email|escapejs }}', '{{ patch_url }}', 'email', 'text', [], true)">
             <label>Adresse e-mail</label>
             <template x-if="!editing && !confirming">
               <button type="button" class="inline-display" @click="startEdit()">
@@ -129,7 +129,7 @@
     </div>
 
     {# ===== Mot de passe ===== #}
-    <div class="profile-section" x-data="{ open: {% if pw_open %}true{% else %}false{% endif %} }">
+    <div class="profile-section" x-data="{ open: {{ pw_open|yesno:'true,false' }} }">
       <div class="profile-section-head" style="display:flex;align-items:center;justify-content:space-between">
         <h2 style="margin:0">Mot de passe</h2>
         <button type="button" class="btn ghost sm" @click="open = !open" x-text="open ? 'Annuler' : 'Modifier'"></button>

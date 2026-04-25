@@ -53,7 +53,9 @@ class TestProfileView:
     def test_journal_counters_present(self, client, user, membership, journal):
         client.force_login(user)
         res = client.get(PROFILE_URL)
-        assert res.status_code == 200
+        content = res.content.decode()
+        assert "0 numéro" in content
+        assert "1 membre" in content
 
 
 @pytest.mark.django_db
