@@ -13,27 +13,30 @@ from apps.accounts.forms import ProfilePasswordForm
 from apps.issues.models import Issue
 
 
+def _memberships_for(user):
+    return list(
+        user.memberships
+        .select_related("journal")
+        .annotate(
+            active_issue_count=Count(
+                "journal__issues",
+                filter=~Q(journal__issues__state__in=Issue.ARCHIVED_STATES),
+                distinct=True,
+            ),
+            member_count=Count("journal__memberships", distinct=True),
+        )
+    )
+
+
 class ProfileView(LoginRequiredMixin, View):
     template_name = "accounts/profile.html"
 
     def get(self, request):
-        memberships = list(
-            request.user.memberships
-            .select_related("journal")
-            .annotate(
-                active_issue_count=Count(
-                    "journal__issues",
-                    filter=~Q(journal__issues__state__in=Issue.ARCHIVED_STATES),
-                    distinct=True,
-                ),
-                member_count=Count("journal__memberships", distinct=True),
-            )
-        )
         return render(request, self.template_name, {
             "patch_url": reverse("accounts:profile_patch"),
             "pw_form": ProfilePasswordForm(request.user),
             "pw_success": request.GET.get("pw") == "ok",
-            "memberships": memberships,
+            "memberships": _memberships_for(request.user),
         })
 
 
@@ -74,4 +77,5 @@ class ProfilePasswordView(LoginRequiredMixin, View):
             "patch_url": reverse("accounts:profile_patch"),
             "pw_form": form,
             "pw_open": True,
+            "memberships": _memberships_for(request.user),
         })
