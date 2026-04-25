@@ -383,8 +383,8 @@ document.addEventListener("alpine:init", () => {
     const todayAbs = todayYear * 12 + todayMonth;
     const minAbs = todayAbs - 6;
     const maxAbs = todayAbs + 12;
+    const MAX_VISIBLE = 3;
 
-    // Pre-index events by ISO date string for O(1) lookup in the cells getter.
     const eventsByDate = new Map();
     for (const evt of events) {
       if (!eventsByDate.has(evt.date)) eventsByDate.set(evt.date, []);
@@ -427,7 +427,7 @@ document.addEventListener("alpine:init", () => {
         this.expandedDate = this.expandedDate === dateStr ? null : dateStr;
       },
 
-      overflowCount(cell) { return cell.events.length - 3; },
+      overflowCount(cell) { return cell.events.length - MAX_VISIBLE; },
 
       get cells() {
         const year = this.year;

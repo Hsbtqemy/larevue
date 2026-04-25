@@ -18,7 +18,6 @@ from apps.reviews.models import ReviewRequest
 
 
 def _build_calendar_events(journal, active_issues=None):
-    """Return flat list of event dicts for all active issues, used by the calendar view."""
     if active_issues is None:
         active_issues = list(journal.issues.filter(state__in=Issue.ACTIVE_STATES))
 
