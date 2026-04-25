@@ -24,7 +24,7 @@
 {% url 'articles:edit' slug=journal.slug issue_id=issue.pk article_id=article.pk as edit_url %}
 {% url 'articles:delete' slug=journal.slug issue_id=issue.pk article_id=article.pk as delete_url %}
 {% url 'articles:note_create' slug=journal.slug issue_id=issue.pk article_id=article.pk as note_create_url %}
-{% url 'articles:version_create' slug=journal.slug issue_id=issue.pk article_id=article.pk as version_create_url %}
+
 {% url 'articles:review_create' slug=journal.slug issue_id=issue.pk article_id=article.pk as review_create_url %}
 
 {% block content %}
@@ -158,9 +158,6 @@
         <div style="display:flex;gap:8px;align-items:flex-start;flex-shrink:0">
 
           {# ── FSM transition buttons ── #}
-          {% if mark_received_spec %}
-            {% include "partials/_mark_received_modal.html" with spec=mark_received_spec mark_received_url=mark_received_url %}
-          {% endif %}
           {% for spec in transitions.primary %}
             {% include "partials/_transition_confirm_modal.html" with spec=spec transition_url=transition_url %}
           {% endfor %}
@@ -271,14 +268,14 @@
         <div class="zone">
           <div class="zone-head">
             <h3>Versions du manuscrit</h3>
-            {% include "articles/_version_upload_modal.html" with version_create_url=version_create_url next_version_number=next_version_number is_archived=is_archived %}
+            {% include "articles/_version_upload_modal.html" with upload_url=file_upload_url is_first=file_upload_is_first show=show_file_upload %}
           </div>
           <div class="versions-timeline" id="versions-list">
             {% for version in versions %}
               {% include "articles/_version_item.html" with version=version is_latest=forloop.first %}
             {% empty %}
               <div class="empty" style="padding:16px 0">
-                <p style="font-size:13px">Aucune version déposée.</p>
+                <p style="font-size:13px">Aucun fichier déposé pour cet article.</p>
               </div>
             {% endfor %}
           </div>

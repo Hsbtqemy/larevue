@@ -1,12 +1,12 @@
 {% load edito %}
-<div x-data="{ open: false }"
-     @htmx:after-request.window="if ($event.detail.elt && $event.detail.elt.id === 'version-upload-form' && $event.detail.successful) { open = false; $event.detail.elt.reset(); }">
+{% if show %}
+<div x-data="{ open: false }">
 
   <button type="button"
           class="btn primary sm"
-          @click="open = true"
-          {% if is_archived %}disabled{% endif %}>
-    {% icon "upload" 14 cls="icon" %} Déposer une version
+          @click="open = true">
+    {% icon "upload" 14 cls="icon" %}
+    {% if is_first %}Déposer le fichier{% else %}Déposer une nouvelle version{% endif %}
   </button>
 
   <template x-teleport="body">
@@ -16,34 +16,31 @@
          @keydown.escape.window="open = false"
          x-transition.opacity>
       <div class="modal" role="dialog" aria-modal="true">
-        <form id="version-upload-form"
-              hx-post="{{ version_create_url }}"
-              hx-target="#versions-list"
-              hx-swap="afterbegin"
-              hx-encoding="multipart/form-data">
+        <form method="post" action="{{ upload_url }}" enctype="multipart/form-data">
           {% csrf_token %}
           <div class="modal-head">
-            <h3>Déposer une nouvelle version</h3>
-            <div class="sub">Vous déposez la version <strong>v{{ next_version_number }}</strong></div>
+            <h3>{% if is_first %}Déposer le fichier de l'article{% else %}Déposer une nouvelle version{% endif %}</h3>
           </div>
           <div class="modal-body">
             <div class="edit-meta-form">
               <div class="field full">
-                <label>Fichier *</label>
+                <label>Fichier <span class="req">*</span></label>
                 <input type="file" name="file" required style="font-size:13px">
               </div>
               <div class="field full">
-                <label>Commentaire <span class="faint">(optionnel)</span></label>
+                <label>Description <span class="faint">(optionnel)</span></label>
                 <textarea name="comment" class="text-input" rows="3" placeholder="Note de version, changements apportés…"></textarea>
               </div>
             </div>
           </div>
           <div class="modal-foot">
             <button type="button" class="btn ghost" @click="open = false">Annuler</button>
-            <button type="submit" class="btn primary">Déposer la version</button>
+            <button type="submit" class="btn primary">Déposer</button>
           </div>
         </form>
       </div>
     </div>
   </template>
+
 </div>
+{% endif %}

@@ -196,13 +196,12 @@ class TestArticleTransitionView:
     # ── context: transitions in view context ──────────────────────────────────
 
     def test_context_primary_transition_for_pending(self, client, user, membership, journal, issue, article):
-        """Pending article exposes mark_received_spec, not a standard primary transition."""
         client.force_login(user)
         ctx = client.get(
             reverse("articles:detail", kwargs={"slug": journal.slug, "issue_id": issue.pk, "article_id": article.pk})
         ).context
-        assert ctx["mark_received_spec"] is not None
-        assert ctx["mark_received_spec"]["name"] == "mark_received"
+        assert ctx["show_file_upload"] is True
+        assert ctx["file_upload_is_first"] is True
         assert ctx["transitions"]["primary"] == []
 
     def test_context_primary_transition_for_received(self, client, user, membership, journal, issue, received_article):
@@ -212,7 +211,8 @@ class TestArticleTransitionView:
         ).context
         primary_names = [t["name"] for t in ctx["transitions"]["primary"]]
         assert "send_to_review" in primary_names
-        assert ctx["mark_received_spec"] is None
+        assert ctx["show_file_upload"] is True
+        assert ctx["file_upload_is_first"] is False
 
     def test_context_primary_transition_for_in_review(self, client, user, membership, journal, issue, in_review_article):
         client.force_login(user)
