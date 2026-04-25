@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter+Tight:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="{% static 'css/edito.css' %}?v=20260425">
+<link rel="stylesheet" href="{% static 'css/edito.css' %}?v=20260426">
 <style>
   :root {
     --accent: {{ journal.accent_color }};
@@ -93,64 +93,24 @@
     </nav>
 
     <div class="main-content">
-      <div class="section" style="max-width:640px">
-        <div class="section-head">
-          <h2>Nouvel article</h2>
+      <div class="section" style="max-width:600px">
+
+        <div class="create-form-header">
+          <h1>Nouvel article</h1>
         </div>
 
         <form method="post" enctype="multipart/form-data" novalidate>
           {% csrf_token %}
 
-          <div style="display:flex;flex-direction:column;gap:16px">
-
-            <div class="field">
-              <label for="id_issue">{{ form.issue.label }}</label>
-              {{ form.issue }}
-              {% if form.issue.errors %}
-                <div class="form-msg err">{{ form.issue.errors|join:" " }}</div>
-              {% endif %}
-            </div>
-
-            <div class="field">
-              <label for="id_title">{{ form.title.label }}</label>
-              {{ form.title }}
-              {% if form.title.errors %}
-                <div class="form-msg err">{{ form.title.errors|join:" " }}</div>
-              {% endif %}
-            </div>
-
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
-              <div class="field">
-                <label for="id_article_type">{{ form.article_type.label }}</label>
-                {{ form.article_type }}
-                {% if form.article_type.errors %}
-                  <div class="form-msg err">{{ form.article_type.errors|join:" " }}</div>
-                {% endif %}
-              </div>
-
-              <div class="field">
-                <label for="id_author">{{ form.author.label }}</label>
-                {{ form.author }}
-                {% if form.author.errors %}
-                  <div class="form-msg err">{{ form.author.errors|join:" " }}</div>
-                {% endif %}
-                <div class="tiny muted" style="margin-top:4px">
-                  Contact absent de la liste ?
-                  <a href="{% url 'contacts:create' slug=journal.slug %}" target="_blank" style="color:var(--accent)">Ajouter un contact</a>
-                </div>
-              </div>
-            </div>
-
-            <div class="field">
-              <label for="id_file">{{ form.file.label }}</label>
-              {{ form.file }}
-              {% if form.file.errors %}
-                <div class="form-msg err">{{ form.file.errors|join:" " }}</div>
-              {% endif %}
-              <div class="tiny muted" style="margin-top:4px">Laissez vide pour importer le fichier plus tard.</div>
-            </div>
-
+          <div class="field">
+            <label for="id_issue">{{ form.issue.label }} <span class="req">*</span></label>
+            {{ form.issue }}
+            {% if form.issue.errors %}
+              <div class="form-msg err">{{ form.issue.errors|join:" " }}</div>
+            {% endif %}
           </div>
+
+          {% include "partials/_article_form_fields.html" with form=form journal=journal %}
 
           {% if form.non_field_errors %}
             <div class="form-msg err" style="margin-top:12px">{{ form.non_field_errors|join:" " }}</div>

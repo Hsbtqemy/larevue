@@ -31,6 +31,12 @@ class ArticleCreateForm(forms.ModelForm):
                 usual_roles__overlap=[Contact.Role.AUTHOR]
             ).order_by("last_name", "first_name")
         self.fields["author"].required = False
+        self.fields["author"].empty_label = "— Choisir un·e auteur·ice —"
+        for name, field in self.fields.items():
+            if name == "file":
+                continue
+            if hasattr(field.widget, "attrs"):
+                field.widget.attrs.setdefault("class", "text-input")
 
     class Meta:
         model = Article
@@ -51,6 +57,7 @@ class ArticleCreateWithIssueForm(ArticleCreateForm):
             self.fields["issue"].queryset = journal.issues.filter(
                 state__in=Issue.ACTIVE_STATES
             ).order_by("-number")
+        self.fields["issue"].widget.attrs.setdefault("class", "text-input")
 
 
 class ArticleVersionUploadForm(forms.Form):

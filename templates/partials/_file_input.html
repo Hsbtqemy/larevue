@@ -1,0 +1,21 @@
+<div x-data="fileInput()"
+     class="file-drop-zone"
+     :class="{ dragging: isDragging }"
+     @dragover.prevent="isDragging = true"
+     @dragleave.prevent="isDragging = false"
+     @drop.prevent="onDrop($event)"
+     @click="$refs.fileInput.click()">
+  <input type="file" name="{{ name }}" x-ref="fileInput" @change="onFileChange($event)"{% if accept %} accept="{{ accept }}"{% endif %}>
+  <template x-if="!fileName">
+    <div>
+      <div class="drop-label">Glissez un fichier ou cliquez pour parcourir</div>
+      <div class="drop-hint">{% if help_text %}{{ help_text }}{% else %}Laissez vide pour importer le fichier plus tard.{% endif %}</div>
+    </div>
+  </template>
+  <template x-if="fileName">
+    <div>
+      <div class="drop-filename" x-text="fileName"></div>
+      <div><button type="button" class="drop-clear" @click.stop="clear($event)">Retirer</button></div>
+    </div>
+  </template>
+</div>

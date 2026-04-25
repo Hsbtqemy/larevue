@@ -308,6 +308,34 @@ document.addEventListener("alpine:init", () => {
   }));
 
 
+  Alpine.data("fileInput", () => ({
+    fileName: null,
+    isDragging: false,
+
+    onFileChange(e) {
+      const file = e.target.files[0] || null;
+      this.fileName = file ? file.name : null;
+    },
+
+    onDrop(e) {
+      this.isDragging = false;
+      const file = e.dataTransfer.files[0] || null;
+      if (file) {
+        this.fileName = file.name;
+        const input = this.$refs.fileInput;
+        const dt = new DataTransfer();
+        dt.items.add(file);
+        input.files = dt.files;
+      }
+    },
+
+    clear(e) {
+      e.stopPropagation();
+      this.fileName = null;
+      this.$refs.fileInput.value = "";
+    },
+  }));
+
   Alpine.data("savedBanner", () => {
     let timer = null;
     return {

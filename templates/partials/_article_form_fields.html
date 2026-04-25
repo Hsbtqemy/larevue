@@ -1,0 +1,48 @@
+{% load edito %}
+{# Common article form fields. Expects: form, journal #}
+
+<div class="field">
+  <label for="id_title">{{ form.title.label }} <span class="req">*</span></label>
+  {{ form.title }}
+  {% if form.title.errors %}
+    <div class="form-msg err">{{ form.title.errors|join:" " }}</div>
+  {% endif %}
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+  <div class="field">
+    <label for="id_article_type">{{ form.article_type.label }} <span class="req">*</span></label>
+    {{ form.article_type }}
+    {% if form.article_type.errors %}
+      <div class="form-msg err">{{ form.article_type.errors|join:" " }}</div>
+    {% endif %}
+  </div>
+
+  <div class="field">
+    <label for="id_author">{{ form.author.label }} <span class="opt">(facultatif)</span></label>
+    {{ form.author }}
+    {% if form.author.errors %}
+      <div class="form-msg err">{{ form.author.errors|join:" " }}</div>
+    {% endif %}
+    <div class="tiny muted" style="margin-top:4px">
+      Contact absent de la liste ?
+      <a href="{% url 'contacts:create' slug=journal.slug %}" target="_blank" style="color:var(--accent)">Ajouter un contact</a>
+    </div>
+  </div>
+</div>
+
+<div class="field">
+  <label for="id_abstract">{{ form.abstract.label }} <span class="opt">(facultatif)</span></label>
+  {{ form.abstract }}
+  {% if form.abstract.errors %}
+    <div class="form-msg err">{{ form.abstract.errors|join:" " }}</div>
+  {% endif %}
+</div>
+
+<div class="field">
+  <label>{{ form.file.label }} <span class="opt">(facultatif)</span></label>
+  {% include "partials/_file_input.html" with name="file" %}
+  {% if form.file.errors %}
+    <div class="form-msg err">{{ form.file.errors|join:" " }}</div>
+  {% endif %}
+</div>
