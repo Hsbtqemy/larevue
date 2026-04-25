@@ -5,7 +5,13 @@
 <div class="review-card" id="review-received-{{ review.pk }}">
 
   <div class="review-head">
-    <span class="review-reviewer">{{ review.reviewer_name_snapshot }}</span>
+    <span class="review-reviewer">
+      {% if review.reviewer %}
+        <a href="{% url 'contacts:detail' slug=journal.slug pk=review.reviewer_id %}" style="color:inherit;text-decoration:none">{{ review.reviewer_name_snapshot }}</a>
+      {% else %}
+        {{ review.reviewer_name_snapshot }}
+      {% endif %}
+    </span>
     <div style="display:flex;gap:8px;align-items:center">
       {% verdict_badge review.verdict %}
       <span class="faint" style="font-size:12px">{{ review.received_at|date_short }}</span>

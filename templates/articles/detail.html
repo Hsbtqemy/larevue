@@ -63,7 +63,7 @@
         {% icon "file" 17 cls="icon" %}
         Numéros en cours
       </a>
-      <a href="#" class="nav-item" style="text-decoration:none">
+      <a href="{% url 'contacts:list' slug=journal.slug %}" class="nav-item" style="text-decoration:none">
         {% icon "users" 17 cls="icon" %}
         Contacts
       </a>
@@ -121,8 +121,8 @@
             <div>
               <span class="muted">Auteur·ice : </span>
               <strong>
-                {% if not is_archived %}
-                  {% inline_editable "author" article patch_url input_type="select" options=author_options %}
+                {% if article.author %}
+                  <a href="{% url 'contacts:detail' slug=journal.slug pk=article.author_id %}" style="color:inherit;text-decoration:none">{{ article.author.full_name }}</a>
                 {% else %}
                   {{ article.displayed_author_name|default:"—" }}
                 {% endif %}
@@ -279,7 +279,7 @@
             <h3>Relectures</h3>
           </div>
 
-          {% include "articles/_review_create_modal.html" with review_create_url=review_create_url version_count=version_count versions=versions reviewer_options=reviewer_options default_deadline=default_deadline is_archived=is_archived %}
+          {% include "articles/_review_create_modal.html" with review_create_url=review_create_url version_count=version_count versions=versions reviewer_search_url=reviewer_search_url default_deadline=default_deadline is_archived=is_archived %}
 
           {% if expected_reviews %}
             <div style="margin-top:16px">

@@ -99,17 +99,8 @@ class TestArticleDetailView:
     def test_context_keys_present(self, client, user, membership, journal, issue, article):
         client.force_login(user)
         ctx = client.get(_detail_url(journal, issue, article)).context
-        for key in ("article", "issue", "journal", "internal_notes", "author_options", "is_archived"):
+        for key in ("article", "issue", "journal", "internal_notes", "is_archived"):
             assert key in ctx
-
-    def test_author_options_filtered_by_journal(self, client, user, membership, journal, issue, article):
-        from apps.journals.models import Journal
-        other_journal = Journal.objects.create(name="Autre", slug="autre2")
-        Contact.objects.create(journal=other_journal, first_name="Étranger", last_name="X")
-        client.force_login(user)
-        ctx = client.get(_detail_url(journal, issue, article)).context
-        names = [name for _, name in ctx["author_options"]]
-        assert "Étranger X" not in names
 
     def test_is_archived_false_for_active_issue(self, client, user, membership, journal, issue, article):
         client.force_login(user)

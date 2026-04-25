@@ -58,7 +58,7 @@
         {% icon "file" 17 cls="icon" %}
         Numéros en cours
       </a>
-      <a href="{% url 'contacts:create' slug=journal.slug %}" class="nav-item" style="text-decoration:none">
+      <a href="{% url 'contacts:list' slug=journal.slug %}" class="nav-item" style="text-decoration:none">
         {% icon "users" 17 cls="icon" %}
         Contacts
       </a>

@@ -289,13 +289,6 @@ class ArticleDetailView(JournalMemberRequiredMixin, DetailView):
 
         internal_notes = list(article.internal_notes.all())
 
-        author_options = [
-            (c.pk, c.full_name)
-            for c in journal.contacts.order_by("last_name", "first_name")
-        ]
-        if article.author and (article.author_id, article.author.full_name) not in author_options:
-            author_options = [(article.author_id, article.author.full_name)] + author_options
-
         author_search_url = (
             reverse("contacts:search", kwargs={"slug": journal.slug}) + "?role=author"
         )
@@ -322,7 +315,6 @@ class ArticleDetailView(JournalMemberRequiredMixin, DetailView):
             "issue": issue,
             "journal": journal,
             "internal_notes": internal_notes,
-            "author_options": author_options,
             "author_search_url": author_search_url,
             "article_author_initial_id": article.author_id or "",
             "article_author_initial_name": article.displayed_author_name,
