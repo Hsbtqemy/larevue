@@ -1,5 +1,6 @@
 import csv
 
+from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db.models import Count, F, Q
 from django.http import Http404, HttpResponse
@@ -311,6 +312,9 @@ class JournalDocumentCreateView(JournalMemberRequiredMixin, View):
             doc.journal = request.journal
             doc.uploaded_by = request.user
             doc.save()
+        else:
+            error_text = " ".join(msg for errors in form.errors.values() for msg in errors)
+            messages.error(request, f"Impossible d'ajouter le document : {error_text}")
         return redirect(reverse("journal_edit", kwargs={"slug": request.journal.slug}))
 
 

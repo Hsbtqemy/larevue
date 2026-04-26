@@ -1,5 +1,6 @@
 import datetime
 
+from django.contrib import messages
 from django.core.exceptions import ValidationError
 from django.db.models import Count, F
 from django.http import Http404, JsonResponse
@@ -429,6 +430,8 @@ class IssueDocumentCreateView(JournalOwnedObjectMixin, JournalMemberRequiredMixi
 
         form = IssueDocumentForm(request.POST, request.FILES)
         if not form.is_valid():
+            error_text = " ".join(msg for errors in form.errors.values() for msg in errors)
+            messages.error(request, f"Impossible d'ajouter le document : {error_text}")
             return _detail_redirect(request, issue_id)
 
         doc = form.save(commit=False)
