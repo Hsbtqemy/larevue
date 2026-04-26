@@ -2,7 +2,7 @@ import datetime
 
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.db.models import Count, F
-from django.http import Http404, HttpResponse, JsonResponse
+from django.http import Http404, JsonResponse
 from django.shortcuts import redirect
 from django.template.loader import render_to_string
 from django.urls import reverse
