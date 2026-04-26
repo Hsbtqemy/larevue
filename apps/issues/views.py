@@ -1,6 +1,6 @@
 import datetime
 
-from django.core.exceptions import PermissionDenied, ValidationError
+from django.core.exceptions import ValidationError
 from django.db.models import Count, F
 from django.http import Http404, JsonResponse
 from django.shortcuts import redirect
@@ -294,9 +294,7 @@ class IssuePatchView(JournalOwnedPatchView):
     FULL_CLEAN_EXCLUDE = ["state", "cover_image", "final_pdf"]
 
     def check_editable(self, obj):
-        if obj.state in Issue.ARCHIVED_STATES:
-            return JsonResponse({"error": "Ce numéro ne peut plus être modifié."}, status=403)
-        return None
+        return _check_issue_archived(obj)
 
     def create_audit_note(self, obj, field_name, old_value, new_value, field_obj):
         InternalNote.objects.create(
@@ -313,8 +311,9 @@ class IssueImageUploadView(JournalOwnedObjectMixin, JournalMemberRequiredMixin, 
 
     def post(self, request, issue_id, **kwargs):
         issue = self.get_object_or_404()
-        if issue.state in Issue.ARCHIVED_STATES:
-            return JsonResponse({"error": "Ce numéro ne peut plus être modifié."}, status=403)
+        guard = _check_issue_archived(issue)
+        if guard:
+            return guard
 
         file = request.FILES.get("cover_image")
         if not file:
@@ -331,8 +330,9 @@ class IssueImageUploadView(JournalOwnedObjectMixin, JournalMemberRequiredMixin, 
 
     def patch(self, request, issue_id, **kwargs):
         issue = self.get_object_or_404()
-        if issue.state in Issue.ARCHIVED_STATES:
-            return JsonResponse({"error": "Ce numéro ne peut plus être modifié."}, status=403)
+        guard = _check_issue_archived(issue)
+        if guard:
+            return guard
 
         if issue.cover_image:
             issue.cover_image.delete(save=False)
@@ -347,9 +347,9 @@ class IssueEditView(JournalOwnedObjectMixin, JournalMemberRequiredMixin, View):
 
     def post(self, request, issue_id, **kwargs):
         issue = self.get_object_or_404()
-
-        if issue.state in Issue.ARCHIVED_STATES:
-            return JsonResponse({"error": "Ce numéro ne peut plus être modifié."}, status=403)
+        guard = _check_issue_archived(issue)
+        if guard:
+            return guard
 
         form = IssueEditForm(request.POST, instance=issue)
         if form.is_valid():
@@ -405,9 +405,10 @@ def _get_document_or_404(request, issue_id, doc_id):
         raise Http404
 
 
-def _assert_issue_editable(issue):
+def _check_issue_archived(issue):
     if issue.state in Issue.ARCHIVED_STATES:
-        raise PermissionDenied
+        return JsonResponse({"error": "Ce numéro ne peut plus être modifié."}, status=403)
+    return None
 
 
 def _detail_redirect(request, issue_id):
@@ -422,7 +423,9 @@ class IssueDocumentCreateView(JournalOwnedObjectMixin, JournalMemberRequiredMixi
 
     def post(self, request, issue_id, **kwargs):
         issue = self.get_object_or_404()
-        _assert_issue_editable(issue)
+        guard = _check_issue_archived(issue)
+        if guard:
+            return guard
 
         form = IssueDocumentForm(request.POST, request.FILES)
         if not form.is_valid():
@@ -440,7 +443,9 @@ class IssueDocumentCreateView(JournalOwnedObjectMixin, JournalMemberRequiredMixi
 class IssueDocumentDeleteView(JournalMemberRequiredMixin, View):
     def post(self, request, issue_id, doc_id, **kwargs):
         doc = _get_document_or_404(request, issue_id, doc_id)
-        _assert_issue_editable(doc.issue)
+        guard = _check_issue_archived(doc.issue)
+        if guard:
+            return guard
 
         doc_name = doc.name
         issue = doc.issue
