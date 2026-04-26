@@ -28,10 +28,10 @@
     })();
   </script>
   <style>[x-cloak]{display:none !important}</style>
-  <script src="https://cdn.tailwindcss.com"></script>
   {% load static %}
+  <link rel="stylesheet" href="{% static 'css/tailwind.css' %}">
   <script defer src="{% static 'js/edito.js' %}?v=20260426a"></script>
-  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <script defer src="{% static 'js/alpine.min.js' %}"></script>
   {% block extra_head %}{% endblock %}
 </head>
 <body class="{% block body_class %}min-h-screen bg-gray-50 text-gray-900{% endblock %}">
