@@ -60,7 +60,7 @@ class ArticleVersionUploadForm(forms.Form):
 
 
 class ReviewRequestCreateForm(forms.ModelForm):
-    def __init__(self, *args, journal=None, article=None, **kwargs):
+    def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["deadline"].widget = forms.DateInput(attrs={"type": "date"})
         self.fields["deadline"].initial = datetime.date.today() + datetime.timedelta(days=28)

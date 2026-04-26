@@ -106,8 +106,7 @@ class JournalDashboardView(JournalMemberRequiredMixin, TemplateView):
                 else 0
             )
 
-        # Fetch all expected reviews for active issues in one query, then split by date.
-        all_expected = list(
+        all_sent = list(
             ReviewRequest.objects
             .filter(
                 state=ReviewRequest.State.SENT,
@@ -129,7 +128,7 @@ class JournalDashboardView(JournalMemberRequiredMixin, TemplateView):
         }
 
         watch_items = []
-        for rr in all_expected:
+        for rr in all_sent:
             if rr.deadline < today:
                 watch_items.append({
                     "type": "review",
@@ -157,7 +156,7 @@ class JournalDashboardView(JournalMemberRequiredMixin, TemplateView):
         watch_items.sort(key=lambda x: x["days_overdue"], reverse=True)
 
         upcoming = []
-        for rr in all_expected:
+        for rr in all_sent:
             if rr.deadline >= today:
                 upcoming.append({
                     "type": "review",

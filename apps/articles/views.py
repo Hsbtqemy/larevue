@@ -17,7 +17,7 @@ from apps.articles.forms import (
     ReviewRequestReceiveForm,
 )
 from apps.articles.models import Article, ArticleVersion, InternalNote
-from apps.articles.utils import log_action, oob_counters_html
+from apps.articles.utils import actor_name, log_action, oob_counters_html
 from apps.contacts.models import Contact
 from apps.core.mixins import JournalMemberRequiredMixin, JournalOwnedObjectMixin
 from apps.core.utils import file_response
@@ -277,7 +277,6 @@ class ArticleDetailView(JournalMemberRequiredMixin, DetailView):
 
         versions = list(article.versions.all())
         review_requests = list(article.review_requests.all())
-        reviews_received_count = sum(1 for r in review_requests if r.state == ReviewRequest.State.RECEIVED)
         active_reviews = [
             r for r in review_requests
             if r.state in (ReviewRequest.State.ASSIGNED, ReviewRequest.State.SENT)
@@ -288,6 +287,7 @@ class ArticleDetailView(JournalMemberRequiredMixin, DetailView):
             reverse=True,
         )
         declined_reviews = [r for r in review_requests if r.state == ReviewRequest.State.DECLINED]
+        reviews_received_count = len(received_reviews)
 
         internal_notes = list(article.internal_notes.all())
 
@@ -488,11 +488,11 @@ class ArticleFileUploadView(_ArticleJournalMixin, JournalMemberRequiredMixin, Vi
                 article.mark_received()
                 article.save()
 
-        actor_name = request.user.get_full_name() or request.user.email
+        name = actor_name(request.user)
         if is_first:
-            msg = f"{actor_name} a déposé le fichier de l'article"
+            msg = f"{name} a déposé le fichier de l'article"
         else:
-            msg = f"{actor_name} a déposé la version v{version.version_number}"
+            msg = f"{name} a déposé la version v{version.version_number}"
         if description:
             msg += f" — {description}"
         log_action(article, request.user, msg)
@@ -520,6 +520,16 @@ class ArticleVersionDownloadView(_ArticleJournalMixin, JournalMemberRequiredMixi
 
 # ──────────────────────────── Relectures ────────────────────────────
 
+def _review_card_ctx(review, request, *, is_archived=False):
+    return {
+        "review": review,
+        "article": review.article,
+        "journal": request.journal,
+        "issue": review.article.issue,
+        "is_archived": is_archived,
+    }
+
+
 class ReviewRequestCreateView(_ArticleJournalMixin, JournalMemberRequiredMixin, View):
     def post(self, request, issue_id, article_id, **kwargs):
         article = self.get_object_or_404()
@@ -531,9 +541,7 @@ class ReviewRequestCreateView(_ArticleJournalMixin, JournalMemberRequiredMixin, 
         if not article.versions.exists():
             return JsonResponse({"error": "Déposez d'abord une version avant de demander une relecture."}, status=400)
 
-        form = ReviewRequestCreateForm(
-            request.POST, journal=request.journal, article=article
-        )
+        form = ReviewRequestCreateForm(request.POST)
         if not form.is_valid():
             errors = {f: [str(e.message) for e in errs] for f, errs in form.errors.as_data().items()}
             return JsonResponse({"errors": errors}, status=400)
@@ -565,21 +573,13 @@ class ReviewRequestCreateView(_ArticleJournalMixin, JournalMemberRequiredMixin, 
             state=ReviewRequest.State.ASSIGNED,
         )
 
-        actor_name = request.user.get_full_name() or request.user.email
         deadline_str = review.deadline.strftime("%d/%m/%Y")
         log_action(
             article, request.user,
-            f"{actor_name} a désigné {reviewer_name_snapshot} comme relecteur·ice (échéance : {deadline_str})",
+            f"{actor_name(request.user)} a désigné {reviewer_name_snapshot} comme relecteur·ice (échéance : {deadline_str})",
         )
 
-        ctx = {
-            "review": review,
-            "article": article,
-            "journal": request.journal,
-            "issue": article.issue,
-            "is_archived": False,
-        }
-        fragment = render_to_string("articles/_review_item_expected.html", ctx, request=request)
+        fragment = render_to_string("articles/_review_item_expected.html", _review_card_ctx(review, request), request=request)
         return HttpResponse(fragment + oob_counters_html(article, request=request))
 
 
@@ -598,21 +598,13 @@ class ReviewRequestSendView(_ReviewRequestMixin, JournalMemberRequiredMixin, Vie
         review.sent_at = timezone.now()
         review.save(update_fields=["state", "sent_at"])
 
-        actor_name = request.user.get_full_name() or request.user.email
         log_action(
             article, request.user,
-            f"{actor_name} a envoyé la demande de relecture à {review.reviewer_name_snapshot}",
+            f"{actor_name(request.user)} a envoyé la demande de relecture à {review.reviewer_name_snapshot}",
         )
 
-        ctx = {
-            "review": review,
-            "article": article,
-            "journal": request.journal,
-            "issue": article.issue,
-            "is_archived": False,
-        }
-        fragment = render_to_string("articles/_review_item_expected.html", ctx, request=request)
-        return HttpResponse(fragment)
+        fragment = render_to_string("articles/_review_item_expected.html", _review_card_ctx(review, request), request=request)
+        return HttpResponse(fragment + oob_counters_html(article, request=request))
 
 
 class ReviewRequestDeclineView(_ReviewRequestMixin, JournalMemberRequiredMixin, View):
@@ -634,16 +626,9 @@ class ReviewRequestDeclineView(_ReviewRequestMixin, JournalMemberRequiredMixin, 
             f"Relecture de {review.reviewer_name_snapshot} refusée",
         )
 
-        ctx = {
-            "review": review,
-            "article": article,
-            "journal": request.journal,
-            "issue": article.issue,
-            "is_archived": False,
-        }
-        declined_html = render_to_string("articles/_review_item_declined.html", ctx, request=request)
+        declined_html = render_to_string("articles/_review_item_declined.html", _review_card_ctx(review, request), request=request)
         oob_declined = f'<div hx-swap-oob="afterbegin:#reviews-declined-list">{declined_html}</div>'
-        return HttpResponse(oob_declined + oob_counters_html(article, request=request))
+        return HttpResponse(oob_declined)
 
 
 class ReviewRequestReceiveView(_ReviewRequestMixin, JournalMemberRequiredMixin, View):
@@ -673,14 +658,7 @@ class ReviewRequestReceiveView(_ReviewRequestMixin, JournalMemberRequiredMixin, 
             f"Relecture de {review.reviewer_name_snapshot} reçue — verdict : {verdict_label}",
         )
 
-        ctx = {
-            "review": review,
-            "article": article,
-            "journal": request.journal,
-            "issue": article.issue,
-            "is_archived": is_archived,
-        }
-        received_html = render_to_string("articles/_review_item_received.html", ctx, request=request)
+        received_html = render_to_string("articles/_review_item_received.html", _review_card_ctx(review, request, is_archived=is_archived), request=request)
         oob_received = (
             f'<div hx-swap-oob="afterbegin:#reviews-received-list">{received_html}</div>'
         )
