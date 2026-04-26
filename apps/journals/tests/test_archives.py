@@ -170,6 +170,71 @@ class TestJournalArchivesStats:
         assert archived.reviews_received_count == 1
 
 
+def _export_url(journal):
+    return reverse("journal_archives_export", kwargs={"slug": journal.slug})
+
+
+@pytest.mark.django_db
+class TestJournalArchivesExport:
+    def test_unauthenticated_redirects(self, client, journal):
+        response = client.get(_export_url(journal))
+        assert response.status_code == 302
+
+    def test_returns_csv(self, client, user, membership):
+        client.force_login(user)
+        response = client.get(_export_url(membership.journal))
+        assert response.status_code == 200
+        assert "text/csv" in response["Content-Type"]
+        assert "attachment" in response["Content-Disposition"]
+
+    def test_csv_contains_header(self, client, user, membership):
+        client.force_login(user)
+        response = client.get(_export_url(membership.journal))
+        content = response.content.decode("utf-8-sig")
+        assert "Titre thématique" in content
+        assert "Relectures reçues" in content
+
+    def test_csv_includes_published_issue(self, client, user, membership, issue):
+        IssueModel.objects.filter(pk=issue.pk).update(state=IssueModel.State.PUBLISHED)
+        client.force_login(user)
+        response = client.get(_export_url(membership.journal))
+        assert issue.thematic_title in response.content.decode("utf-8-sig")
+
+    def test_csv_excludes_active_issue(self, client, user, membership, issue):
+        client.force_login(user)
+        response = client.get(_export_url(membership.journal))
+        assert issue.thematic_title not in response.content.decode("utf-8-sig")
+
+    def test_state_filter_published_only(self, client, user, membership, journal):
+        IssueModel.objects.filter(journal=journal).delete()
+        pub = IssueModel.objects.create(journal=journal, number="30", thematic_title="Publié", editor_name="Ed")
+        ref = IssueModel.objects.create(journal=journal, number="31", thematic_title="Refusé", editor_name="Ed")
+        IssueModel.objects.filter(pk=pub.pk).update(state=IssueModel.State.PUBLISHED)
+        IssueModel.objects.filter(pk=ref.pk).update(state=IssueModel.State.REFUSED)
+        client.force_login(user)
+        response = client.get(_export_url(journal) + "?state=published")
+        content = response.content.decode("utf-8-sig")
+        assert "Publié" in content
+        assert "Refusé" not in content
+
+    def test_state_filter_refused_only(self, client, user, membership, journal):
+        IssueModel.objects.filter(journal=journal).delete()
+        pub = IssueModel.objects.create(journal=journal, number="32", thematic_title="PubliéB", editor_name="Ed")
+        ref = IssueModel.objects.create(journal=journal, number="33", thematic_title="RefuséB", editor_name="Ed")
+        IssueModel.objects.filter(pk=pub.pk).update(state=IssueModel.State.PUBLISHED)
+        IssueModel.objects.filter(pk=ref.pk).update(state=IssueModel.State.REFUSED)
+        client.force_login(user)
+        response = client.get(_export_url(journal) + "?state=refused")
+        content = response.content.decode("utf-8-sig")
+        assert "RefuséB" in content
+        assert "PubliéB" not in content
+
+    def test_filename_includes_journal_slug(self, client, user, membership):
+        client.force_login(user)
+        response = client.get(_export_url(membership.journal))
+        assert membership.journal.slug in response["Content-Disposition"]
+
+
 def _find_issue(years_groups, pk):
     for _year, issues in years_groups:
         for issue in issues:

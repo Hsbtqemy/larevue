@@ -1,6 +1,8 @@
+import csv
+
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db.models import Count, F, Q
-from django.http import Http404
+from django.http import Http404, HttpResponse
 from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.utils import timezone
@@ -194,6 +196,25 @@ class JournalDashboardView(JournalMemberRequiredMixin, TemplateView):
         return ctx
 
 
+def _archived_issues_qs(journal, state_filter=None):
+    qs = (
+        journal.issues
+        .filter(state__in=Issue.ARCHIVED_STATES)
+        .annotate(
+            article_count=Count("articles", distinct=True),
+            reviews_received_count=Count(
+                "articles__review_requests",
+                filter=Q(articles__review_requests__state="received"),
+                distinct=True,
+            ),
+        )
+        .order_by(F("published_at").desc(nulls_last=True), F("refused_at").desc(nulls_last=True))
+    )
+    if state_filter in (Issue.State.PUBLISHED, Issue.State.REFUSED):
+        qs = qs.filter(state=state_filter)
+    return qs
+
+
 class JournalArchivesView(JournalMemberRequiredMixin, TemplateView):
     template_name = "journals/archives.html"
 
@@ -201,19 +222,7 @@ class JournalArchivesView(JournalMemberRequiredMixin, TemplateView):
         ctx = super().get_context_data(**kwargs)
         journal = self.request.journal
 
-        archived_issues = list(
-            journal.issues
-            .filter(state__in=Issue.ARCHIVED_STATES)
-            .annotate(
-                article_count=Count("articles", distinct=True),
-                reviews_received_count=Count(
-                    "articles__review_requests",
-                    filter=Q(articles__review_requests__state="received"),
-                    distinct=True,
-                ),
-            )
-            .order_by(F("published_at").desc(nulls_last=True), F("refused_at").desc(nulls_last=True))
-        )
+        archived_issues = list(_archived_issues_qs(journal))
 
         years_data: dict[int, list] = {}
         for issue in archived_issues:
@@ -228,8 +237,41 @@ class JournalArchivesView(JournalMemberRequiredMixin, TemplateView):
                 for year in sorted(years_data.keys(), reverse=True)
             ],
             "total_count": len(archived_issues),
+            "export_url": reverse("journal_archives_export", kwargs={"slug": journal.slug}),
         })
         return ctx
+
+
+class JournalArchivesExportView(JournalMemberRequiredMixin, View):
+    def get(self, request, **kwargs):
+        journal = request.journal
+        state_filter = request.GET.get("state", "")
+        issues = list(_archived_issues_qs(journal, state_filter=state_filter))
+        for issue in issues:
+            issue.archive_date = issue.published_at or issue.refused_at
+
+        response = HttpResponse(content_type="text/csv; charset=utf-8-sig")
+        slug = journal.slug
+        state_suffix = f"_{state_filter}" if state_filter else ""
+        response["Content-Disposition"] = f'attachment; filename="archives_{slug}{state_suffix}.csv"'
+
+        writer = csv.writer(response)
+        writer.writerow([
+            "Numéro", "Titre thématique", "Responsable éditorial·e",
+            "État", "Articles", "Relectures reçues", "Date archivage",
+        ])
+        state_labels = dict(Issue.State.choices)
+        for issue in issues:
+            writer.writerow([
+                issue.number,
+                issue.thematic_title,
+                issue.editor_name,
+                state_labels.get(issue.state, issue.state),
+                issue.article_count,
+                issue.reviews_received_count,
+                issue.archive_date.strftime("%d/%m/%Y") if issue.archive_date else "",
+            ])
+        return response
 
 
 class JournalDocumentCreateView(JournalMemberRequiredMixin, View):
