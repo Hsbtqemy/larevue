@@ -17,10 +17,10 @@ from apps.articles.forms import (
     ReviewRequestReceiveForm,
 )
 from apps.articles.models import Article, ArticleVersion, InternalNote
-from apps.articles.utils import actor_name, log_action, oob_counters_html
+from apps.articles.utils import oob_counters_html
 from apps.contacts.models import Contact
 from apps.core.mixins import JournalMemberRequiredMixin, JournalOwnedObjectMixin
-from apps.core.utils import file_response
+from apps.core.utils import actor_name, create_audit_note, file_response
 from apps.core.views import JournalOwnedCreateView, JournalOwnedPatchView, JournalOwnedTransitionView, compute_transitions
 from apps.issues.models import Issue
 from apps.reviews.models import ReviewRequest
@@ -495,7 +495,7 @@ class ArticleFileUploadView(_ArticleJournalMixin, JournalMemberRequiredMixin, Vi
             msg = f"{name} a déposé la version v{version.version_number}"
         if description:
             msg += f" — {description}"
-        log_action(article, request.user, msg)
+        create_audit_note(article=article, author=request.user, message=msg)
 
         return redirect(reverse(
             "articles:detail",
@@ -574,9 +574,9 @@ class ReviewRequestCreateView(_ArticleJournalMixin, JournalMemberRequiredMixin, 
         )
 
         deadline_str = review.deadline.strftime("%d/%m/%Y")
-        log_action(
-            article, request.user,
-            f"{actor_name(request.user)} a désigné {reviewer_name_snapshot} comme relecteur·ice (échéance : {deadline_str})",
+        create_audit_note(
+            article=article, author=request.user,
+            message=f"{actor_name(request.user)} a désigné {reviewer_name_snapshot} comme relecteur·ice (échéance : {deadline_str})",
         )
 
         fragment = render_to_string("articles/_review_item_expected.html", _review_card_ctx(review, request), request=request)
@@ -598,9 +598,9 @@ class ReviewRequestSendView(_ReviewRequestMixin, JournalMemberRequiredMixin, Vie
         review.sent_at = timezone.now()
         review.save(update_fields=["state", "sent_at"])
 
-        log_action(
-            article, request.user,
-            f"{actor_name(request.user)} a envoyé la demande de relecture à {review.reviewer_name_snapshot}",
+        create_audit_note(
+            article=article, author=request.user,
+            message=f"{actor_name(request.user)} a envoyé la demande de relecture à {review.reviewer_name_snapshot}",
         )
 
         fragment = render_to_string("articles/_review_item_expected.html", _review_card_ctx(review, request), request=request)
@@ -621,9 +621,9 @@ class ReviewRequestDeclineView(_ReviewRequestMixin, JournalMemberRequiredMixin, 
         review.state = ReviewRequest.State.DECLINED
         review.save(update_fields=["state"])
 
-        log_action(
-            article, request.user,
-            f"Relecture de {review.reviewer_name_snapshot} refusée",
+        create_audit_note(
+            article=article, author=request.user,
+            message=f"Relecture de {review.reviewer_name_snapshot} refusée",
         )
 
         declined_html = render_to_string("articles/_review_item_declined.html", _review_card_ctx(review, request), request=request)
@@ -653,9 +653,9 @@ class ReviewRequestReceiveView(_ReviewRequestMixin, JournalMemberRequiredMixin, 
         review.save()
 
         verdict_label = review.get_verdict_display()
-        log_action(
-            article, request.user,
-            f"Relecture de {review.reviewer_name_snapshot} reçue — verdict : {verdict_label}",
+        create_audit_note(
+            article=article, author=request.user,
+            message=f"Relecture de {review.reviewer_name_snapshot} reçue — verdict : {verdict_label}",
         )
 
         received_html = render_to_string("articles/_review_item_received.html", _review_card_ctx(review, request, is_archived=is_archived), request=request)
@@ -678,7 +678,7 @@ class ReviewRequestDeleteView(_ReviewRequestMixin, JournalMemberRequiredMixin, V
 
         name = review.reviewer_name_snapshot
         review.delete()
-        log_action(article, request.user, f"Désignation de {name} annulée")
+        create_audit_note(article=article, author=request.user, message=f"Désignation de {name} annulée")
 
         return HttpResponse(oob_counters_html(article, request=request))
 
@@ -715,7 +715,7 @@ class ArticleTransitionView(_ArticleJournalMixin, JournalOwnedTransitionView):
         return self._check_archived(article)
 
     def create_audit_note(self, obj, user, message):
-        InternalNote.objects.create(article=obj, author=user, content=message, is_automatic=True)
+        create_audit_note(article=obj, author=user, message=message)
 
     def get_success_url(self, obj):
         return reverse(

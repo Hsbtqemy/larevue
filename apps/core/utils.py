@@ -4,6 +4,21 @@ from django.http import FileResponse, HttpResponse
 
 MAX_UPLOAD_MB = 25
 
+
+def actor_name(user):
+    return user.get_full_name() or user.email
+
+
+def create_audit_note(*, issue=None, article=None, author, message):
+    from apps.articles.models import InternalNote  # avoid circular import
+    InternalNote.objects.create(
+        issue=issue,
+        article=article,
+        author=author,
+        content=message,
+        is_automatic=True,
+    )
+
 try:
     import weasyprint
 except OSError:

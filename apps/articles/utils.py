@@ -1,21 +1,7 @@
 from django.db.models import Count, Q
 from django.template.loader import render_to_string
 
-from apps.articles.models import InternalNote
 from apps.reviews.models import ReviewRequest
-
-
-def actor_name(user):
-    return user.get_full_name() or user.email
-
-
-def log_action(article, actor, message):
-    InternalNote.objects.create(
-        article=article,
-        author=actor,
-        content=message,
-        is_automatic=True,
-    )
 
 
 def article_counter_ctx(article):

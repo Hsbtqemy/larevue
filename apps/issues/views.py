@@ -13,7 +13,7 @@ from django.views.generic import DetailView, TemplateView
 from apps.articles.models import Article, InternalNote
 from apps.core.display import DEADLINE_LABELS
 from apps.core.mixins import JournalMemberRequiredMixin, JournalOwnedObjectMixin
-from apps.core.utils import file_response, html_or_pdf_response
+from apps.core.utils import actor_name, create_audit_note, file_response, html_or_pdf_response
 from apps.core.views import JournalOwnedCreateView, JournalOwnedPatchView, JournalOwnedTransitionView, compute_transitions
 from apps.issues.forms import IssueCreateForm, IssueDocumentForm, IssueEditForm
 from apps.issues.models import Issue, IssueDocument
@@ -385,7 +385,7 @@ class IssueTransitionView(JournalOwnedTransitionView):
     TRANSITION_SPECS = _ISSUE_TRANSITIONS
 
     def create_audit_note(self, obj, user, message):
-        InternalNote.objects.create(issue=obj, author=user, content=message, is_automatic=True)
+        create_audit_note(issue=obj, author=user, message=message)
 
     def get_success_url(self, obj):
         return reverse(
@@ -416,14 +416,6 @@ def _detail_redirect(request, issue_id):
     )
 
 
-def _log_issue_action(issue, user, message):
-    InternalNote.objects.create(issue=issue, author=user, content=message, is_automatic=True)
-
-
-def _actor_name(user):
-    return user.get_full_name() or user.email
-
-
 class IssueDocumentCreateView(JournalOwnedObjectMixin, JournalMemberRequiredMixin, View):
     model = Issue
     pk_url_kwarg = "issue_id"
@@ -441,7 +433,7 @@ class IssueDocumentCreateView(JournalOwnedObjectMixin, JournalMemberRequiredMixi
         doc.uploaded_by = request.user
         doc.save()
 
-        _log_issue_action(issue, request.user, f"{_actor_name(request.user)} a ajouté le document « {doc.name} »")
+        create_audit_note(issue=issue, author=request.user, message=f"{actor_name(request.user)} a ajouté le document « {doc.name} »")
         return _detail_redirect(request, issue_id)
 
 
@@ -454,7 +446,7 @@ class IssueDocumentDeleteView(JournalMemberRequiredMixin, View):
         issue = doc.issue
         doc.delete()
 
-        _log_issue_action(issue, request.user, f"{_actor_name(request.user)} a supprimé le document « {doc_name} »")
+        create_audit_note(issue=issue, author=request.user, message=f"{actor_name(request.user)} a supprimé le document « {doc_name} »")
         return _detail_redirect(request, issue_id)
 
 
