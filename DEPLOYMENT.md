@@ -4,6 +4,7 @@
 
 - Ubuntu 24.04 LTS
 - Python 3.13+
+- Node.js 20 LTS+ (build assets frontend)
 - PostgreSQL 16+
 - nginx
 - certbot (Let's Encrypt)
@@ -11,9 +12,14 @@
 
 ```bash
 sudo apt update && sudo apt install -y python3.13 python3.13-venv python3-pip \
+    nodejs npm \
     postgresql postgresql-contrib nginx certbot python3-certbot-nginx \
     libpango-1.0-0 libpangoft2-1.0-0 libharfbuzz0b fonts-liberation
 ```
+
+> Si la version Node.js fournie par apt est trop ancienne (< 20), utiliser
+> [NodeSource](https://github.com/nodesource/distributions) ou `nvm` pour
+> obtenir une LTS récente.
 
 ## Variables d'environnement
 
@@ -68,12 +74,16 @@ sudo -u edito .venv/bin/pip install -r requirements/production.txt
 sudo -u edito cp .env.example /home/edito/edito/.env
 # Éditer .env avec les valeurs réelles
 
-# 6. Migrations et collectstatic
+# 6. Build assets frontend
+sudo -u edito npm install
+sudo -u edito npm run build:css
+
+# 7. Migrations et collectstatic
 sudo -u edito .venv/bin/python manage.py migrate
 sudo -u edito .venv/bin/python manage.py collectstatic --noinput
 sudo -u edito .venv/bin/python manage.py createsuperuser
 
-# 7. Vérification
+# 8. Vérification
 sudo -u edito DJANGO_SETTINGS_MODULE=config.settings.production \
     .venv/bin/python manage.py check --deploy
 ```
@@ -168,6 +178,8 @@ Le renouvellement automatique est configuré par certbot via un timer systemd.
 cd /home/edito/edito
 sudo -u edito git pull
 sudo -u edito .venv/bin/pip install -r requirements/production.txt
+sudo -u edito npm install
+sudo -u edito npm run build:css
 sudo -u edito .venv/bin/python manage.py migrate
 sudo -u edito .venv/bin/python manage.py collectstatic --noinput
 sudo systemctl restart edito
@@ -181,23 +193,3 @@ Points à couvrir :
 - Dump PostgreSQL quotidien (`pg_dump`) chiffré et envoyé vers B2
 - Sauvegarde du dossier `MEDIA_ROOT`
 - Rétention et rotation des sauvegardes
-
-## TODO — Assets frontend
-
-> À traiter dans une session dédiée avant la mise en production.
-
-Les deux bibliothèques JS/CSS sont actuellement chargées depuis des CDN :
-
-- **Alpine.js** — `https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js`
-  → À vendoriser : télécharger `alpine.min.js` dans `static/js/` et utiliser `{% static %}`.
-
-- **Tailwind CSS** — `https://cdn.tailwindcss.com` (play CDN, compile en navigateur)
-  → Non adapté à la production. Nécessite un pipeline de build :
-  1. Installer Node.js + npm sur le poste de développement
-  2. `npm install tailwindcss @tailwindcss/cli`
-  3. Configurer `tailwind.config.js` (content paths vers les templates)
-  4. Générer `static/css/tailwind.css` à chaque déploiement
-  5. Référencer avec `{% static 'css/tailwind.css' %}`
-
-En attendant, le CDN play Tailwind fonctionne mais impose une dépendance réseau
-et une latence de compilation au premier rendu.
