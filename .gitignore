@@ -55,5 +55,6 @@ htmlcov/
 # Pre-commit
 .pre-commit-cache/
 
-# Node (pour django-tailwind plus tard)
+# Node
 node_modules/
+static/css/tailwind.css
