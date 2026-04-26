@@ -258,6 +258,9 @@ class ArticleDetailView(JournalMemberRequiredMixin, DetailView):
         )
 
     def get_object(self, queryset=None):
+        # Uses DetailView.get_object() to benefit from the get_queryset() prefetch tree above.
+        # Journal ownership is checked manually here rather than via JournalOwnedObjectMixin,
+        # which would bypass the optimised queryset and duplicate the prefetch setup.
         article = super().get_object(queryset)
         if article.issue.journal_id != self.request.journal.id:
             raise Http404

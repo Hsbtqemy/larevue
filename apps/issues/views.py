@@ -9,7 +9,7 @@ from django.template.loader import render_to_string
 from django.urls import reverse
 from django.utils import timezone
 from django.views import View
-from django.views.generic import DetailView, TemplateView
+from django.views.generic import TemplateView
 
 from apps.articles.models import Article, InternalNote
 from apps.core.display import DEADLINE_LABELS
@@ -211,16 +211,14 @@ class IssueCreateView(JournalOwnedCreateView):
         )
 
 
-class IssueDetailView(JournalMemberRequiredMixin, DetailView):
+class IssueDetailView(JournalOwnedObjectMixin, JournalMemberRequiredMixin, TemplateView):
     model = Issue
     pk_url_kwarg = "issue_id"
     template_name = "issues/detail.html"
 
-    def get_object(self, queryset=None):
-        issue = super().get_object(queryset)
-        if issue.journal_id != self.request.journal.id:
-            raise Http404
-        return issue
+    def get(self, request, *args, **kwargs):
+        self.object = self.get_object_or_404()
+        return self.render_to_response(self.get_context_data())
 
     @staticmethod
     def _compute_transitions(issue):
@@ -267,6 +265,7 @@ class IssueDetailView(JournalMemberRequiredMixin, DetailView):
             )
 
         ctx.update({
+            "issue": issue,
             "journal": journal,
             "articles": articles,
             "documents": documents,
@@ -514,12 +513,12 @@ def _build_report_context(request, issue, options):
     }
 
 
-class IssueReportView(JournalMemberRequiredMixin, View):
+class IssueReportView(JournalOwnedObjectMixin, JournalMemberRequiredMixin, View):
+    model = Issue
+    pk_url_kwarg = "issue_id"
+
     def get(self, request, issue_id, **kwargs):
-        try:
-            issue = Issue.objects.get(pk=issue_id, journal=request.journal)
-        except Issue.DoesNotExist:
-            raise Http404
+        issue = self.get_object_or_404()
 
         options = {
             "include_notes": request.GET.get("include_notes", "1") == "1",
