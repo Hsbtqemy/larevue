@@ -194,6 +194,44 @@ class JournalDashboardView(JournalMemberRequiredMixin, TemplateView):
         return ctx
 
 
+class JournalArchivesView(JournalMemberRequiredMixin, TemplateView):
+    template_name = "journals/archives.html"
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        journal = self.request.journal
+
+        archived_issues = list(
+            journal.issues
+            .filter(state__in=Issue.ARCHIVED_STATES)
+            .annotate(
+                article_count=Count("articles", distinct=True),
+                reviews_received_count=Count(
+                    "articles__review_requests",
+                    filter=Q(articles__review_requests__state="received"),
+                    distinct=True,
+                ),
+            )
+            .order_by(F("published_at").desc(nulls_last=True), F("refused_at").desc(nulls_last=True))
+        )
+
+        years_data: dict[int, list] = {}
+        for issue in archived_issues:
+            issue.archive_date = issue.published_at or issue.refused_at
+            year = issue.archive_date.year if issue.archive_date else 0
+            years_data.setdefault(year, []).append(issue)
+
+        ctx.update({
+            "journal": journal,
+            "years_groups": [
+                (year, years_data[year])
+                for year in sorted(years_data.keys(), reverse=True)
+            ],
+            "total_count": len(archived_issues),
+        })
+        return ctx
+
+
 class JournalDocumentCreateView(JournalMemberRequiredMixin, View):
     def post(self, request, **kwargs):
         form = JournalDocumentForm(request.POST, request.FILES)

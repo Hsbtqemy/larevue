@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+{% load static edito %}
+
+{% block title %}Archives — {{ journal.name }}{% endblock %}
+
+{% block body_class %}{% endblock %}
+
+{% block extra_head %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter+Tight:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{% static 'css/edito.css' %}?v=20260425c">
+{% endblock %}
+
+{% block content %}
+<div class="app-shell" data-accent="{{ journal.accent_color }}">
+
+  {# ===== SIDEBAR ===== #}
+  {% include "partials/_sidebar.html" with sidebar_active="archives" %}
+
+  {# ===== MAIN ===== #}
+  <main class="main">
+
+    <div class="accent-strip" style="background:var(--accent)"></div>
+
+    <div class="accent-bandeau">
+      <div class="eyebrow">{{ journal.name }}</div>
+      <h1 style="font-size:32px;letter-spacing:-0.02em">Archives</h1>
+    </div>
+
+    <div class="main-content"
+         x-data="{
+           q: '',
+           stateFilter: '',
+           yearsOpen: { {% for year, issues in years_groups %}{{ year }}: {% if forloop.first %}true{% else %}false{% endif %}{% if not forloop.last %}, {% endif %}{% endfor %} },
+           matchesRow(el, state) {
+             if (this.stateFilter && state !== this.stateFilter) return false;
+             const t = this.q.toLowerCase().trim();
+             if (t && !el.dataset.search.includes(t)) return false;
+             return true;
+           },
+           toggleYear(year) { this.yearsOpen[year] = !this.yearsOpen[year]; },
+           yearVisible(year) { return this.yearsOpen[year] || this.q.trim() !== '' || this.stateFilter !== ''; }
+         }">
+
+      {# ===== Barre de recherche + filtres ===== #}
+      <div class="section">
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+          <input type="search"
+                 x-model="q"
+                 placeholder="Rechercher un numéro, un responsable…"
+                 class="text-input"
+                 style="flex:1;min-width:200px;max-width:360px">
+          <span class="muted" style="font-size:13px;margin-left:auto">
+            {{ total_count }} numéro{{ total_count|pluralize }} archivé{{ total_count|pluralize }}
+          </span>
+        </div>
+        <div class="filter-chips" style="margin-top:12px">
+          <button type="button" class="chip" :class="{on: !stateFilter}" @click="stateFilter=''">Tous</button>
+          <button type="button" class="chip" :class="{on: stateFilter==='published'}" @click="stateFilter='published'">Publiés</button>
+          <button type="button" class="chip" :class="{on: stateFilter==='refused'}" @click="stateFilter='refused'">Refusés</button>
+        </div>
+      </div>
+
+      {# ===== Groupes par année ===== #}
+      {% for year, issues in years_groups %}
+        <div class="section">
+          <div class="section-head" style="cursor:pointer;user-select:none" @click="toggleYear({{ year }})">
+            <h2>{% if year %}{{ year }}{% else %}Date inconnue{% endif %}</h2>
+            <span class="meta">{{ issues|length }} numéro{{ issues|length|pluralize }}</span>
+            <span style="margin-left:auto;color:var(--ink-faint);font-size:11px" x-text="yearsOpen[{{ year }}] ? '▲' : '▼'">▲</span>
+          </div>
+
+          <div x-show="yearVisible({{ year }})" x-transition.opacity.duration.150ms>
+            {% if issues %}
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>N°</th>
+                    <th>Titre thématique</th>
+                    <th>Responsable éditorial·e</th>
+                    <th>État</th>
+                    <th style="text-align:right">Articles</th>
+                    <th style="text-align:right">Relectures reçues</th>
+                    <th>Date archivage</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for issue in issues %}
+                    <tr data-search="{{ issue.thematic_title|lower }} {{ issue.editor_name|lower }} {{ issue.number|lower }}"
+                        x-show="matchesRow($el, '{{ issue.state }}')"
+                        @click="window.location='{% url 'issues:detail' slug=journal.slug issue_id=issue.pk %}'"
+                        style="cursor:pointer">
+                      <td class="mono" style="white-space:nowrap">N°{{ issue.number }}</td>
+                      <td style="font-weight:500;color:var(--ink)">{{ issue.thematic_title }}</td>
+                      <td style="color:var(--ink-muted);font-size:13px">{{ issue.editor_name }}</td>
+                      <td>{% state_badge issue %}</td>
+                      <td style="text-align:right;font-size:13px;color:var(--ink-muted)">{{ issue.article_count }}</td>
+                      <td style="text-align:right;font-size:13px;color:var(--ink-muted)">{{ issue.reviews_received_count }}</td>
+                      <td style="font-size:13px;color:var(--ink-muted);white-space:nowrap">
+                        {% if issue.archive_date %}{{ issue.archive_date|date:"d/m/Y" }}{% else %}—{% endif %}
+                      </td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            {% endif %}
+          </div>
+        </div>
+      {% empty %}
+        <div class="section">
+          <div class="empty">
+            <h4>Aucun numéro archivé</h4>
+            <p class="muted">Les numéros publiés ou refusés apparaîtront ici.</p>
+          </div>
+        </div>
+      {% endfor %}
+
+    </div>
+
+  </main>
+
+</div>
+{% endblock %}

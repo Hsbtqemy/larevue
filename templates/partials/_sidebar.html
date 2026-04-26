@@ -47,7 +47,9 @@
       {% icon "users" 17 cls="icon" %}
       Contacts
     </a>
-    <a href="#" class="nav-item" style="text-decoration:none">
+    <a href="{% url 'journal_archives' slug=journal.slug %}"
+       class="nav-item{% if sidebar_active == 'archives' %} active{% endif %}"
+       style="text-decoration:none">
       {% icon "archive" 17 cls="icon" %}
       Archives
     </a>
