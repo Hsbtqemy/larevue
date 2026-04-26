@@ -7,6 +7,7 @@ urlpatterns = [
     path("revues/<slug:slug>/", views.JournalDashboardView.as_view(), name="journal_dashboard"),
     path("revues/<slug:slug>/archives/", views.JournalArchivesView.as_view(), name="journal_archives"),
     path("revues/<slug:slug>/archives/export.csv", views.JournalArchivesExportView.as_view(), name="journal_archives_export"),
+    path("revues/<slug:slug>/archives/bilan.pdf", views.JournalBilanReportView.as_view(), name="journal_archives_bilan"),
     path("revues/<slug:slug>/modifier/", views.JournalEditView.as_view(), name="journal_edit"),
     path("revues/<slug:slug>/documents/create/", views.JournalDocumentCreateView.as_view(), name="journal_document_create"),
     path("revues/<slug:slug>/documents/<int:doc_id>/delete/", views.JournalDocumentDeleteView.as_view(), name="journal_document_delete"),

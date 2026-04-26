@@ -70,10 +70,19 @@
       {# ===== Groupes par année ===== #}
       {% for year, issues in years_groups %}
         <div class="section">
-          <div class="section-head" style="cursor:pointer;user-select:none" @click="toggleYear({{ year }})">
-            <h2>{% if year %}{{ year }}{% else %}Date inconnue{% endif %}</h2>
-            <span class="meta">{{ issues|length }} numéro{{ issues|length|pluralize }}</span>
-            <span style="margin-left:auto;color:var(--ink-faint);font-size:11px" x-text="yearsOpen[{{ year }}] ? '▲' : '▼'">▲</span>
+          <div class="section-head">
+            <div style="display:flex;align-items:center;gap:12px;flex:1;cursor:pointer;user-select:none" @click="toggleYear({{ year }})">
+              <h2>{% if year %}{{ year }}{% else %}Date inconnue{% endif %}</h2>
+              <span class="meta">{{ issues|length }} numéro{{ issues|length|pluralize }}</span>
+              <span style="margin-left:4px;color:var(--ink-faint);font-size:11px" x-text="yearsOpen[{{ year }}] ? '▲' : '▼'">▲</span>
+            </div>
+            {% if year %}
+              <a href="{% url 'journal_archives_bilan' slug=journal.slug %}?year={{ year }}"
+                 class="btn ghost sm"
+                 style="text-decoration:none;flex-shrink:0">
+                {% icon "file" 14 cls="icon" %} Bilan PDF
+              </a>
+            {% endif %}
           </div>
 
           <div x-show="yearVisible({{ year }})" x-transition.opacity.duration.150ms>

@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Bilan {{ year }} — {{ journal.name }}</title>
+  <style>
+    @page {
+      size: A4;
+      margin: 2cm 1.5cm 2.2cm;
+      @top-left   { content: "{{ journal.name|escapejs }}"; font-size: 8.5pt; color: #888; font-family: Helvetica, Arial, sans-serif; }
+      @top-right  { content: "Bilan {{ year }}"; font-size: 8.5pt; color: #888; font-family: Helvetica, Arial, sans-serif; }
+      @bottom-right { content: counter(page) " / " counter(pages); font-size: 8pt; color: #aaa; font-family: Helvetica, Arial, sans-serif; }
+    }
+    @page :first { @top-left { content: ""; } @top-right { content: ""; } }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { background: white; color: #1a1a1a; }
+    body { font-family: -apple-system, "Helvetica Neue", Arial, sans-serif; font-size: 10pt; line-height: 1.55; }
+    h1 { font-size: 22pt; font-weight: 600; letter-spacing: -0.02em; line-height: 1.2; }
+    h2 { font-size: 12pt; font-weight: 600; margin-bottom: 10pt; }
+
+    .cover { margin-bottom: 28pt; padding-bottom: 18pt; border-bottom: 2px solid #1a1a1a; }
+    .cover-overline { font-size: 9pt; text-transform: uppercase; letter-spacing: 0.1em; color: #555; margin-bottom: 6pt; }
+    .cover-meta { font-size: 9pt; color: #666; margin-top: 10pt; }
+
+    .section { margin-bottom: 22pt; }
+    .section-title {
+      font-size: 9pt; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em;
+      color: #666; border-bottom: 1px solid #ccc; padding-bottom: 4pt; margin-bottom: 10pt;
+    }
+
+    .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10pt; margin-bottom: 10pt; }
+    .stat-box { border: 1px solid #ddd; border-radius: 4pt; padding: 10pt; text-align: center; }
+    .stat-value { font-size: 22pt; font-weight: 600; line-height: 1; }
+    .stat-label { font-size: 8pt; text-transform: uppercase; letter-spacing: 0.07em; color: #666; margin-top: 3pt; }
+
+    .issues-table { width: 100%; border-collapse: collapse; font-size: 9pt; }
+    .issues-table th {
+      text-align: left; font-weight: 600; font-size: 8pt; text-transform: uppercase;
+      letter-spacing: 0.06em; color: #666; border-bottom: 1.5px solid #1a1a1a; padding: 4pt 6pt 4pt 0;
+    }
+    .issues-table td { padding: 6pt 6pt 6pt 0; border-bottom: 1px solid #ebebeb; vertical-align: top; }
+    .issues-table tr:last-child td { border-bottom: none; }
+
+    .badge { display: inline-block; padding: 1.5pt 5pt; border-radius: 3pt; font-size: 8pt; background: #eee; color: #333; }
+    .badge-published { background: #d4edda; color: #1a5c2e; }
+    .badge-refused { background: #f5e0e0; color: #6b1a1a; }
+    .muted { color: #888; }
+    .empty { color: #aaa; font-style: italic; font-size: 9pt; }
+  </style>
+</head>
+<body>
+
+<div class="cover">
+  <div class="cover-overline">{{ journal.name }}</div>
+  <h1>Bilan {{ year }}</h1>
+  <div class="cover-meta">
+    Généré le {{ generated_at|date:"d/m/Y à H\hi" }}
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-title">Résumé de l'année</div>
+  <div class="stats-grid">
+    <div class="stat-box">
+      <div class="stat-value">{{ total_issues }}</div>
+      <div class="stat-label">Numéro{{ total_issues|pluralize }} archivé{{ total_issues|pluralize }}</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-value">{{ total_articles }}</div>
+      <div class="stat-label">Article{{ total_articles|pluralize }}</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-value">{{ total_reviews_received }}</div>
+      <div class="stat-label">Relecture{{ total_reviews_received|pluralize }} reçue{{ total_reviews_received|pluralize }}</div>
+    </div>
+  </div>
+  <div class="stats-grid">
+    <div class="stat-box">
+      <div class="stat-value">{{ published_count }}</div>
+      <div class="stat-label">Publié{{ published_count|pluralize }}</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-value">{{ refused_count }}</div>
+      <div class="stat-label">Refusé{{ refused_count|pluralize }}</div>
+    </div>
+    <div class="stat-box"></div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-title">Détail des numéros ({{ total_issues }})</div>
+  {% if issues %}
+    <table class="issues-table">
+      <thead>
+        <tr>
+          <th>N°</th>
+          <th>Titre thématique</th>
+          <th>Responsable éditorial·e</th>
+          <th>État</th>
+          <th style="text-align:right">Articles</th>
+          <th style="text-align:right">Relectures</th>
+          <th>Date archivage</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for issue in issues %}
+          <tr>
+            <td class="muted">N°{{ issue.number }}</td>
+            <td><strong>{{ issue.thematic_title }}</strong></td>
+            <td>{{ issue.editor_name }}</td>
+            <td>
+              <span class="badge {% if issue.state == 'published' %}badge-published{% elif issue.state == 'refused' %}badge-refused{% endif %}">
+                {{ issue.get_state_display }}
+              </span>
+            </td>
+            <td style="text-align:right">{{ issue.article_count }}</td>
+            <td style="text-align:right">{{ issue.reviews_received_count }}</td>
+            <td class="muted">{% if issue.archive_date %}{{ issue.archive_date|date:"d/m/Y" }}{% else %}—{% endif %}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p class="empty">Aucun numéro archivé pour cette année.</p>
+  {% endif %}
+</div>
+
+</body>
+</html>

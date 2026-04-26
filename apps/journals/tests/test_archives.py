@@ -235,6 +235,98 @@ class TestJournalArchivesExport:
         assert membership.journal.slug in response["Content-Disposition"]
 
 
+def _bilan_url(journal, year):
+    return reverse("journal_archives_bilan", kwargs={"slug": journal.slug}) + f"?year={year}"
+
+
+@pytest.mark.django_db
+class TestJournalBilanReport:
+    def test_unauthenticated_redirects(self, client, journal):
+        response = client.get(_bilan_url(journal, 2024))
+        assert response.status_code == 302
+
+    def test_non_member_gets_403(self, client, db):
+        from apps.accounts.models import User
+        from apps.journals.models import Journal, Membership
+
+        j = Journal.objects.create(name="Bilan revue", slug="bilan-revue")
+        owner = User.objects.create_user(email="owner_b@example.com", password="pass")
+        Membership.objects.create(user=owner, journal=j)
+        intruder = User.objects.create_user(email="intrus_b@example.com", password="pass")
+        client.force_login(intruder)
+        response = client.get(_bilan_url(j, 2024))
+        assert response.status_code == 403
+
+    def test_missing_year_returns_404(self, client, user, membership):
+        client.force_login(user)
+        response = client.get(
+            reverse("journal_archives_bilan", kwargs={"slug": membership.journal.slug})
+        )
+        assert response.status_code == 404
+
+    def test_invalid_year_returns_404(self, client, user, membership):
+        client.force_login(user)
+        response = client.get(
+            reverse("journal_archives_bilan", kwargs={"slug": membership.journal.slug}) + "?year=abc"
+        )
+        assert response.status_code == 404
+
+    def test_returns_html_when_weasyprint_unavailable(self, client, user, membership, journal):
+        IssueModel.objects.filter(journal=journal).delete()
+        issue = IssueModel.objects.create(journal=journal, number="50", thematic_title="Bilan test", editor_name="Ed")
+        IssueModel.objects.filter(pk=issue.pk).update(
+            state=IssueModel.State.PUBLISHED,
+            published_at=datetime.datetime(2024, 6, 1, tzinfo=dt_tz.utc),
+        )
+        client.force_login(user)
+        response = client.get(_bilan_url(journal, 2024))
+        assert response.status_code == 200
+        ct = response["Content-Type"]
+        assert "pdf" in ct or "html" in ct
+
+    def test_context_stats(self, client, user, membership, journal):
+        from apps.articles.models import Article
+
+        IssueModel.objects.filter(journal=journal).delete()
+        i1 = IssueModel.objects.create(journal=journal, number="60", thematic_title="I1", editor_name="Ed")
+        i2 = IssueModel.objects.create(journal=journal, number="61", thematic_title="I2", editor_name="Ed")
+        Article.objects.create(issue=i1, title="A1")
+        Article.objects.create(issue=i1, title="A2")
+        Article.objects.create(issue=i2, title="A3")
+        IssueModel.objects.filter(pk=i1.pk).update(
+            state=IssueModel.State.PUBLISHED,
+            published_at=datetime.datetime(2025, 1, 1, tzinfo=dt_tz.utc),
+        )
+        IssueModel.objects.filter(pk=i2.pk).update(
+            state=IssueModel.State.REFUSED,
+            refused_at=datetime.datetime(2025, 3, 1, tzinfo=dt_tz.utc),
+        )
+        client.force_login(user)
+        response = client.get(_bilan_url(journal, 2025))
+        assert response.status_code == 200
+        content = response.content.decode()
+        assert "I1" in content
+        assert "I2" in content
+
+    def test_only_issues_from_requested_year(self, client, user, membership, journal):
+        IssueModel.objects.filter(journal=journal).delete()
+        i2023 = IssueModel.objects.create(journal=journal, number="70", thematic_title="2023 issue", editor_name="Ed")
+        i2024 = IssueModel.objects.create(journal=journal, number="71", thematic_title="2024 issue", editor_name="Ed")
+        IssueModel.objects.filter(pk=i2023.pk).update(
+            state=IssueModel.State.PUBLISHED,
+            published_at=datetime.datetime(2023, 12, 1, tzinfo=dt_tz.utc),
+        )
+        IssueModel.objects.filter(pk=i2024.pk).update(
+            state=IssueModel.State.PUBLISHED,
+            published_at=datetime.datetime(2024, 1, 1, tzinfo=dt_tz.utc),
+        )
+        client.force_login(user)
+        response = client.get(_bilan_url(journal, 2024))
+        content = response.content.decode()
+        assert "2024 issue" in content
+        assert "2023 issue" not in content
+
+
 def _find_issue(years_groups, pk):
     for _year, issues in years_groups:
         for issue in issues:

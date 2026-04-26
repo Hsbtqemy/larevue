@@ -3,6 +3,12 @@ import csv
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db.models import Count, F, Q
 from django.http import Http404, HttpResponse
+from django.template.loader import render_to_string
+
+try:
+    import weasyprint
+except OSError:
+    weasyprint = None
 from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.utils import timezone
@@ -272,6 +278,46 @@ class JournalArchivesExportView(JournalMemberRequiredMixin, View):
                 issue.archive_date.strftime("%d/%m/%Y") if issue.archive_date else "",
             ])
         return response
+
+
+class JournalBilanReportView(JournalMemberRequiredMixin, View):
+    def get(self, request, **kwargs):
+        journal = request.journal
+        try:
+            year = int(request.GET.get("year", 0))
+        except (ValueError, TypeError):
+            year = 0
+        if not year:
+            raise Http404
+
+        issues = list(_archived_issues_qs(journal))
+        for issue in issues:
+            issue.archive_date = issue.published_at or issue.refused_at
+
+        year_issues = [i for i in issues if i.archive_date and i.archive_date.year == year]
+
+        ctx = {
+            "journal": journal,
+            "year": year,
+            "issues": year_issues,
+            "total_issues": len(year_issues),
+            "published_count": sum(1 for i in year_issues if i.state == Issue.State.PUBLISHED),
+            "refused_count": sum(1 for i in year_issues if i.state == Issue.State.REFUSED),
+            "total_articles": sum(i.article_count for i in year_issues),
+            "total_reviews_received": sum(i.reviews_received_count for i in year_issues),
+            "generated_at": timezone.now(),
+            "state_labels": dict(Issue.State.choices),
+        }
+        html = render_to_string("journals/bilan.html", ctx, request=request)
+
+        if weasyprint is not None:
+            pdf = weasyprint.HTML(string=html).write_pdf()
+            filename = f"bilan_{journal.slug}_{year}.pdf"
+            response = HttpResponse(pdf, content_type="application/pdf")
+            response["Content-Disposition"] = f'attachment; filename="{filename}"'
+            return response
+
+        return HttpResponse(html, content_type="text/html")
 
 
 class JournalDocumentCreateView(JournalMemberRequiredMixin, View):
