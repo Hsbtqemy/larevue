@@ -374,6 +374,9 @@ class IssueDeleteView(JournalOwnedObjectMixin, JournalMemberRequiredMixin, View)
 
     def delete(self, request, issue_id, **kwargs):
         issue = self.get_object_or_404()
+        guard = _check_issue_archived(issue)
+        if guard:
+            return guard
         issue.delete()
         url = reverse("journal_dashboard", kwargs={"slug": request.journal.slug})
         return JsonResponse({"redirect_url": url})
