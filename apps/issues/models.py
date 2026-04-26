@@ -83,6 +83,12 @@ class Issue(BaseModel):
         verbose_name="Date limite envoi à l'éditeur",
         help_text="Date prévue d'envoi à l'éditeur.",
     )
+    published_at = models.DateTimeField(
+        null=True, blank=True, verbose_name="Date de publication"
+    )
+    refused_at = models.DateTimeField(
+        null=True, blank=True, verbose_name="Date de refus"
+    )
     cover_image = models.ImageField(
         upload_to="issues/covers/", blank=True, null=True, verbose_name="Image de couverture"
     )
@@ -103,6 +109,21 @@ class Issue(BaseModel):
         constraints = [
             models.UniqueConstraint(fields=["journal", "number"], name="unique_issue_number")
         ]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._original_state = self.state
+
+    def save(self, *args, **kwargs):
+        if self.state != self._original_state:
+            from django.utils import timezone
+            now = timezone.now()
+            if self.state == self.State.PUBLISHED and not self.published_at:
+                self.published_at = now
+            elif self.state == self.State.REFUSED and not self.refused_at:
+                self.refused_at = now
+        super().save(*args, **kwargs)
+        self._original_state = self.state
 
     def __str__(self):
         return f"N°{self.number} — {self.thematic_title}"
