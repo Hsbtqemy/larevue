@@ -7,21 +7,46 @@
     <div class="brand-name">Edito</div>
   </div>
 
-  <div class="revue-switcher">
+  {% if user_journals|length > 1 %}
+  <div class="revue-switcher"
+       x-data="revueSwitcher()"
+       @click.outside="close()"
+       @keydown.escape.window="close()">
     <div class="revue-switcher-label">Revue courante</div>
-    {% if user_journal_count > 1 %}
-      <a href="{% url 'home' %}" class="revue-switcher-current" style="text-decoration:none">
+    <div style="position:relative">
+      <button type="button"
+              class="revue-switcher-current"
+              @click="toggle()"
+              :aria-expanded="open.toString()"
+              aria-haspopup="menu">
         <span class="revue-dot" style="background:var(--accent)"></span>
         <span class="revue-name">{{ journal.name }}</span>
         <span class="chev">{% icon "chevron" 14 %}</span>
-      </a>
-    {% else %}
-      <div class="revue-switcher-current" style="cursor:default">
-        <span class="revue-dot" style="background:var(--accent)"></span>
-        <span class="revue-name">{{ journal.name }}</span>
+      </button>
+      <div class="popover" x-show="open" x-cloak role="menu">
+        {% for j in user_journals %}
+          <a href="{% url 'journal_dashboard' slug=j.slug %}"
+             class="popover-item{% if j.pk == journal.pk %} on{% endif %}"
+             style="text-decoration:none"
+             role="menuitem"
+             @click="close()">
+            <span class="revue-dot" style="background:{{ j.accent_color|default:'var(--accent)' }}"></span>
+            <span style="flex:1">{{ j.name }}</span>
+            {% if j.pk == journal.pk %}{% icon "check" 14 %}{% endif %}
+          </a>
+        {% endfor %}
       </div>
-    {% endif %}
+    </div>
   </div>
+  {% else %}
+  <div class="revue-switcher">
+    <div class="revue-switcher-label">Revue courante</div>
+    <div class="revue-switcher-current" style="cursor:default">
+      <span class="revue-dot" style="background:var(--accent)"></span>
+      <span class="revue-name">{{ journal.name }}</span>
+    </div>
+  </div>
+  {% endif %}
 
   <nav class="nav">
     {% if sidebar_active == "dashboard" %}

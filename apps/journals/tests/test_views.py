@@ -98,23 +98,25 @@ class TestJournalDashboardView:
         )
         assert issue.thematic_title not in response.content.decode()
 
-    def test_switcher_link_visible_with_multiple_journals(self, client, user, membership, db):
-        # New design: sidebar switcher is an <a href="/"> when user has > 1 journal.
+    def test_switcher_popover_visible_with_multiple_journals(self, client, user, membership, db):
         second_journal = Journal.objects.create(name="Troisième revue", slug="troisieme-revue")
         Membership.objects.create(user=user, journal=second_journal)
         client.force_login(user)
         response = client.get(
             reverse("journal_dashboard", kwargs={"slug": membership.journal.slug})
         )
-        assert 'href="/"' in response.content.decode()
+        content = response.content.decode()
+        assert "revueSwitcher" in content
+        assert 'aria-haspopup="menu"' in content
 
-    def test_switcher_not_a_link_with_single_journal(self, client, user, membership):
-        # New design: sidebar switcher is a static <div> (no href) when user has 1 journal.
+    def test_switcher_static_with_single_journal(self, client, user, membership):
         client.force_login(user)
         response = client.get(
             reverse("journal_dashboard", kwargs={"slug": membership.journal.slug})
         )
-        assert 'href="/"' not in response.content.decode()
+        content = response.content.decode()
+        assert "revueSwitcher" not in content
+        assert "revue-switcher-current" in content
 
     def test_issue_cards_link_to_detail_no_delete_trigger(self, client, user, membership, issue):
         client.force_login(user)

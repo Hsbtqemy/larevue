@@ -479,6 +479,12 @@ document.addEventListener("alpine:init", () => {
     },
   }));
 
+  Alpine.data("revueSwitcher", () => ({
+    open: false,
+    toggle() { this.open = !this.open; },
+    close() { this.open = false; },
+  }));
+
   Alpine.data("savedBanner", () => {
     let timer = null;
     return {
