@@ -382,6 +382,12 @@ def _review_delete_url(journal, issue, article, review):
 def _review_patch_url(journal, issue, article, review):
     return reverse("articles:review_patch", kwargs={"slug": journal.slug, "issue_id": issue.pk, "article_id": article.pk, "review_id": review.pk})
 
+def _review_send_url(journal, issue, article, review):
+    return reverse("articles:review_send", kwargs={"slug": journal.slug, "issue_id": issue.pk, "article_id": article.pk, "review_id": review.pk})
+
+def _review_decline_url(journal, issue, article, review):
+    return reverse("articles:review_decline", kwargs={"slug": journal.slug, "issue_id": issue.pk, "article_id": article.pk, "review_id": review.pk})
+
 
 # ──────────────────────────── TestArticleVersionDownloadView ────────────────────────────
 
@@ -449,6 +455,18 @@ class TestReviewRequestCreateView:
         assert res.status_code == 200
         assert ReviewRequest.objects.filter(article=article).count() == 1
 
+    def test_initial_state_is_assigned(self, client, user, membership, journal, issue, article, article_version, contact):
+        client.force_login(user)
+        self._post(client, journal, issue, article, article_version, contact)
+        rr = ReviewRequest.objects.get(article=article)
+        assert rr.state == ReviewRequest.State.ASSIGNED
+
+    def test_auto_assigns_latest_version(self, client, user, membership, journal, issue, article, article_version, contact):
+        client.force_login(user)
+        self._post(client, journal, issue, article, article_version, contact)
+        rr = ReviewRequest.objects.get(article=article)
+        assert rr.article_version == article_version
+
     def test_snapshot_set_from_contact(self, client, user, membership, journal, issue, article, article_version, contact):
         client.force_login(user)
         self._post(client, journal, issue, article, article_version, contact)
@@ -494,6 +512,92 @@ class TestReviewRequestCreateView:
         client.force_login(user)
         res = self._post(client, journal, issue, article, article_version, contact)
         assert b"review-card" in res.content
+
+
+# ──────────────────────────── TestReviewRequestSendView ────────────────────────────
+
+@pytest.mark.django_db
+class TestReviewRequestSendView:
+    def test_requires_login(self, client, journal, issue, article, review_request):
+        res = client.post(_review_send_url(journal, issue, article, review_request))
+        assert res.status_code == 302
+
+    def test_transitions_assigned_to_sent(self, client, user, membership, journal, issue, article, review_request):
+        client.force_login(user)
+        res = client.post(_review_send_url(journal, issue, article, review_request))
+        assert res.status_code == 200
+        assert ReviewRequest.objects.get(pk=review_request.pk).state == ReviewRequest.State.SENT
+
+    def test_sets_sent_at(self, client, user, membership, journal, issue, article, review_request):
+        client.force_login(user)
+        client.post(_review_send_url(journal, issue, article, review_request))
+        assert ReviewRequest.objects.get(pk=review_request.pk).sent_at is not None
+
+    def test_creates_audit_note(self, client, user, membership, journal, issue, article, review_request):
+        client.force_login(user)
+        client.post(_review_send_url(journal, issue, article, review_request))
+        assert InternalNote.objects.filter(article=article, is_automatic=True).exists()
+
+    def test_already_sent_returns_400(self, client, user, membership, journal, issue, article, review_request):
+        ReviewRequest.objects.filter(pk=review_request.pk).update(state=ReviewRequest.State.SENT)
+        client.force_login(user)
+        res = client.post(_review_send_url(journal, issue, article, review_request))
+        assert res.status_code == 400
+
+    def test_archived_article_returns_403(self, client, user, membership, journal, issue, article, review_request):
+        Issue.objects.filter(pk=issue.pk).update(state=Issue.State.PUBLISHED)
+        client.force_login(user)
+        res = client.post(_review_send_url(journal, issue, article, review_request))
+        assert res.status_code == 403
+
+    def test_response_contains_review_card(self, client, user, membership, journal, issue, article, review_request):
+        client.force_login(user)
+        res = client.post(_review_send_url(journal, issue, article, review_request))
+        assert b"review-card" in res.content
+
+
+# ──────────────────────────── TestReviewRequestDeclineView ────────────────────────────
+
+@pytest.mark.django_db
+class TestReviewRequestDeclineView:
+    def test_requires_login(self, client, journal, issue, article, review_request):
+        res = client.post(_review_decline_url(journal, issue, article, review_request))
+        assert res.status_code == 302
+
+    def test_transitions_assigned_to_declined(self, client, user, membership, journal, issue, article, review_request):
+        client.force_login(user)
+        res = client.post(_review_decline_url(journal, issue, article, review_request))
+        assert res.status_code == 200
+        assert ReviewRequest.objects.get(pk=review_request.pk).state == ReviewRequest.State.DECLINED
+
+    def test_transitions_sent_to_declined(self, client, user, membership, journal, issue, article, review_request):
+        ReviewRequest.objects.filter(pk=review_request.pk).update(state=ReviewRequest.State.SENT)
+        client.force_login(user)
+        res = client.post(_review_decline_url(journal, issue, article, review_request))
+        assert res.status_code == 200
+        assert ReviewRequest.objects.get(pk=review_request.pk).state == ReviewRequest.State.DECLINED
+
+    def test_received_cannot_be_declined(self, client, user, membership, journal, issue, article, review_request):
+        ReviewRequest.objects.filter(pk=review_request.pk).update(state=ReviewRequest.State.RECEIVED)
+        client.force_login(user)
+        res = client.post(_review_decline_url(journal, issue, article, review_request))
+        assert res.status_code == 400
+
+    def test_creates_audit_note(self, client, user, membership, journal, issue, article, review_request):
+        client.force_login(user)
+        client.post(_review_decline_url(journal, issue, article, review_request))
+        assert InternalNote.objects.filter(article=article, is_automatic=True).exists()
+
+    def test_archived_article_returns_403(self, client, user, membership, journal, issue, article, review_request):
+        Issue.objects.filter(pk=issue.pk).update(state=Issue.State.PUBLISHED)
+        client.force_login(user)
+        res = client.post(_review_decline_url(journal, issue, article, review_request))
+        assert res.status_code == 403
+
+    def test_response_contains_oob_declined_list(self, client, user, membership, journal, issue, article, review_request):
+        client.force_login(user)
+        res = client.post(_review_decline_url(journal, issue, article, review_request))
+        assert b"reviews-declined-list" in res.content
 
 
 # ──────────────────────────── TestReviewRequestReceiveView ────────────────────────────
@@ -592,6 +696,12 @@ class TestReviewRequestDeleteView:
 
     def test_received_review_cannot_be_deleted(self, client, user, membership, journal, issue, article, review_request):
         ReviewRequest.objects.filter(pk=review_request.pk).update(state=ReviewRequest.State.RECEIVED)
+        client.force_login(user)
+        res = client.post(_review_delete_url(journal, issue, article, review_request))
+        assert res.status_code == 400
+
+    def test_sent_review_cannot_be_deleted(self, client, user, membership, journal, issue, article, review_request):
+        ReviewRequest.objects.filter(pk=review_request.pk).update(state=ReviewRequest.State.SENT)
         client.force_login(user)
         res = client.post(_review_delete_url(journal, issue, article, review_request))
         assert res.status_code == 400
