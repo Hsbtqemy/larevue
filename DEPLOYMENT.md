@@ -1,91 +1,153 @@
 # Déploiement Edito — VPS Ubuntu 24.04
 
+Déployé sur VPS Infomaniak (Ubuntu 24.04 LTS, 2 vCPU, 4 Go RAM).
+Chemins effectifs : `/home/edito/edito/`, venv dans `venv/` (pas `.venv`).
+
 ## Prérequis serveur
 
 - Ubuntu 24.04 LTS
-- Python 3.13+
-- Node.js 20 LTS+ (build assets frontend)
+- Python 3.12+ (3.12.3 fourni par Ubuntu 24.04)
+- Node.js 20 LTS+ (via NodeSource — apt fournit une version trop ancienne)
 - PostgreSQL 16+
 - nginx
-- certbot (Let's Encrypt)
-- Dépendances système WeasyPrint : `libpango-1.0-0 libpangoft2-1.0-0 libharfbuzz0b fonts-liberation`
+- certbot (Let's Encrypt) — pour HTTPS, après l'ajout d'un domaine
+- Dépendances système WeasyPrint : `libpango-1.0-0 libpangoft2-1.0-0`
 
 ```bash
-sudo apt update && sudo apt install -y python3.13 python3.13-venv python3-pip \
-    nodejs npm \
-    postgresql postgresql-contrib nginx certbot python3-certbot-nginx \
-    libpango-1.0-0 libpangoft2-1.0-0 libharfbuzz0b fonts-liberation
+sudo apt update && sudo apt upgrade -y
+
+# Stack de base
+sudo apt install -y python3-pip python3-venv python3-dev build-essential \
+    libpq-dev git postgresql postgresql-contrib nginx \
+    libpango-1.0-0 libpangoft2-1.0-0 fail2ban unattended-upgrades
+
+# Node.js 20 LTS via NodeSource
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+sudo apt install -y nodejs
 ```
 
-> Si la version Node.js fournie par apt est trop ancienne (< 20), utiliser
-> [NodeSource](https://github.com/nodesource/distributions) ou `nvm` pour
-> obtenir une LTS récente.
+## Firewall
+
+UFW + firewall réseau Infomaniak (deux couches indépendantes) :
+
+```bash
+sudo ufw default deny incoming
+sudo ufw default allow outgoing
+sudo ufw allow OpenSSH
+sudo ufw allow 'Nginx Full'
+sudo ufw enable
+```
+
+**Important** : ouvrir aussi les ports 22 et 80 (puis 443) dans le firewall
+réseau Infomaniak (Manager → VPS → Régler le Firewall). UFW seul ne suffit pas.
+
+## Utilisateur dédié
+
+```bash
+sudo adduser --disabled-password --gecos "" edito
+sudo usermod -aG www-data edito
+
+# Donner accès à nginx au répertoire home (traverse le socket)
+sudo chmod o+x /home/edito
+```
+
+## Base de données
+
+```bash
+# Générer un mot de passe fort
+openssl rand -base64 32
+
+# Créer la base et l'utilisateur (commandes séparées pour éviter le bug \c)
+sudo -u postgres psql -c "CREATE DATABASE edito_prod;"
+sudo -u postgres psql -c "CREATE USER edito_user WITH PASSWORD 'MOT_DE_PASSE';"
+sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE edito_prod TO edito_user;"
+sudo -u postgres psql -c "ALTER DATABASE edito_prod OWNER TO edito_user;"
+sudo -u postgres psql -d edito_prod -c "GRANT ALL ON SCHEMA public TO edito_user;"
+```
+
+> Note : ne pas utiliser `\c edito_prod` dans psql interactif — utiliser
+> `psql -d edito_prod -c "..."` directement depuis le shell.
 
 ## Variables d'environnement
 
-Copier `.env.example` vers `/etc/edito/edito.env` (ou `/home/edito/.env`) et compléter :
+Créer `/home/edito/edito/.env` :
 
 ```bash
-SECRET_KEY=<générer avec : python -c "import secrets; print(secrets.token_urlsafe(50))">
-DEBUG=False
-ALLOWED_HOSTS=votre-domaine.fr,www.votre-domaine.fr
 DJANGO_SETTINGS_MODULE=config.settings.production
+SECRET_KEY=<python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())">
+DEBUG=False
+ALLOWED_HOSTS=83.228.221.204,localhost,127.0.0.1
+HTTPS_ENABLED=False   # passer à True après certbot
 
-DB_NAME=edito
-DB_USER=edito
-DB_PASSWORD=<mot de passe fort>
+DB_NAME=edito_prod
+DB_USER=edito_user
+DB_PASSWORD=<mot de passe généré>
 DB_HOST=localhost
 DB_PORT=5432
 
-STATIC_ROOT=/var/www/edito/staticfiles
-MEDIA_ROOT=/var/www/edito/media
+STATIC_ROOT=/home/edito/edito/staticfiles
+MEDIA_ROOT=/home/edito/edito/media
 LOG_FILE=/var/log/edito/edito.log
 
-# Email SMTP
-EMAIL_HOST=smtp.example.com
-EMAIL_PORT=587
-EMAIL_HOST_USER=contact@votre-domaine.fr
-EMAIL_HOST_PASSWORD=
-EMAIL_USE_TLS=True
-DEFAULT_FROM_EMAIL=noreply@votre-domaine.fr
+CSRF_TRUSTED_ORIGINS=http://83.228.221.204   # ajouter https://domaine.fr après certbot
+
+# Email SMTP (configurer pour reset de mot de passe, etc.)
+# EMAIL_HOST=smtp.example.com
+# EMAIL_PORT=587
+# EMAIL_HOST_USER=contact@domaine.fr
+# EMAIL_HOST_PASSWORD=
+# EMAIL_USE_TLS=True
+# DEFAULT_FROM_EMAIL=noreply@domaine.fr
+```
+
+**Important** : `DJANGO_SETTINGS_MODULE` dans `.env` n'est pas lu par
+`manage.py` (qui utilise `os.environ.setdefault`). Pour les commandes
+manuelles, toujours exporter explicitement :
+
+```bash
+export DJANGO_SETTINGS_MODULE=config.settings.production
 ```
 
 ## Setup initial
 
 ```bash
-# 1. Utilisateur système dédié
-sudo useradd -m -s /bin/bash edito
+# Se connecter en tant qu'edito
+sudo su - edito
 
-# 2. Base de données
-sudo -u postgres psql -c "CREATE USER edito WITH PASSWORD 'xxx';"
-sudo -u postgres psql -c "CREATE DATABASE edito OWNER edito;"
+# Cloner le repo
+git clone https://github.com/Hsbtqemy/larevue.git edito
+cd edito
 
-# 3. Dossiers
-sudo mkdir -p /var/www/edito/{staticfiles,media} /var/log/edito
-sudo chown -R edito:edito /var/www/edito /var/log/edito
+# Virtualenv et dépendances
+python3 -m venv venv
+source venv/bin/activate
+pip install --upgrade pip
+pip install -r requirements/production.txt
 
-# 4. Clone et virtualenv
-sudo -u edito git clone <repo> /home/edito/edito
-cd /home/edito/edito
-sudo -u edito python3.13 -m venv .venv
-sudo -u edito .venv/bin/pip install -r requirements/production.txt
+# Créer les dossiers
+mkdir -p staticfiles media
 
-# 5. Fichier .env
-sudo -u edito cp .env.example /home/edito/edito/.env
-# Éditer .env avec les valeurs réelles
+# Créer le .env (voir section Variables d'environnement)
+nano .env
 
-# 6. Build assets frontend
-sudo -u edito npm install
-sudo -u edito npm run build:css
+# Exporter le settings module pour les commandes manage.py
+export DJANGO_SETTINGS_MODULE=config.settings.production
 
-# 7. Migrations et collectstatic
-sudo -u edito .venv/bin/python manage.py migrate
-sudo -u edito .venv/bin/python manage.py collectstatic --noinput
-sudo -u edito .venv/bin/python manage.py createsuperuser
+# Build Tailwind et collectstatic
+npm install
+npm run build:css
+python manage.py migrate
+python manage.py collectstatic --noinput
+python manage.py createsuperuser
 
-# 8. Vérification
-sudo -u edito DJANGO_SETTINGS_MODULE=config.settings.production \
-    .venv/bin/python manage.py check --deploy
+exit  # retour à ubuntu
+```
+
+## Logs
+
+```bash
+sudo mkdir -p /var/log/edito
+sudo chown edito:www-data /var/log/edito
 ```
 
 ## Configuration gunicorn (systemd)
@@ -94,20 +156,22 @@ sudo -u edito DJANGO_SETTINGS_MODULE=config.settings.production \
 
 ```ini
 [Unit]
-Description=Edito gunicorn daemon
+Description=Gunicorn daemon for Edito
 After=network.target
 
 [Service]
 User=edito
-Group=edito
+Group=www-data
 WorkingDirectory=/home/edito/edito
 EnvironmentFile=/home/edito/edito/.env
-ExecStart=/home/edito/edito/.venv/bin/gunicorn \
-    --workers 3 \
-    --bind unix:/run/edito.sock \
-    --access-logfile /var/log/edito/access.log \
-    --error-logfile /var/log/edito/gunicorn.log \
-    config.wsgi:application
+Environment=DJANGO_SETTINGS_MODULE=config.settings.production
+ExecStart=/home/edito/edito/venv/bin/gunicorn \
+          --workers 3 \
+          --forwarded-allow-ips="*" \
+          --bind unix:/home/edito/edito/edito.sock \
+          --access-logfile /var/log/edito/access.log \
+          --error-logfile /var/log/edito/error.log \
+          config.wsgi:application
 Restart=on-failure
 
 [Install]
@@ -117,6 +181,7 @@ WantedBy=multi-user.target
 ```bash
 sudo systemctl daemon-reload
 sudo systemctl enable --now edito
+sudo systemctl status edito
 ```
 
 ## Configuration nginx
@@ -126,63 +191,82 @@ sudo systemctl enable --now edito
 ```nginx
 server {
     listen 80;
-    server_name votre-domaine.fr www.votre-domaine.fr;
-    return 301 https://$host$request_uri;
-}
+    server_name 83.228.221.204;
 
-server {
-    listen 443 ssl;
-    server_name votre-domaine.fr www.votre-domaine.fr;
+    client_max_body_size 25M;
 
-    ssl_certificate     /etc/letsencrypt/live/votre-domaine.fr/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/votre-domaine.fr/privkey.pem;
-
-    client_max_body_size 20M;
+    location = /favicon.ico { access_log off; log_not_found off; }
 
     location /static/ {
-        alias /var/www/edito/staticfiles/;
-        expires 1y;
+        alias /home/edito/edito/staticfiles/;
+        expires 30d;
         add_header Cache-Control "public, immutable";
     }
 
     location /media/ {
-        alias /var/www/edito/media/;
+        alias /home/edito/edito/media/;
     }
 
     location / {
-        proxy_pass http://unix:/run/edito.sock;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
+        include proxy_params;
+        proxy_pass http://unix:/home/edito/edito/edito.sock;
     }
 }
 ```
 
 ```bash
 sudo ln -s /etc/nginx/sites-available/edito /etc/nginx/sites-enabled/
-sudo nginx -t && sudo systemctl reload nginx
+sudo rm /etc/nginx/sites-enabled/default
+sudo nginx -t
+sudo systemctl reload nginx
 ```
 
-## HTTPS — certbot
+## HTTPS — certbot (après ajout du domaine)
+
+1. Pointer le domaine sur `83.228.221.204` (DNS)
+2. Mettre à jour `ALLOWED_HOSTS` et `CSRF_TRUSTED_ORIGINS` dans `.env`
+3. Passer `HTTPS_ENABLED=True` dans `.env`
+4. Lancer certbot :
 
 ```bash
-sudo certbot --nginx -d votre-domaine.fr -d www.votre-domaine.fr
+sudo apt install -y certbot python3-certbot-nginx
+sudo certbot --nginx -d domaine.fr -d www.domaine.fr
+sudo systemctl restart edito
 ```
 
 Le renouvellement automatique est configuré par certbot via un timer systemd.
 
+## Commandes Django utiles (depuis ubuntu)
+
+```bash
+# Alias pratique à ajouter dans ~/.bashrc
+alias edito-manage='sudo -u edito bash -c "cd /home/edito/edito && source venv/bin/activate && DJANGO_SETTINGS_MODULE=config.settings.production python manage.py"'
+
+# Exemples
+edito-manage migrate
+edito-manage createsuperuser
+edito-manage shell
+```
+
 ## Procédure de mise à jour
 
 ```bash
-cd /home/edito/edito
-sudo -u edito git pull
-sudo -u edito .venv/bin/pip install -r requirements/production.txt
-sudo -u edito npm install
-sudo -u edito npm run build:css
-sudo -u edito .venv/bin/python manage.py migrate
-sudo -u edito .venv/bin/python manage.py collectstatic --noinput
+sudo -u edito git -C /home/edito/edito pull
+sudo -u edito bash -c "cd /home/edito/edito && source venv/bin/activate && pip install -r requirements/production.txt"
+sudo -u edito bash -c "cd /home/edito/edito && npm install && npm run build:css"
+sudo -u edito bash -c "cd /home/edito/edito && source venv/bin/activate && DJANGO_SETTINGS_MODULE=config.settings.production python manage.py migrate"
+sudo -u edito bash -c "cd /home/edito/edito && source venv/bin/activate && DJANGO_SETTINGS_MODULE=config.settings.production python manage.py collectstatic --noinput"
 sudo systemctl restart edito
+```
+
+## Logs utiles
+
+```bash
+sudo tail -f /var/log/edito/edito.log      # logs Django
+sudo tail -f /var/log/edito/error.log      # logs gunicorn
+sudo tail -f /var/log/edito/access.log     # accès HTTP
+sudo tail -f /var/log/nginx/error.log      # erreurs nginx
+sudo journalctl -u edito -f                # journal systemd
 ```
 
 ## Sauvegarde
