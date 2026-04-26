@@ -67,16 +67,6 @@
       <div class="stat-label">Numéro{{ total_issues|pluralize }} archivé{{ total_issues|pluralize }}</div>
     </div>
     <div class="stat-box">
-      <div class="stat-value">{{ total_articles }}</div>
-      <div class="stat-label">Article{{ total_articles|pluralize }}</div>
-    </div>
-    <div class="stat-box">
-      <div class="stat-value">{{ total_reviews_received }}</div>
-      <div class="stat-label">Relecture{{ total_reviews_received|pluralize }} reçue{{ total_reviews_received|pluralize }}</div>
-    </div>
-  </div>
-  <div class="stats-grid">
-    <div class="stat-box">
       <div class="stat-value">{{ published_count }}</div>
       <div class="stat-label">Publié{{ published_count|pluralize }}</div>
     </div>
@@ -84,7 +74,14 @@
       <div class="stat-value">{{ refused_count }}</div>
       <div class="stat-label">Refusé{{ refused_count|pluralize }}</div>
     </div>
-    <div class="stat-box"></div>
+    <div class="stat-box">
+      <div class="stat-value">{{ total_articles }}</div>
+      <div class="stat-label">Article{{ total_articles|pluralize }}</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-value">{{ total_reviews_received }}</div>
+      <div class="stat-label">Relecture{{ total_reviews_received|pluralize }} reçue{{ total_reviews_received|pluralize }}</div>
+    </div>
   </div>
 </div>
 

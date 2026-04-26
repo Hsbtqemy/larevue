@@ -10,15 +10,10 @@ from django.utils import timezone
 from django.views import View
 from django.views.generic import DetailView, TemplateView
 
-try:
-    import weasyprint
-except OSError:
-    weasyprint = None
-
 from apps.articles.models import Article, InternalNote
 from apps.core.display import DEADLINE_LABELS
 from apps.core.mixins import JournalMemberRequiredMixin, JournalOwnedObjectMixin
-from apps.core.utils import file_response
+from apps.core.utils import file_response, html_or_pdf_response
 from apps.core.views import JournalOwnedCreateView, JournalOwnedPatchView, JournalOwnedTransitionView, compute_transitions
 from apps.issues.forms import IssueCreateForm, IssueDocumentForm, IssueEditForm
 from apps.issues.models import Issue, IssueDocument
@@ -533,11 +528,5 @@ class IssueReportView(JournalMemberRequiredMixin, View):
         ctx = _build_report_context(request, issue, options)
         html = render_to_string("issues/report.html", ctx)
 
-        if weasyprint is not None:
-            pdf = weasyprint.HTML(string=html).write_pdf()
-            filename = f"rapport_{ctx['journal'].slug}_n{issue.number}_{ctx['generated_at'].date()}.pdf"
-            response = HttpResponse(pdf, content_type="application/pdf")
-            response["Content-Disposition"] = f'attachment; filename="{filename}"'
-            return response
-
-        return HttpResponse(html, content_type="text/html")
+        filename = f"rapport_{ctx['journal'].slug}_n{issue.number}_{ctx['generated_at'].date()}.pdf"
+        return html_or_pdf_response(html, filename=filename)

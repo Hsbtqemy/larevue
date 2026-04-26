@@ -3,13 +3,8 @@ import csv
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db.models import Count, F, Q
 from django.http import Http404, HttpResponse
-from django.template.loader import render_to_string
-
-try:
-    import weasyprint
-except OSError:
-    weasyprint = None
 from django.shortcuts import redirect, render
+from django.template.loader import render_to_string
 from django.urls import reverse
 from django.utils import timezone
 from django.views import View
@@ -18,7 +13,7 @@ from django.views.generic import TemplateView
 from apps.articles.models import Article
 from apps.core.display import DEADLINE_LABELS, DEADLINE_TYPES, MONTH_ABBR
 from apps.core.mixins import JournalMemberRequiredMixin
-from apps.core.utils import file_response
+from apps.core.utils import file_response, html_or_pdf_response
 from apps.issues.models import Issue
 from apps.journals.forms import JournalDocumentForm, JournalEditForm
 from apps.journals.models import JournalDocument
@@ -255,7 +250,7 @@ class JournalArchivesExportView(JournalMemberRequiredMixin, View):
 
         response = HttpResponse(content_type="text/csv; charset=utf-8-sig")
         slug = journal.slug
-        state_suffix = f"_{state_filter}" if state_filter else ""
+        state_suffix = f"_{state_filter}" if state_filter in (Issue.State.PUBLISHED, Issue.State.REFUSED) else ""
         response["Content-Disposition"] = f'attachment; filename="archives_{slug}{state_suffix}.csv"'
 
         writer = csv.writer(response)
@@ -305,15 +300,7 @@ class JournalBilanReportView(JournalMemberRequiredMixin, View):
             "generated_at": timezone.now(),
         }
         html = render_to_string("journals/bilan.html", ctx, request=request)
-
-        if weasyprint is not None:
-            pdf = weasyprint.HTML(string=html).write_pdf()
-            filename = f"bilan_{journal.slug}_{year}.pdf"
-            response = HttpResponse(pdf, content_type="application/pdf")
-            response["Content-Disposition"] = f'attachment; filename="{filename}"'
-            return response
-
-        return HttpResponse(html, content_type="text/html")
+        return html_or_pdf_response(html, filename=f"bilan_{journal.slug}_{year}.pdf")
 
 
 class JournalDocumentCreateView(JournalMemberRequiredMixin, View):

@@ -49,7 +49,7 @@ def issue_document(issue, user):
 class TestIssueReportAccess:
     def _get(self, client, user, url, wp=None):
         client.force_login(user)
-        with patch("apps.issues.views.weasyprint", wp):
+        with patch("apps.core.utils.weasyprint", wp):
             return client.get(url)
 
     def test_unauthenticated_redirects(self, client, journal, issue):
@@ -88,7 +88,7 @@ class TestIssueReportAccess:
 class TestIssueReportOptions:
     def _get(self, client, user, report_url, **params):
         client.force_login(user)
-        with patch("apps.issues.views.weasyprint", None):
+        with patch("apps.core.utils.weasyprint", None):
             return client.get(report_url, params)
 
     def test_include_notes_1_shows_note_content(self, client, user, membership, report_url, issue):
