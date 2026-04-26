@@ -5,6 +5,7 @@ from django.conf import settings
 from django.db import models
 from django.db.models.signals import post_delete
 from django.dispatch import receiver
+from django.utils import timezone
 from django_fsm import FSMField, transition
 
 from apps.core.models import BaseModel
@@ -114,9 +115,12 @@ class Issue(BaseModel):
         super().__init__(*args, **kwargs)
         self._original_state = self.state
 
+    @property
+    def archive_date(self):
+        return self.published_at or self.refused_at
+
     def save(self, *args, **kwargs):
         if self.state != self._original_state:
-            from django.utils import timezone
             now = timezone.now()
             if self.state == self.State.PUBLISHED and not self.published_at:
                 self.published_at = now

@@ -232,7 +232,6 @@ class JournalArchivesView(JournalMemberRequiredMixin, TemplateView):
 
         years_data: dict[int, list] = {}
         for issue in archived_issues:
-            issue.archive_date = issue.published_at or issue.refused_at
             year = issue.archive_date.year if issue.archive_date else 0
             years_data.setdefault(year, []).append(issue)
 
@@ -253,8 +252,6 @@ class JournalArchivesExportView(JournalMemberRequiredMixin, View):
         journal = request.journal
         state_filter = request.GET.get("state", "")
         issues = list(_archived_issues_qs(journal, state_filter=state_filter))
-        for issue in issues:
-            issue.archive_date = issue.published_at or issue.refused_at
 
         response = HttpResponse(content_type="text/csv; charset=utf-8-sig")
         slug = journal.slug
@@ -290,23 +287,22 @@ class JournalBilanReportView(JournalMemberRequiredMixin, View):
         if not year:
             raise Http404
 
-        issues = list(_archived_issues_qs(journal))
-        for issue in issues:
-            issue.archive_date = issue.published_at or issue.refused_at
-
-        year_issues = [i for i in issues if i.archive_date and i.archive_date.year == year]
+        issues = list(
+            _archived_issues_qs(journal).filter(
+                Q(published_at__year=year) | Q(refused_at__year=year)
+            )
+        )
 
         ctx = {
             "journal": journal,
             "year": year,
-            "issues": year_issues,
-            "total_issues": len(year_issues),
-            "published_count": sum(1 for i in year_issues if i.state == Issue.State.PUBLISHED),
-            "refused_count": sum(1 for i in year_issues if i.state == Issue.State.REFUSED),
-            "total_articles": sum(i.article_count for i in year_issues),
-            "total_reviews_received": sum(i.reviews_received_count for i in year_issues),
+            "issues": issues,
+            "total_issues": len(issues),
+            "published_count": sum(1 for i in issues if i.state == Issue.State.PUBLISHED),
+            "refused_count": sum(1 for i in issues if i.state == Issue.State.REFUSED),
+            "total_articles": sum(i.article_count for i in issues),
+            "total_reviews_received": sum(i.reviews_received_count for i in issues),
             "generated_at": timezone.now(),
-            "state_labels": dict(Issue.State.choices),
         }
         html = render_to_string("journals/bilan.html", ctx, request=request)
 
