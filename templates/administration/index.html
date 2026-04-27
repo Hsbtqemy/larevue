@@ -1,0 +1,216 @@
+{% extends "base.html" %}
+{% load static edito %}
+
+{% block title %}Administration — Edito{% endblock %}
+
+{% block extra_head %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter+Tight:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{% static 'css/edito.css' %}?v=20260425c">
+{% endblock %}
+
+{% block content %}
+<div style="min-height:100vh;background:var(--bg)">
+
+  <nav style="display:flex;align-items:center;gap:16px;padding:14px 24px;border-bottom:1px solid var(--line);background:var(--surface)">
+    <a href="{% url 'home' %}" style="display:flex;align-items:center;gap:8px;text-decoration:none;color:var(--ink)">
+      <div class="brand-mark" style="width:24px;height:24px;font-size:13px;border-radius:6px">É</div>
+      <span style="font-family:var(--font-display);font-weight:500;font-size:14px">Edito</span>
+    </a>
+    <span style="color:var(--line-strong)">›</span>
+    <span style="font-size:13.5px;color:var(--ink-muted)">Administration</span>
+  </nav>
+
+  <main style="max-width:900px;margin:0 auto;padding:40px 24px">
+
+    <h1 style="font-family:var(--font-display);font-size:24px;font-weight:500;margin:0 0 40px">Administration</h1>
+
+    {# ===== SECTION REVUES ===== #}
+    <section style="margin-bottom:56px">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px">
+        <h2 style="font-size:16px;font-weight:600;margin:0">Revues <span style="font-weight:400;color:var(--ink-muted)">({{ journals.count }})</span></h2>
+        <div x-data="editModal('{% url 'administration:journal_create' %}')" style="margin-left:auto">
+          <button type="button" class="btn sm" @click="openModal()">+ Créer une revue</button>
+          <template x-teleport="body">
+            <div x-show="open" x-cloak class="modal-backdrop" @click.self="close()" @keydown.escape.window="close()" x-transition.opacity>
+              <div class="modal" role="dialog" aria-modal="true" style="max-width:480px">
+                <div class="modal-head">
+                  <h3>Créer une revue</h3>
+                </div>
+                <div class="modal-body">
+                  <form id="journal-create-form" @submit.prevent="submit($el)">
+                    {% csrf_token %}
+                    <div class="form-field">
+                      <label class="form-label">Nom *</label>
+                      <input type="text" name="name" class="text-input" required
+                             @input="$el.closest('form').querySelector('[name=slug]').value = $el.value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')">
+                      <template x-if="fieldErrors('name').length">
+                        <div class="form-error" x-text="fieldErrors('name').join(', ')"></div>
+                      </template>
+                    </div>
+                    <div class="form-field">
+                      <label class="form-label">Identifiant URL *</label>
+                      <input type="text" name="slug" class="text-input" required pattern="[a-z0-9\-]+">
+                      <template x-if="fieldErrors('slug').length">
+                        <div class="form-error" x-text="fieldErrors('slug').join(', ')"></div>
+                      </template>
+                    </div>
+                    <div class="form-field">
+                      <label class="form-label">Description</label>
+                      <textarea name="description" class="text-input" rows="3"></textarea>
+                    </div>
+                    <div class="form-field">
+                      <label class="form-label">Couleur d'accentuation</label>
+                      <select name="accent_color" class="text-input">
+                        <option value="terracotta">Terracotta</option>
+                        <option value="olive">Olive</option>
+                        <option value="slate">Ardoise</option>
+                        <option value="plum">Prune</option>
+                        <option value="ochre">Ocre</option>
+                      </select>
+                    </div>
+                    <template x-if="fieldErrors('__all__').length">
+                      <div class="form-error" x-text="fieldErrors('__all__').join(', ')"></div>
+                    </template>
+                  </form>
+                </div>
+                <div class="modal-foot">
+                  <button type="button" class="btn ghost sm" @click="close()">Annuler</button>
+                  <button type="submit" form="journal-create-form" class="btn sm" :disabled="saving">
+                    <span x-text="saving ? 'Création…' : 'Créer la revue'"></span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </template>
+        </div>
+      </div>
+
+      {% if journals %}
+      <table class="data-table" style="width:100%">
+        <thead>
+          <tr>
+            <th>Nom</th>
+            <th style="text-align:center">Membres</th>
+            <th style="text-align:center">Numéros</th>
+            <th>Créée le</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for journal in journals %}
+          <tr>
+            <td><strong>{{ journal.name }}</strong></td>
+            <td style="text-align:center">{{ journal.member_count }}</td>
+            <td style="text-align:center">{{ journal.issue_count }}</td>
+            <td style="color:var(--ink-muted);font-size:13px">{{ journal.created_at|date:"d/m/Y" }}</td>
+            <td style="text-align:right">
+              <a href="{% url 'administration:journal_members' slug=journal.slug %}" class="btn ghost sm">
+                Membres
+              </a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p style="color:var(--ink-muted);font-size:14px">Aucune revue créée.</p>
+      {% endif %}
+    </section>
+
+    {# ===== SECTION UTILISATEURS ===== #}
+    <section>
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px">
+        <h2 style="font-size:16px;font-weight:600;margin:0">Utilisateurs <span style="font-weight:400;color:var(--ink-muted)">({{ users.count }})</span></h2>
+        <div x-data="editModal('{% url 'administration:user_create' %}')" style="margin-left:auto">
+          <button type="button" class="btn sm" @click="openModal()">+ Créer un utilisateur</button>
+          <template x-teleport="body">
+            <div x-show="open" x-cloak class="modal-backdrop" @click.self="close()" @keydown.escape.window="close()" x-transition.opacity>
+              <div class="modal" role="dialog" aria-modal="true" style="max-width:440px">
+                <div class="modal-head">
+                  <h3>Créer un utilisateur</h3>
+                  <div class="sub">Un mot de passe temporaire sera généré automatiquement.</div>
+                </div>
+                <div class="modal-body">
+                  <form id="user-create-form" @submit.prevent="submit($el)">
+                    {% csrf_token %}
+                    <div class="form-field">
+                      <label class="form-label">Adresse e-mail *</label>
+                      <input type="email" name="email" class="text-input" required autocomplete="off">
+                      <template x-if="fieldErrors('email').length">
+                        <div class="form-error" x-text="fieldErrors('email').join(', ')"></div>
+                      </template>
+                    </div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+                      <div class="form-field">
+                        <label class="form-label">Prénom *</label>
+                        <input type="text" name="first_name" class="text-input" required>
+                        <template x-if="fieldErrors('first_name').length">
+                          <div class="form-error" x-text="fieldErrors('first_name').join(', ')"></div>
+                        </template>
+                      </div>
+                      <div class="form-field">
+                        <label class="form-label">Nom *</label>
+                        <input type="text" name="last_name" class="text-input" required>
+                        <template x-if="fieldErrors('last_name').length">
+                          <div class="form-error" x-text="fieldErrors('last_name').join(', ')"></div>
+                        </template>
+                      </div>
+                    </div>
+                    <div class="form-field" style="display:flex;align-items:center;gap:8px">
+                      <input type="checkbox" name="is_superuser" id="is_superuser_check" value="true" style="width:16px;height:16px;cursor:pointer">
+                      <label for="is_superuser_check" style="font-size:13.5px;cursor:pointer">Superutilisateur·ice</label>
+                    </div>
+                    <template x-if="fieldErrors('__all__').length">
+                      <div class="form-error" x-text="fieldErrors('__all__').join(', ')"></div>
+                    </template>
+                  </form>
+                </div>
+                <div class="modal-foot">
+                  <button type="button" class="btn ghost sm" @click="close()">Annuler</button>
+                  <button type="submit" form="user-create-form" class="btn sm" :disabled="saving">
+                    <span x-text="saving ? 'Création…' : 'Créer le compte'"></span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </template>
+        </div>
+      </div>
+
+      {% if users %}
+      <table class="data-table" style="width:100%">
+        <thead>
+          <tr>
+            <th>Nom</th>
+            <th>E-mail</th>
+            <th style="text-align:center">Revues</th>
+            <th>Inscrit·e le</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for u in users %}
+          <tr>
+            <td>
+              <a href="{% url 'administration:user_detail' user_id=u.pk %}" style="text-decoration:none;color:inherit;font-weight:500">
+                {{ u.get_full_name|default:u.email }}
+              </a>
+              {% if u.is_superuser %}<span class="badge" style="margin-left:6px;font-size:11px;background:var(--bg-sunken);color:var(--ink-muted)">superuser</span>{% endif %}
+              {% if u.must_change_password %}<span class="badge" style="margin-left:4px;font-size:11px;background:#fef3c7;color:#92400e">mdp temp.</span>{% endif %}
+            </td>
+            <td style="color:var(--ink-muted);font-size:13px">{{ u.email }}</td>
+            <td style="text-align:center">{{ u.journal_count }}</td>
+            <td style="color:var(--ink-muted);font-size:13px">{{ u.date_joined|date:"d/m/Y" }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p style="color:var(--ink-muted);font-size:14px">Aucun utilisateur.</p>
+      {% endif %}
+    </section>
+
+  </main>
+</div>
+{% endblock %}

@@ -18,6 +18,7 @@ urlpatterns = [
         name="article_create_from_journal",
     ),
     path("revues/<slug:slug>/contacts/", include("apps.contacts.urls")),
+    path("administration/", include("apps.administration.urls")),
 ]
 
 if settings.DEBUG:

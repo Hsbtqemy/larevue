@@ -1,0 +1,177 @@
+{% extends "base.html" %}
+{% load static edito %}
+
+{% block title %}{{ journal.name }} — Membres — Administration — Edito{% endblock %}
+
+{% block extra_head %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter+Tight:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{% static 'css/edito.css' %}?v=20260425c">
+{% endblock %}
+
+{% block content %}
+<div style="min-height:100vh;background:var(--bg)">
+
+  <nav style="display:flex;align-items:center;gap:16px;padding:14px 24px;border-bottom:1px solid var(--line);background:var(--surface)">
+    <a href="{% url 'home' %}" style="display:flex;align-items:center;gap:8px;text-decoration:none;color:var(--ink)">
+      <div class="brand-mark" style="width:24px;height:24px;font-size:13px;border-radius:6px">É</div>
+      <span style="font-family:var(--font-display);font-weight:500;font-size:14px">Edito</span>
+    </a>
+    <span style="color:var(--line-strong)">›</span>
+    <a href="{% url 'administration:index' %}" style="font-size:13.5px;color:var(--ink-muted);text-decoration:none">Administration</a>
+    <span style="color:var(--line-strong)">›</span>
+    <span style="font-size:13.5px;color:var(--ink-muted)">{{ journal.name }} — Membres</span>
+    <a href="{{ journal_edit_url }}" class="btn ghost sm" style="margin-left:auto">Modifier la revue</a>
+  </nav>
+
+  <main style="max-width:720px;margin:0 auto;padding:40px 24px">
+
+    <h1 style="font-family:var(--font-display);font-size:22px;font-weight:500;margin:0 0 32px">
+      {{ journal.name }} — Membres
+    </h1>
+
+    {# ===== LISTE DES MEMBRES ===== #}
+    <div class="profile-section" style="margin-bottom:32px">
+      <div class="profile-section-head">
+        <h2>Membres actuels <span style="font-weight:400;color:var(--ink-muted)">({{ memberships|length }})</span></h2>
+      </div>
+      {% if memberships %}
+        <table class="data-table" style="width:100%;margin-bottom:0">
+          <tbody>
+            {% for m in memberships %}
+            <tr>
+              <td>
+                <a href="{% url 'administration:user_detail' user_id=m.user.pk %}" style="text-decoration:none;color:inherit;font-weight:500">
+                  {{ m.user.get_full_name|default:m.user.email }}
+                </a>
+              </td>
+              <td style="color:var(--ink-muted);font-size:13px">{{ m.user.email }}</td>
+              <td style="color:var(--ink-muted);font-size:13px">Depuis le {{ m.created_at|date:"d/m/Y" }}</td>
+              <td style="text-align:right">
+                {% url 'administration:journal_member_remove' slug=journal.slug user_id=m.user.pk as remove_member_url %}
+                {% include "partials/_confirm_delete.html" with delete_url=remove_member_url trigger_label="Retirer" trigger_cls="btn ghost sm" title="Retirer ce membre ?" message="L'utilisateur·ice perdra l'accès à cette revue." %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      {% else %}
+        <p style="font-size:14px;color:var(--ink-muted)">Aucun membre.</p>
+      {% endif %}
+    </div>
+
+    {# ===== AJOUTER UN MEMBRE ===== #}
+    <div class="profile-section" style="margin-bottom:32px">
+      <div class="profile-section-head">
+        <h2>Ajouter un membre</h2>
+      </div>
+      <div x-data="{
+        query: '',
+        results: [],
+        selected: null,
+        adding: false,
+        error: '',
+        async search() {
+          if (this.query.length < 2) { this.results = []; return; }
+          const url = '{{ user_search_url }}?q=' + encodeURIComponent(this.query) + '&exclude_journal={{ journal.slug }}';
+          const res = await fetch(url);
+          const data = await res.json();
+          this.results = data.results;
+        },
+        select(r) { this.selected = r; this.query = r.name + ' — ' + r.email; this.results = []; },
+        async add() {
+          if (!this.selected) return;
+          this.adding = true; this.error = '';
+          const fd = new FormData();
+          fd.append('user_id', this.selected.id);
+          fd.append('csrfmiddlewaretoken', document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '');
+          const res = await fetch('{{ member_add_url }}', { method: 'POST', body: fd });
+          const data = await res.json();
+          if (res.ok) { window.location.reload(); }
+          else { this.error = data.error || 'Erreur.'; this.adding = false; }
+        }
+      }" style="position:relative">
+        <div style="display:flex;gap:10px;align-items:flex-start">
+          <div style="flex:1;position:relative">
+            <input type="text" class="text-input" placeholder="Rechercher par nom ou email…"
+                   x-model="query" @input.debounce.300ms="search()" autocomplete="off">
+            <div x-show="results.length > 0" style="position:absolute;top:100%;left:0;right:0;background:var(--surface);border:1px solid var(--line);border-radius:8px;margin-top:4px;z-index:50;box-shadow:0 4px 12px rgba(0,0,0,.08)">
+              <template x-for="r in results" :key="r.id">
+                <button type="button" @click="select(r)"
+                        style="display:block;width:100%;text-align:left;padding:10px 14px;font-size:13.5px;border:none;background:none;cursor:pointer;color:var(--ink)"
+                        onmouseover="this.style.background='var(--bg-hover)'" onmouseout="this.style.background='none'">
+                  <span x-text="r.name" style="font-weight:500"></span>
+                  <span x-text="' — ' + r.email" style="color:var(--ink-muted)"></span>
+                </button>
+              </template>
+            </div>
+          </div>
+          <button type="button" class="btn sm" :disabled="!selected || adding" @click="add()">
+            <span x-text="adding ? 'Ajout…' : 'Ajouter'"></span>
+          </button>
+        </div>
+        <template x-if="error">
+          <div class="form-error" style="margin-top:6px" x-text="error"></div>
+        </template>
+      </div>
+
+      <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--line)">
+        <div x-data="editModal('{{ quick_create_url }}')">
+          <button type="button" class="btn ghost sm" @click="openModal()">
+            Cette personne n'a pas de compte ? Créer son compte et l'ajouter à cette revue
+          </button>
+          <template x-teleport="body">
+            <div x-show="open" x-cloak class="modal-backdrop" @click.self="close()" @keydown.escape.window="close()" x-transition.opacity>
+              <div class="modal" role="dialog" aria-modal="true" style="max-width:440px">
+                <div class="modal-head">
+                  <h3>Créer un compte et ajouter à {{ journal.name }}</h3>
+                  <div class="sub">Un mot de passe temporaire sera généré automatiquement.</div>
+                </div>
+                <div class="modal-body">
+                  <form id="quick-create-form" @submit.prevent="submit($el)">
+                    {% csrf_token %}
+                    <div class="form-field">
+                      <label class="form-label">Adresse e-mail *</label>
+                      <input type="email" name="email" class="text-input" required autocomplete="off">
+                      <template x-if="fieldErrors('email').length">
+                        <div class="form-error" x-text="fieldErrors('email').join(', ')"></div>
+                      </template>
+                    </div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+                      <div class="form-field">
+                        <label class="form-label">Prénom *</label>
+                        <input type="text" name="first_name" class="text-input" required>
+                        <template x-if="fieldErrors('first_name').length">
+                          <div class="form-error" x-text="fieldErrors('first_name').join(', ')"></div>
+                        </template>
+                      </div>
+                      <div class="form-field">
+                        <label class="form-label">Nom *</label>
+                        <input type="text" name="last_name" class="text-input" required>
+                        <template x-if="fieldErrors('last_name').length">
+                          <div class="form-error" x-text="fieldErrors('last_name').join(', ')"></div>
+                        </template>
+                      </div>
+                    </div>
+                    <template x-if="fieldErrors('__all__').length">
+                      <div class="form-error" x-text="fieldErrors('__all__').join(', ')"></div>
+                    </template>
+                  </form>
+                </div>
+                <div class="modal-foot">
+                  <button type="button" class="btn ghost sm" @click="close()">Annuler</button>
+                  <button type="submit" form="quick-create-form" class="btn sm" :disabled="saving">
+                    <span x-text="saving ? 'Création…' : 'Créer et ajouter'"></span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </template>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+{% endblock %}
