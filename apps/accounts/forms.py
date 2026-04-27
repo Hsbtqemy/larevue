@@ -5,6 +5,7 @@ class ProfilePasswordForm(forms.Form):
     current_password = forms.CharField(
         label="Mot de passe actuel",
         widget=forms.PasswordInput,
+        required=False,
     )
     new_password = forms.CharField(
         label="Nouveau mot de passe",
@@ -19,12 +20,22 @@ class ProfilePasswordForm(forms.Form):
     def __init__(self, user, *args, **kwargs):
         self._user = user
         super().__init__(*args, **kwargs)
+        if not user.must_change_password:
+            self.fields["current_password"].required = True
 
     def clean_current_password(self):
-        pw = self.cleaned_data["current_password"]
+        pw = self.cleaned_data.get("current_password", "")
+        if not pw:
+            return pw
         if not self._user.check_password(pw):
             raise forms.ValidationError("Mot de passe incorrect.")
         return pw
+
+    def clean(self):
+        cleaned = super().clean()
+        if not self._user.must_change_password and not cleaned.get("current_password"):
+            self.add_error("current_password", "Ce champ est obligatoire.")
+        return cleaned
 
     def clean(self):
         cleaned = super().clean()

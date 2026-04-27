@@ -142,6 +142,7 @@
       <div x-show="open" x-cloak style="margin-top:16px">
         <form method="post" action="{% url 'accounts:profile_password' %}" class="pw-form">
           {% csrf_token %}
+          {% if not request.user.must_change_password %}
           <div class="field">
             <label for="id_current_password">Mot de passe actuel</label>
             <input type="password" id="id_current_password" name="current_password" autocomplete="current-password">
@@ -149,6 +150,7 @@
               <div class="form-msg err">{{ pw_form.current_password.errors|join:" " }}</div>
             {% endif %}
           </div>
+          {% endif %}
           <div class="field">
             <label for="id_new_password">Nouveau mot de passe <span class="req">*</span></label>
             <input type="password" id="id_new_password" name="new_password" autocomplete="new-password">
