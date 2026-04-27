@@ -1,8 +1,14 @@
 import os
+import secrets
 
 from django.http import FileResponse, HttpResponse
 
 MAX_UPLOAD_MB = 25
+
+
+def generate_temp_password() -> str:
+    """Return a random URL-safe password (~24 chars). Strong enough for a temporary credential."""
+    return secrets.token_urlsafe(18)
 
 
 def actor_name(user):

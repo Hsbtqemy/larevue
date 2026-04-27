@@ -14,6 +14,12 @@ class User(AbstractUser):
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = []
 
+    must_change_password = models.BooleanField(
+        default=False,
+        verbose_name="Doit changer son mot de passe",
+        help_text="Forcé à la première connexion après création ou reset par un superuser.",
+    )
+
     objects = UserManager()
 
     class Meta:
