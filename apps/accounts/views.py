@@ -70,6 +70,7 @@ class ProfilePasswordView(LoginRequiredMixin, View):
         form = ProfilePasswordForm(request.user, request.POST)
         if form.is_valid():
             request.user.set_password(form.cleaned_data["new_password"])
+            request.user.must_change_password = False
             request.user.save()
             update_session_auth_hash(request, request.user)
             return redirect(reverse("accounts:profile") + "?pw=ok")

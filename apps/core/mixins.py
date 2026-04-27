@@ -3,6 +3,17 @@ from django.core.exceptions import PermissionDenied
 from django.http import Http404
 
 
+class SuperuserRequiredMixin(LoginRequiredMixin):
+    """Allow access only to authenticated superusers; others get 403."""
+
+    def dispatch(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return self.handle_no_permission()
+        if not request.user.is_superuser:
+            raise PermissionDenied
+        return super().dispatch(request, *args, **kwargs)
+
+
 class JournalOwnedObjectMixin:
     """Mixin for views that operate on a single object belonging to the current journal.
 
