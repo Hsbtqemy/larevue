@@ -2550,13 +2550,14 @@ textarea.text-input {
 
 /* ── Timeline ── */
 .timeline-wrap {
-  padding: 24px 40px 8px;
+  padding: 24px 0 8px;
   overflow-x: auto;
 }
 .timeline-track {
   position: relative;
   height: 72px;
-  min-width: 480px;
+  min-width: 520px;
+  margin: 0 4px;
 }
 .timeline-track::before {
   content: "";
@@ -2617,6 +2618,16 @@ textarea.text-input {
   border-color: var(--tone-warn-ink);
 }
 .timeline-date--late { color: var(--tone-warn-ink); font-weight: 500; }
+.timeline-milestone:first-child {
+  transform: translateX(0);
+  align-items: flex-start;
+}
+.timeline-milestone:first-child .timeline-label { text-align: left; }
+.timeline-milestone:last-child {
+  transform: translateX(-100%);
+  align-items: flex-end;
+}
+.timeline-milestone:last-child .timeline-label { text-align: right; }
 
 
 /* ===============================================================
