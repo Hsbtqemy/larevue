@@ -2598,6 +2598,7 @@ textarea.text-input {
   font-size: 10px;
   color: var(--ink-faint);
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 .timeline-milestone--done .timeline-dot {
   background: var(--tone-done-bg);
