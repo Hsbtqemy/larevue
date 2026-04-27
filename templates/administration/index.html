@@ -138,16 +138,21 @@
               </td>
               <td class="col-date" style="color:var(--ink-muted);font-size:13px">{{ j.created_at|date:"d/m/Y" }}</td>
               <td class="col-actions" @click.stop>
-                <div class="row-menu" x-data="{ open: false }" @click.outside="open = false">
-                  <button type="button" class="row-menu-btn" aria-label="Actions" @click.stop="open = !open">
+                <div class="row-menu" x-data="kebabMenu()" @keydown.escape.window="close()">
+                  <button type="button" class="row-menu-btn" aria-label="Actions"
+                          :aria-expanded="open.toString()" @click.stop="toggle($el)">
                     {% icon "dots" 16 %}
                   </button>
-                  <div class="popover row-menu-pop" x-show="open" x-cloak role="menu">
-                    <a href="{% url 'administration:journal_members' slug=j.slug %}"
-                       class="popover-item" style="text-decoration:none" role="menuitem">
-                      {% icon "chevronR" 13 %} <span style="flex:1">Ouvrir la fiche</span>
-                    </a>
-                  </div>
+                  <template x-teleport="body">
+                    <div class="popover row-menu-pop" x-show="open" x-cloak
+                         :style="`position:fixed;right:${x}px;top:${y}px`"
+                         @click.outside="close()" role="menu">
+                      <a href="{% url 'administration:journal_members' slug=j.slug %}"
+                         class="popover-item" style="text-decoration:none" role="menuitem">
+                        {% icon "chevronR" 13 %} <span style="flex:1">Ouvrir la fiche</span>
+                      </a>
+                    </div>
+                  </template>
                 </div>
               </td>
             </tr>
@@ -307,32 +312,35 @@
               </td>
               <td class="col-date" style="color:var(--ink-muted);font-size:13px">{{ u.date_joined|date:"d/m/Y" }}</td>
               <td class="col-actions" @click.stop>
-                <div class="row-menu" x-data="{ open: false }" @click.outside="open = false">
-                  <button type="button" class="row-menu-btn" aria-label="Actions" @click.stop="open = !open">
+                <div class="row-menu" x-data="kebabMenu()" @keydown.escape.window="close()">
+                  <button type="button" class="row-menu-btn" aria-label="Actions"
+                          :aria-expanded="open.toString()" @click.stop="toggle($el)">
                     {% icon "dots" 16 %}
                   </button>
-                  <div class="popover row-menu-pop" x-show="open" x-cloak role="menu">
-                    <a href="{% url 'administration:user_detail' user_id=u.pk %}"
-                       class="popover-item" style="text-decoration:none" role="menuitem">
-                      {% icon "chevronR" 13 %} <span style="flex:1">Ouvrir la fiche</span>
-                    </a>
-                    <div class="popover-sep"></div>
-                    <form method="post" action="{% url 'administration:user_toggle_active' user_id=u.pk %}" @submit.prevent="
-                      open=false;
-                      fetch($el.action, { method:'POST', headers:{'X-CSRFToken':'{{ csrf_token }}'} })
-                        .then(r => r.ok && window.location.reload())">
-                      {% csrf_token %}
-                      {% if u.is_active %}
-                      <button type="submit" class="popover-item danger" role="menuitem" style="width:100%;text-align:left">
-                        {% icon "close" 13 %} <span style="flex:1">Désactiver le compte</span>
-                      </button>
-                      {% else %}
-                      <button type="submit" class="popover-item" role="menuitem" style="width:100%;text-align:left">
-                        {% icon "check" 13 %} <span style="flex:1">Réactiver le compte</span>
-                      </button>
-                      {% endif %}
-                    </form>
-                  </div>
+                  <template x-teleport="body">
+                    <div class="popover row-menu-pop" x-show="open" x-cloak
+                         :style="`position:fixed;right:${x}px;top:${y}px`"
+                         @click.outside="close()" role="menu">
+                      <a href="{% url 'administration:user_detail' user_id=u.pk %}"
+                         class="popover-item" style="text-decoration:none" role="menuitem">
+                        {% icon "chevronR" 13 %} <span style="flex:1">Ouvrir la fiche</span>
+                      </a>
+                      <div class="popover-sep"></div>
+                      <form method="post" action="{% url 'administration:user_toggle_active' user_id=u.pk %}"
+                            @submit.prevent="close(); fetch($el.action, { method:'POST', headers:{'X-CSRFToken':'{{ csrf_token }}'} }).then(r => r.ok && window.location.reload())">
+                        {% csrf_token %}
+                        {% if u.is_active %}
+                        <button type="submit" class="popover-item danger" role="menuitem" style="width:100%;text-align:left">
+                          {% icon "close" 13 %} <span style="flex:1">Désactiver le compte</span>
+                        </button>
+                        {% else %}
+                        <button type="submit" class="popover-item" role="menuitem" style="width:100%;text-align:left">
+                          {% icon "check" 13 %} <span style="flex:1">Réactiver le compte</span>
+                        </button>
+                        {% endif %}
+                      </form>
+                    </div>
+                  </template>
                 </div>
               </td>
             </tr>

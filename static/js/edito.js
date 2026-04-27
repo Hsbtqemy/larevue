@@ -485,6 +485,29 @@ document.addEventListener("alpine:init", () => {
     close() { this.open = false; },
   }));
 
+  Alpine.data("kebabMenu", () => ({
+    open: false,
+    x: 0,
+    y: 0,
+
+    init() {
+      window.addEventListener("kebab-close-all", (e) => {
+        if (e.detail !== this) this.open = false;
+      });
+    },
+
+    toggle(btn) {
+      if (this.open) { this.open = false; return; }
+      const rect = btn.getBoundingClientRect();
+      this.x = window.innerWidth - rect.right;
+      this.y = rect.bottom + 4;
+      window.dispatchEvent(new CustomEvent("kebab-close-all", { detail: this }));
+      this.open = true;
+    },
+
+    close() { this.open = false; },
+  }));
+
   Alpine.data("savedBanner", () => {
     let timer = null;
     return {
