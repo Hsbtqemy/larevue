@@ -49,6 +49,7 @@
   {% endif %}
 
   <nav class="nav">
+    {% if journal %}
     {% if sidebar_active == "dashboard" %}
       <button class="nav-item active" type="button">
         {% icon "home" 17 cls="icon" %}
@@ -84,6 +85,7 @@
       {% icon "edit" 17 cls="icon" %}
       Modifier la revue
     </a>
+    {% endif %}
     {% if request.user.is_superuser %}
     <div class="nav-sep" aria-hidden="true"><span>Superuser</span></div>
     <a href="{% url 'administration:index' %}"

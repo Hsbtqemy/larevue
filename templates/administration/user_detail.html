@@ -10,21 +10,12 @@
 <link rel="stylesheet" href="{% static 'css/edito.css' %}?v=20260427a">
 {% endblock %}
 
+{% block body_class %}{% endblock %}
 {% block content %}
-<div style="min-height:100vh;background:var(--bg)">
-
-  <nav style="display:flex;align-items:center;gap:16px;padding:14px 24px;border-bottom:1px solid var(--line);background:var(--surface)">
-    <a href="{% url 'home' %}" style="display:flex;align-items:center;gap:8px;text-decoration:none;color:var(--ink)">
-      <div class="brand-mark" style="width:24px;height:24px;font-size:13px;border-radius:6px">É</div>
-      <span style="font-family:var(--font-display);font-weight:500;font-size:14px">Edito</span>
-    </a>
-    <span style="color:var(--line-strong)">›</span>
-    <a href="{% url 'administration:index' %}" style="font-size:13.5px;color:var(--ink-muted);text-decoration:none">Administration</a>
-    <span style="color:var(--line-strong)">›</span>
-    <span style="font-size:13.5px;color:var(--ink-muted)">{{ target_user.get_full_name|default:target_user.email }}</span>
-  </nav>
-
-  <main style="max-width:900px;margin:0 auto;padding:32px 24px 60px">
+<div class="app-shell" data-accent="{{ journal.accent_color|default:'slate' }}">
+  {% include "partials/_sidebar.html" with sidebar_active="admin" %}
+  <main class="main">
+  <div style="max-width:900px;margin:0 auto;padding:32px 24px 60px">
 
     {# ===== HEADER ===== #}
     <div style="margin-bottom:28px">
@@ -205,6 +196,7 @@
       </div>
     </div>
 
+  </div>
   </main>
 </div>
 {% endblock %}

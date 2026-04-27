@@ -51,6 +51,7 @@ class AdministrationView(SuperuserRequiredMixin, View):
             )
             .order_by("last_name", "first_name", "email")
         )
+        first = request.user.memberships.select_related("journal").first()
         return render(request, self.template_name, {
             "journals": journals,
             "users": users,
@@ -58,6 +59,7 @@ class AdministrationView(SuperuserRequiredMixin, View):
             "journal_form": JournalCreateAdminForm(),
             "user_form": UserCreateForm(),
             "user_search_url": reverse("administration:user_search"),
+            "journal": first.journal if first else None,
         })
 
 
@@ -141,9 +143,11 @@ class UserPasswordDisplayView(SuperuserRequiredMixin, View):
         # Guard against accessing this URL without going through the creation flow.
         if password is None or stored_uid != user.pk:
             return redirect(reverse("administration:index"))
+        first = request.user.memberships.select_related("journal").first()
         return render(request, self.template_name, {
             "created_user": user,
             "temp_password": password,
+            "journal": first.journal if first else None,
         })
 
 
@@ -155,10 +159,12 @@ class UserDetailView(SuperuserRequiredMixin, View):
         memberships = user.memberships.select_related("journal").order_by("journal__name")
         member_journal_ids = memberships.values_list("journal_id", flat=True)
         available_journals = Journal.objects.exclude(pk__in=member_journal_ids).order_by("name")
+        first = request.user.memberships.select_related("journal").first()
         return render(request, self.template_name, {
             "target_user": user,
             "memberships": memberships,
             "available_journals": available_journals,
+            "journal": first.journal if first else None,
         })
 
 
