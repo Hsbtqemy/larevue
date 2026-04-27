@@ -7,19 +7,8 @@
    doc_section_title — section heading (default "Documents")
    doc_add_modal_title — add modal heading (default "Ajouter un document")
 {% endcomment %}
+{% if is_editable %}
 <details class="documents-section" id="documents"
-         x-data
-         x-init="if (window.location.hash === '#documents') $el.open = true">
-  <summary class="documents-summary">
-    <span class="doc-toggle-chev">{% icon "chevronR" 14 %}</span>
-    <span class="doc-summary-title">{{ doc_section_title|default:"Documents" }}</span>
-    <span class="doc-summary-count">{{ documents|length }} document{{ documents|length|pluralize }}</span>
-  </summary>
-
-  <div class="documents-content">
-
-    {% if is_editable %}
-    <div class="documents-content-head"
          x-data="{
            open: false,
            name: '',
@@ -45,125 +34,154 @@
            },
            clearFile(e) { e.stopPropagation(); this.fileName = null; this.$refs.docFile.value = ''; },
            resetAndClose() { this.open = false; this.name = ''; this.fileName = null; if (this.$refs.docFile) this.$refs.docFile.value = ''; }
-         }">
-      <button type="button" class="btn primary sm" @click="open = true">
-        {% icon "plus" 14 cls="icon" %} Ajouter un document
+         }"
+         x-init="if (window.location.hash === '#documents') $el.open = true">
+  <summary>
+    <span class="doc-toggle-chev">{% icon "chevronR" 14 %}</span>
+    <span class="doc-summary-title">{{ doc_section_title|default:"Documents" }}</span>
+    <span class="doc-summary-count">{{ documents|length }} document{{ documents|length|pluralize }}</span>
+    <span class="doc-summary-actions" @click.stop>
+      <button type="button" class="btn ghost sm" @click="open = true">
+        {% icon "plus" 13 cls="icon" %} Ajouter
       </button>
-      <template x-teleport="body">
-        <div x-show="open"
-             class="modal-backdrop"
-             @click.self="resetAndClose()"
-             @keydown.escape.window="resetAndClose()"
-             x-transition.opacity>
-          <div class="modal" role="dialog" aria-modal="true">
-            <div class="modal-head">
-              <h3>{{ doc_add_modal_title|default:"Ajouter un document" }}</h3>
-            </div>
-            <form method="post" action="{{ doc_create_url }}" enctype="multipart/form-data">
-              {% csrf_token %}
-              <div class="modal-body">
-                <div class="field">
-                  <label for="doc-name">Nom du document <span class="req">*</span></label>
-                  <input type="text" id="doc-name" name="name" x-model="name" required
-                         placeholder="Ex : Projet de numéro initial">
-                </div>
-                <div class="field">
-                  <label for="doc-description">Description</label>
-                  <textarea id="doc-description" name="description" rows="3"
-                            placeholder="Optionnel — pour préciser le contenu du document."></textarea>
-                </div>
-                <div class="field">
-                  <label>Fichier <span class="req">*</span></label>
-                  <div class="file-drop-zone"
-                       :class="{ dragging: isDragging }"
-                       @dragover.prevent="isDragging = true"
-                       @dragleave.prevent="isDragging = false"
-                       @drop.prevent="onDrop($event)"
-                       @click="$refs.docFile.click()">
-                    <input type="file" name="file" x-ref="docFile" @change="onFileChange($event)" required>
-                    <template x-if="!fileName">
-                      <div>
-                        <div class="drop-label">Glissez un fichier ou cliquez pour parcourir</div>
-                        <div class="drop-hint">PDF, Word, ODT, ZIP… — 25 Mo maximum.</div>
-                      </div>
-                    </template>
-                    <template x-if="fileName">
-                      <div>
-                        <div class="drop-filename" x-text="fileName"></div>
-                        <div><button type="button" class="drop-clear" @click.stop="clearFile($event)">Retirer</button></div>
-                      </div>
-                    </template>
-                  </div>
-                </div>
-              </div>
-              <div class="modal-foot">
-                <button type="button" class="btn ghost" @click="resetAndClose()">Annuler</button>
-                <button type="submit" class="btn primary">Ajouter le document</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      </template>
-    </div>
-    {% endif %}
+    </span>
+  </summary>
 
+  <template x-teleport="body">
+    <div x-show="open"
+         class="modal-backdrop"
+         @click.self="resetAndClose()"
+         @keydown.escape.window="resetAndClose()"
+         x-transition.opacity>
+      <div class="modal" role="dialog" aria-modal="true">
+        <div class="modal-head">
+          <h3>{{ doc_add_modal_title|default:"Ajouter un document" }}</h3>
+        </div>
+        <form method="post" action="{{ doc_create_url }}" enctype="multipart/form-data">
+          {% csrf_token %}
+          <div class="modal-body">
+            <div class="field">
+              <label for="doc-name">Nom du document <span class="req">*</span></label>
+              <input type="text" id="doc-name" name="name" x-model="name" required
+                     placeholder="Ex : Projet de numéro initial">
+            </div>
+            <div class="field">
+              <label for="doc-description">Description</label>
+              <textarea id="doc-description" name="description" rows="3"
+                        placeholder="Optionnel — pour préciser le contenu du document."></textarea>
+            </div>
+            <div class="field">
+              <label>Fichier <span class="req">*</span></label>
+              <div class="file-drop-zone"
+                   :class="{ dragging: isDragging }"
+                   @dragover.prevent="isDragging = true"
+                   @dragleave.prevent="isDragging = false"
+                   @drop.prevent="onDrop($event)"
+                   @click="$refs.docFile.click()">
+                <input type="file" name="file" x-ref="docFile" @change="onFileChange($event)" required>
+                <template x-if="!fileName">
+                  <div>
+                    <div class="drop-label">Glissez un fichier ou cliquez pour parcourir</div>
+                    <div class="drop-hint">PDF, Word, ODT, ZIP… — 25 Mo maximum.</div>
+                  </div>
+                </template>
+                <template x-if="fileName">
+                  <div>
+                    <div class="drop-filename" x-text="fileName"></div>
+                    <div><button type="button" class="drop-clear" @click.stop="clearFile($event)">Retirer</button></div>
+                  </div>
+                </template>
+              </div>
+            </div>
+          </div>
+          <div class="modal-foot">
+            <button type="button" class="btn ghost" @click="resetAndClose()">Annuler</button>
+            <button type="submit" class="btn primary">Ajouter le document</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </template>
+
+  <div class="documents-content">
     {% if documents %}
       <div class="doc-list">
         {% for doc in documents %}
           <div class="doc-row">
             <div class="doc-row-icon">{% icon "file" 16 %}</div>
             <div class="doc-row-body">
-              <div class="doc-row-name">
-                <a href="{{ doc.download_url }}">{{ doc.name }}</a>
-              </div>
-              {% if doc.description %}
-                <div class="doc-row-desc">{{ doc.description }}</div>
-              {% endif %}
+              <div class="doc-row-name"><a href="{{ doc.download_url }}">{{ doc.name }}</a></div>
+              {% if doc.description %}<div class="doc-row-desc">{{ doc.description }}</div>{% endif %}
               <div class="doc-row-meta">
                 Ajouté par {{ doc.uploaded_by.get_full_name|default:doc.uploaded_by.email }}
                 le {{ doc.uploaded_at|date:"j F Y" }}
               </div>
             </div>
-            {% if is_editable %}
-              <div class="doc-row-actions" x-data="{ open: false }">
-                <button type="button"
-                        class="btn ghost sm"
-                        title="Supprimer ce document"
-                        @click="open = true">
-                  {% icon "trash" 14 %}
-                </button>
-                <template x-teleport="body">
-                  <div x-show="open"
-                       class="modal-backdrop"
-                       @click.self="open = false"
-                       @keydown.escape.window="open = false"
-                       x-transition.opacity>
-                    <div class="modal" role="dialog" aria-modal="true">
-                      <div class="modal-head">
-                        <h3>Supprimer le document</h3>
-                        <div class="sub">Cette action est définitive.</div>
-                      </div>
-                      <div class="modal-body">
-                        <p>Supprimer le document <strong>« {{ doc.name }} »</strong> ?</p>
-                      </div>
-                      <div class="modal-foot">
-                        <button type="button" class="btn ghost" @click="open = false">Annuler</button>
-                        <form method="post" action="{{ doc.delete_url }}">
-                          {% csrf_token %}
-                          <button type="submit" class="btn danger-ghost">Supprimer</button>
-                        </form>
-                      </div>
+            <div class="doc-row-actions" x-data="{ confirmOpen: false }">
+              <button type="button" class="btn ghost sm" title="Supprimer" @click="confirmOpen = true">
+                {% icon "trash" 14 %}
+              </button>
+              <template x-teleport="body">
+                <div x-show="confirmOpen" class="modal-backdrop"
+                     @click.self="confirmOpen = false"
+                     @keydown.escape.window="confirmOpen = false"
+                     x-transition.opacity>
+                  <div class="modal" role="dialog" aria-modal="true">
+                    <div class="modal-head">
+                      <h3>Supprimer le document</h3>
+                      <div class="sub">Cette action est définitive.</div>
+                    </div>
+                    <div class="modal-body">
+                      <p>Supprimer <strong>« {{ doc.name }} »</strong> ?</p>
+                    </div>
+                    <div class="modal-foot">
+                      <button type="button" class="btn ghost" @click="confirmOpen = false">Annuler</button>
+                      <form method="post" action="{{ doc.delete_url }}">
+                        {% csrf_token %}
+                        <button type="submit" class="btn danger-ghost">Supprimer</button>
+                      </form>
                     </div>
                   </div>
-                </template>
-              </div>
-            {% endif %}
+                </div>
+              </template>
+            </div>
           </div>
         {% endfor %}
       </div>
     {% else %}
       <div style="font-size:13px;color:var(--ink-muted);padding-bottom:4px">Aucun document attaché.</div>
     {% endif %}
-
   </div>
 </details>
+
+{% else %}{# read-only #}
+<details class="documents-section" id="documents"
+         x-data x-init="if (window.location.hash === '#documents') $el.open = true">
+  <summary>
+    <span class="doc-toggle-chev">{% icon "chevronR" 14 %}</span>
+    <span class="doc-summary-title">{{ doc_section_title|default:"Documents" }}</span>
+    <span class="doc-summary-count">{{ documents|length }} document{{ documents|length|pluralize }}</span>
+  </summary>
+  <div class="documents-content">
+    {% if documents %}
+      <div class="doc-list">
+        {% for doc in documents %}
+          <div class="doc-row">
+            <div class="doc-row-icon">{% icon "file" 16 %}</div>
+            <div class="doc-row-body">
+              <div class="doc-row-name"><a href="{{ doc.download_url }}">{{ doc.name }}</a></div>
+              {% if doc.description %}<div class="doc-row-desc">{{ doc.description }}</div>{% endif %}
+              <div class="doc-row-meta">
+                Ajouté par {{ doc.uploaded_by.get_full_name|default:doc.uploaded_by.email }}
+                le {{ doc.uploaded_at|date:"j F Y" }}
+              </div>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div style="font-size:13px;color:var(--ink-muted);padding-bottom:4px">Aucun document attaché.</div>
+    {% endif %}
+  </div>
+</details>
+{% endif %}
