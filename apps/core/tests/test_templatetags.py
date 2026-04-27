@@ -9,6 +9,7 @@ from apps.core.templatetags.edito import (
     date_short,
     days_late,
     icon,
+    to_json,
 )
 
 
@@ -145,3 +146,25 @@ class TestVerdictBadge:
         rendered = tpl.render(Context({"verdict": "unknown"}))
         assert "neutral" in rendered
         assert "unknown" in rendered
+
+
+class TestToJson:
+    def test_list_of_tuples_html_escaped(self):
+        result = to_json([["article", "Article"], ["note", "Note"]])
+        assert "&quot;" in result
+        assert '"' not in str(result)
+
+    def test_safe_string_for_html_attribute(self):
+        result = to_json([["a", "b"]])
+        rendered = f'x-data="fn({result})"'
+        # The attribute string must not contain unescaped double-quotes inside
+        inner = rendered[len('x-data="fn('):-len(')"')]
+        assert '"' not in inner
+
+    def test_non_ascii_preserved(self):
+        result = to_json([["val", "Éditorial"]])
+        assert "Éditorial" in str(result)
+
+    def test_empty_list(self):
+        result = to_json([])
+        assert str(result) == "[]"

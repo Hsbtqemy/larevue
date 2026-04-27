@@ -2,7 +2,7 @@ import datetime
 import json
 
 from django import template
-from django.utils.html import mark_safe
+from django.utils.html import escape, mark_safe
 from django.utils import timezone
 
 from apps.core.display import MONTH_ABBR, MONTH_SHORT, VERDICT_LABELS, VERDICT_TONES
@@ -144,5 +144,5 @@ def timesince_short(value):
 
 @register.filter
 def to_json(value):
-    """Serialize a Python value to a safe JSON string for use in Alpine.js data attributes."""
-    return mark_safe(json.dumps(value))
+    """Serialize value to JSON safe for use inside an HTML attribute (double-quotes HTML-escaped)."""
+    return mark_safe(escape(json.dumps(value, ensure_ascii=False)))
