@@ -2550,14 +2550,13 @@ textarea.text-input {
 
 /* ── Timeline ── */
 .timeline-wrap {
-  padding: 24px 0 8px;
+  padding: 24px 40px 8px;
   overflow-x: auto;
 }
 .timeline-track {
   position: relative;
   height: 72px;
   min-width: 480px;
-  margin: 0 24px;
 }
 .timeline-track::before {
   content: "";
@@ -2592,7 +2591,7 @@ textarea.text-input {
   line-height: 1.3;
   max-width: 72px;
   white-space: normal;
-  word-break: break-word;
+  word-break: normal;
 }
 .timeline-date {
   font-size: 10px;
@@ -3498,6 +3497,51 @@ html[data-zoom="tres-grand"] .prefs-anchor { zoom: 1; }
 .doc-row-desc { font-size: 13px; color: var(--ink-muted); margin-top: 2px; }
 .doc-row-meta { font-size: 12px; color: var(--ink-faint); margin-top: 3px; }
 .doc-row-actions { flex-shrink: 0; align-self: center; }
+
+/* Documents section — <details> collapsible */
+.documents-section {
+  border-top: 1px solid var(--line);
+  margin: 0;
+}
+.documents-summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 0;
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+.documents-summary::-webkit-details-marker { display: none; }
+.documents-summary::marker { display: none; }
+.doc-toggle-chev {
+  color: var(--ink-faint);
+  transition: transform 180ms ease;
+  flex-shrink: 0;
+  line-height: 0;
+}
+details[open] .doc-toggle-chev {
+  transform: rotate(90deg);
+}
+.doc-summary-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+  flex: 1;
+  font-family: var(--font-ui);
+}
+.doc-summary-count {
+  font-size: 13px;
+  color: var(--ink-muted);
+}
+.documents-content {
+  padding-bottom: 20px;
+}
+.documents-content-head {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 12px;
+}
 
 /* ============================================================
    Administration (superuser)

@@ -136,6 +136,14 @@ _TIMELINE_STATES = [
     Issue.State.PUBLISHED,
 ]
 
+_TIMELINE_LABELS = {
+    Issue.State.UNDER_REVIEW: "Évaluation",
+    Issue.State.IN_REVIEW: "Relectures",
+    Issue.State.IN_REVISION: "V2",
+    Issue.State.FINAL_CHECK: "Vérification",
+    Issue.State.SENT_TO_PUBLISHER: "Éditeur",
+}
+
 _STATE_DEADLINE_FIELD = {
     Issue.State.IN_REVIEW: "deadline_articles",
     Issue.State.IN_REVISION: "deadline_reviews",
@@ -163,7 +171,7 @@ def _build_timeline(issue):
         is_current = current_idx == i
         milestones.append({
             "state": state,
-            "label": state.label,
+            "label": _TIMELINE_LABELS.get(state, state.label),
             "is_current": is_current,
             "is_done": is_done,
             "deadline": deadline,

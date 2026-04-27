@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter+Tight:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="{% static 'css/edito.css' %}?v=20260425d">
+<link rel="stylesheet" href="{% static 'css/edito.css' %}?v=20260427b">
 {% endblock %}
 
 {% block content %}
@@ -367,11 +367,6 @@
       </div>
     </div>
 
-    {# ===== Documents du numéro ===== #}
-    <div class="main-content" style="padding-bottom:0">
-      {% include "partials/_documents_panel.html" %}
-    </div>
-
     {# ===== Articles ===== #}
     <div class="main-content">
       <div class="section">
@@ -430,7 +425,12 @@
           </div>
         {% endif %}
       </div>
-    </div>{# /main-content #}
+    </div>{# /main-content articles #}
+
+    {# ===== Documents du numéro ===== #}
+    <div class="main-content">
+      {% include "partials/_documents_panel.html" %}
+    </div>
 
   </main>
 
