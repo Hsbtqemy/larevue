@@ -76,8 +76,8 @@ Créer `/home/edito/edito/.env` :
 DJANGO_SETTINGS_MODULE=config.settings.production
 SECRET_KEY=<python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())">
 DEBUG=False
-ALLOWED_HOSTS=83.228.221.204,localhost,127.0.0.1
-HTTPS_ENABLED=False   # passer à True après certbot
+ALLOWED_HOSTS=edito-revue.fr,www.edito-revue.fr,83.228.221.204
+HTTPS_ENABLED=True
 
 DB_NAME=edito_prod
 DB_USER=edito_user
@@ -89,7 +89,7 @@ STATIC_ROOT=/home/edito/edito/staticfiles
 MEDIA_ROOT=/home/edito/edito/media
 LOG_FILE=/var/log/edito/edito.log
 
-CSRF_TRUSTED_ORIGINS=http://83.228.221.204   # ajouter https://domaine.fr après certbot
+CSRF_TRUSTED_ORIGINS=https://edito-revue.fr,https://www.edito-revue.fr
 
 # Email SMTP (configurer pour reset de mot de passe, etc.)
 # EMAIL_HOST=smtp.example.com
@@ -186,16 +186,21 @@ sudo systemctl status edito
 
 ## Configuration nginx
 
-`/etc/nginx/sites-available/edito` :
+Config initiale dans `/etc/nginx/sites-available/edito` (avant certbot) :
 
 ```nginx
 server {
     listen 80;
-    server_name 83.228.221.204;
+    listen [::]:80;
+    server_name edito-revue.fr www.edito-revue.fr;
 
     client_max_body_size 25M;
 
     location = /favicon.ico { access_log off; log_not_found off; }
+
+    location /.well-known/acme-challenge/ {
+        root /var/www/html;
+    }
 
     location /static/ {
         alias /home/edito/edito/staticfiles/;
@@ -221,20 +226,34 @@ sudo nginx -t
 sudo systemctl reload nginx
 ```
 
-## HTTPS — certbot (après ajout du domaine)
+## HTTPS — certbot
 
-1. Pointer le domaine sur `83.228.221.204` (DNS)
-2. Mettre à jour `ALLOWED_HOSTS` et `CSRF_TRUSTED_ORIGINS` dans `.env`
-3. Passer `HTTPS_ENABLED=True` dans `.env`
-4. Lancer certbot :
+Prérequis : domaine pointant sur le VPS, nginx rechargé avec la config ci-dessus.
 
 ```bash
 sudo apt install -y certbot python3-certbot-nginx
-sudo certbot --nginx -d domaine.fr -d www.domaine.fr
+sudo certbot --nginx -d edito-revue.fr -d www.edito-revue.fr
+```
+
+Certbot modifie automatiquement la config nginx pour ajouter le bloc HTTPS et
+la redirection HTTP→HTTPS. Mettre à jour `.env` puis redémarrer :
+
+```bash
+# Dans .env : HTTPS_ENABLED=True + CSRF_TRUSTED_ORIGINS=https://edito-revue.fr,...
 sudo systemctl restart edito
 ```
 
-Le renouvellement automatique est configuré par certbot via un timer systemd.
+**Important** : ouvrir le port 443 dans le firewall réseau Infomaniak
+(Manager → VPS → Régler le Firewall) — distinct d'UFW.
+
+Le renouvellement automatique est configuré par certbot via un timer systemd :
+
+```bash
+sudo certbot renew --dry-run   # tester le renouvellement
+sudo systemctl status certbot.timer
+```
+
+Certificat actuel : `/etc/letsencrypt/live/edito-revue.fr/` — expire le 2026-07-26.
 
 ## Commandes Django utiles (depuis ubuntu)
 
@@ -269,11 +288,67 @@ sudo tail -f /var/log/nginx/error.log      # erreurs nginx
 sudo journalctl -u edito -f                # journal systemd
 ```
 
-## Sauvegarde
+## Sauvegarde automatique (Backblaze B2)
 
-> TODO (session ultérieure) — stratégie Backblaze B2 via script cron côté serveur.
+Backup quotidien à 2h30 via cron, configuré sur l'utilisateur `edito`.
 
-Points à couvrir :
-- Dump PostgreSQL quotidien (`pg_dump`) chiffré et envoyé vers B2
-- Sauvegarde du dossier `MEDIA_ROOT`
-- Rétention et rotation des sauvegardes
+**Composants :**
+- rclone configuré avec le remote `b2-edito` → bucket `edito-backups-828`
+- Script : `/home/edito/scripts/backup.sh`
+- Logs : `/home/edito/backups/backup.log`
+- Rétention locale : 7 jours ; rétention B2 : illimitée (gérer dans le dashboard)
+
+**Vérifier les backups :**
+
+```bash
+sudo -u edito rclone ls b2-edito:edito-backups-828
+cat /home/edito/backups/backup.log
+```
+
+**Relancer manuellement :**
+
+```bash
+sudo -u edito /home/edito/scripts/backup.sh
+```
+
+## Restauration depuis Backblaze B2
+
+### Étape 1 — Lister et télécharger les sauvegardes
+
+```bash
+sudo -u edito rclone ls b2-edito:edito-backups-828
+
+# Télécharger les fichiers voulus (remplacer YYYYMMDD_HHMMSS)
+sudo -u edito rclone copy b2-edito:edito-backups-828/edito_db_YYYYMMDD_HHMMSS.sql.gz /tmp/
+sudo -u edito rclone copy b2-edito:edito-backups-828/edito_files_YYYYMMDD_HHMMSS.tar.gz /tmp/
+```
+
+### Étape 2 — Restaurer la base de données
+
+```bash
+# Arrêter l'app pour éviter les écritures concurrentes
+sudo systemctl stop edito
+
+# Décompresser et importer
+gunzip /tmp/edito_db_YYYYMMDD_HHMMSS.sql.gz
+sudo -u postgres psql -d edito_prod -f /tmp/edito_db_YYYYMMDD_HHMMSS.sql
+```
+
+### Étape 3 — Restaurer les fichiers uploadés
+
+```bash
+# Sauvegarder le media actuel
+sudo mv /home/edito/edito/media /home/edito/edito/media.bak
+
+# Extraire l'archive
+sudo -u edito tar xzf /tmp/edito_files_YYYYMMDD_HHMMSS.tar.gz -C /home/edito/edito/
+```
+
+### Étape 4 — Redémarrer et vérifier
+
+```bash
+sudo systemctl start edito
+sudo systemctl status edito
+```
+
+Tester que l'app répond sur https://edito-revue.fr et que les données sont bien là.
