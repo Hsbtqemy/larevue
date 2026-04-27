@@ -68,6 +68,14 @@ class ProfilePatchView(LoginRequiredMixin, View):
 
 
 class ProfilePasswordView(LoginRequiredMixin, View):
+    def get(self, request):
+        return render(request, ProfileView.template_name, {
+            "patch_url": reverse("accounts:profile_patch"),
+            "pw_form": ProfilePasswordForm(request.user),
+            "pw_open": True,
+            "memberships": _memberships_for(request.user),
+        })
+
     def post(self, request):
         form = ProfilePasswordForm(request.user, request.POST)
         if form.is_valid():
