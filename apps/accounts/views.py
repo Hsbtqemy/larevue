@@ -57,7 +57,9 @@ class ProfilePatchView(LoginRequiredMixin, View):
         user = request.user
         setattr(user, field, value)
         try:
-            user.full_clean()
+            # Validate only the field being patched; skip the other allowed fields
+            # which may legitimately be empty (e.g. last_name="" on a fresh account).
+            user.full_clean(exclude=[f for f in self.ALLOWED_FIELDS if f != field])
             user.save(update_fields=[field])
         except ValidationError as e:
             return JsonResponse({"error": " ".join(e.messages)}, status=400)

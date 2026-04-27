@@ -154,6 +154,49 @@ class TestProfilePatchView:
         user.refresh_from_db()
         assert user.email == original
 
+    def test_patch_first_name_when_last_name_empty(self, db, client):
+        # Accounts created via createsuperuser may have empty last_name.
+        # Patching first_name must succeed regardless.
+        u = User.objects.create_user(
+            email="partial@example.com",
+            password="pass",
+            first_name="",
+            last_name="",
+        )
+        client.force_login(u)
+        res = _patch(client, "first_name", "Hugo")
+        assert res.status_code == 200
+        u.refresh_from_db()
+        assert u.first_name == "Hugo"
+        assert u.last_name == ""
+
+    def test_patch_last_name_when_first_name_empty(self, db, client):
+        u = User.objects.create_user(
+            email="partial2@example.com",
+            password="pass",
+            first_name="",
+            last_name="",
+        )
+        client.force_login(u)
+        res = _patch(client, "last_name", "Dupont")
+        assert res.status_code == 200
+        u.refresh_from_db()
+        assert u.last_name == "Dupont"
+        assert u.first_name == ""
+
+    def test_patch_email_when_names_empty(self, db, client):
+        u = User.objects.create_user(
+            email="partial3@example.com",
+            password="pass",
+            first_name="",
+            last_name="",
+        )
+        client.force_login(u)
+        res = _patch(client, "email", "updated@example.com")
+        assert res.status_code == 200
+        u.refresh_from_db()
+        assert u.email == "updated@example.com"
+
 
 def _change_password(client, current, new, confirm):
     return client.post(PASSWORD_URL, {
