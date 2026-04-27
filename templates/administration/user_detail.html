@@ -1,13 +1,13 @@
 {% extends "base.html" %}
 {% load static edito %}
 
-{% block title %}{{ target_user.get_full_name }} — Administration — Edito{% endblock %}
+{% block title %}{{ target_user.get_full_name|default:target_user.email }} — Administration — Edito{% endblock %}
 
 {% block extra_head %}
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter+Tight:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="{% static 'css/edito.css' %}?v=20260425c">
+<link rel="stylesheet" href="{% static 'css/edito.css' %}?v=20260427a">
 {% endblock %}
 
 {% block content %}
@@ -21,121 +21,188 @@
     <span style="color:var(--line-strong)">›</span>
     <a href="{% url 'administration:index' %}" style="font-size:13.5px;color:var(--ink-muted);text-decoration:none">Administration</a>
     <span style="color:var(--line-strong)">›</span>
-    <span style="font-size:13.5px;color:var(--ink-muted)">{{ target_user.get_full_name }}</span>
+    <span style="font-size:13.5px;color:var(--ink-muted)">{{ target_user.get_full_name|default:target_user.email }}</span>
   </nav>
 
-  <main style="max-width:720px;margin:0 auto;padding:40px 24px">
+  <main style="max-width:900px;margin:0 auto;padding:32px 24px 60px">
 
-    <div style="margin-bottom:40px">
-      <h1 style="font-family:var(--font-display);font-size:22px;font-weight:500;margin:0 0 4px">
-        {{ target_user.get_full_name|default:target_user.email }}
-        {% if target_user.is_superuser %}
-          <span class="badge" style="font-size:11px;background:var(--bg-sunken);color:var(--ink-muted);vertical-align:middle">superuser</span>
-        {% endif %}
-        {% if target_user.must_change_password %}
-          <span class="badge" style="font-size:11px;background:#fef3c7;color:#92400e;vertical-align:middle">mdp temporaire</span>
-        {% endif %}
-      </h1>
-      <div style="font-size:13.5px;color:var(--ink-muted)">{{ target_user.email }}</div>
+    {# ===== HEADER ===== #}
+    <div style="margin-bottom:28px">
+      <a href="{% url 'administration:index' %}" class="btn sm" style="margin-bottom:16px;display:inline-flex">
+        {% icon "back" 13 %} Administration
+      </a>
+      <div class="admin-detail-head">
+        <div class="avatar" style="width:48px;height:48px;border-radius:10px;font-size:16px;font-weight:600;flex-shrink:0">
+          {{ target_user.first_name|slice:":1" }}{{ target_user.last_name|slice:":1" }}
+        </div>
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:3px">
+            <h1 style="font-family:var(--font-display);font-size:22px;font-weight:500;margin:0">
+              {{ target_user.get_full_name|default:target_user.email }}
+            </h1>
+            {% if target_user.is_superuser %}
+            <span class="superuser-pill big">{% icon "lock" 10 cls="icon" %} superuser</span>
+            {% endif %}
+            {% if target_user.must_change_password %}
+            <span class="badge warn no-dot" style="font-size:11px">mdp temporaire</span>
+            {% endif %}
+          </div>
+          <div style="font-family:var(--font-mono);font-size:12.5px;color:var(--ink-muted)">{{ target_user.email }}</div>
+        </div>
+        <div style="display:flex;gap:8px;flex-shrink:0">
+          <div x-data="{ open: false, submitting: false }">
+            <button type="button" class="btn ghost sm" @click="open = true">
+              {% icon "edit" 13 %} Réinitialiser mdp
+            </button>
+            <template x-teleport="body">
+              <div x-show="open" x-cloak class="modal-backdrop" @click.self="open = false" @keydown.escape.window="open = false" x-transition.opacity>
+                <div class="modal" role="dialog" aria-modal="true" style="max-width:420px">
+                  <div class="modal-head">
+                    <h3>Réinitialiser le mot de passe ?</h3>
+                    <div class="sub">Un nouveau mot de passe temporaire sera généré. {{ target_user.first_name|default:"L'utilisateur·ice" }} devra le changer à sa prochaine connexion.</div>
+                  </div>
+                  <div class="modal-foot">
+                    <button type="button" class="btn ghost sm" @click="open = false">Annuler</button>
+                    <form method="post" action="{% url 'administration:user_reset_password' user_id=target_user.pk %}" @submit="submitting = true">
+                      {% csrf_token %}
+                      <button type="submit" class="btn sm" :disabled="submitting">
+                        <span x-text="submitting ? 'Traitement…' : 'Réinitialiser'"></span>
+                      </button>
+                    </form>
+                  </div>
+                </div>
+              </div>
+            </template>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {# ===== STATS ===== #}
+    <div class="admin-stats-grid">
+      <div class="admin-stat">
+        <div class="lbl">Statut</div>
+        <div class="val">
+          {% if target_user.is_active %}
+          <span class="badge done no-dot" style="font-size:12px">Actif·ve</span>
+          {% else %}
+          <span class="badge refused no-dot" style="font-size:12px">Inactif·ve</span>
+          {% endif %}
+        </div>
+      </div>
+      <div class="admin-stat">
+        <div class="lbl">Rôle</div>
+        <div class="val">{% if target_user.is_superuser %}Superutilisateur·ice{% else %}Membre{% endif %}</div>
+      </div>
+      <div class="admin-stat">
+        <div class="lbl">Revues</div>
+        <div class="val">{{ memberships|length }}</div>
+      </div>
+      <div class="admin-stat">
+        <div class="lbl">Inscrit·e le</div>
+        <div class="val" style="color:var(--ink-muted);font-size:13px">{{ target_user.date_joined|date:"d/m/Y" }}</div>
+      </div>
+    </div>
+
+    {# ===== COMPTE ===== #}
+    <div class="profile-section" style="margin-bottom:20px">
+      <div class="profile-section-head" style="margin-bottom:16px">
+        <h2 style="font-family:var(--font-ui);font-size:15px;font-weight:600">Compte</h2>
+      </div>
+      <div class="admin-meta-grid">
+        <div>
+          <span class="lbl">Adresse e-mail</span>
+          <span class="val" style="font-family:var(--font-mono);font-size:13px">{{ target_user.email }}</span>
+        </div>
+        <div>
+          <span class="lbl">Inscrit·e le</span>
+          <span class="val">{{ target_user.date_joined|date:"d/m/Y à H:i" }}</span>
+        </div>
+        <div>
+          <span class="lbl">Dernière connexion</span>
+          <span class="val">{{ target_user.last_login|date:"d/m/Y à H:i"|default:"Jamais" }}</span>
+        </div>
+        <div>
+          <span class="lbl">Mdp temporaire</span>
+          <span class="val">{{ target_user.must_change_password|yesno:"Actif,Non" }}</span>
+        </div>
+      </div>
     </div>
 
     {# ===== REVUES ===== #}
-    <div class="profile-section" style="margin-bottom:32px">
-      <div class="profile-section-head">
-        <h2>Revues d'appartenance</h2>
-      </div>
-      {% if memberships %}
-        <table class="data-table" style="width:100%;margin-bottom:16px">
-          <tbody>
-            {% for m in memberships %}
-            <tr>
-              <td>
-                <a href="{% url 'journal_dashboard' slug=m.journal.slug %}" style="text-decoration:none;color:inherit;font-weight:500">{{ m.journal.name }}</a>
-              </td>
-              <td style="color:var(--ink-muted);font-size:13px">Depuis le {{ m.created_at|date:"d/m/Y" }}</td>
-              <td style="text-align:right">
-                {% url 'administration:user_remove_journal' user_id=target_user.pk slug=m.journal.slug as remove_url %}
-                {% include "partials/_confirm_delete.html" with delete_url=remove_url trigger_label="Retirer" trigger_cls="btn ghost sm" title="Retirer de cette revue ?" message="L'utilisateur·ice perdra l'accès à cette revue." %}
-              </td>
-            </tr>
+    <div class="profile-section" style="margin-bottom:20px">
+      <div class="profile-section-head" style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px">
+        <div>
+          <h2 style="font-family:var(--font-ui);font-size:15px;font-weight:600;margin:0 0 3px">
+            Revues <span style="font-weight:400;color:var(--ink-muted)">({{ memberships|length }})</span>
+          </h2>
+          <div style="font-size:12.5px;color:var(--ink-muted)">Revues auxquelles cet·te utilisateur·ice a accès.</div>
+        </div>
+        {% if available_journals %}
+        <div x-data="{ open: false }" @click.outside="open = false" style="position:relative">
+          <button type="button" class="btn sm" @click="open = !open">
+            {% icon "plus" 12 %} Ajouter
+          </button>
+          <div x-show="open" x-cloak
+               style="position:absolute;right:0;top:calc(100% + 6px);background:var(--surface);border:1px solid var(--line);border-radius:8px;z-index:50;box-shadow:var(--shadow-md);min-width:220px;padding:4px">
+            {% for j in available_journals %}
+            <form method="post" action="{% url 'administration:user_add_journal' user_id=target_user.pk %}">
+              {% csrf_token %}
+              <input type="hidden" name="journal_id" value="{{ j.pk }}">
+              <button type="submit" class="popover-item" style="width:100%;display:flex;align-items:center;gap:8px">
+                <span style="display:inline-block;width:10px;height:10px;border-radius:50%;flex-shrink:0;background:var(--accent-{{ j.accent_color }})"></span>
+                {{ j.name }}
+              </button>
+            </form>
             {% endfor %}
-          </tbody>
-        </table>
-      {% else %}
-        <p style="font-size:14px;color:var(--ink-muted)">Aucune revue.</p>
-      {% endif %}
-
-      {% if available_journals %}
-      <form method="post" action="{% url 'administration:user_add_journal' user_id=target_user.pk %}" style="display:flex;align-items:center;gap:10px;margin-top:8px">
-        {% csrf_token %}
-        <select name="journal_id" class="text-input" style="flex:1;max-width:300px">
-          {% for j in available_journals %}
-            <option value="{{ j.pk }}">{{ j.name }}</option>
-          {% endfor %}
-        </select>
-        <button type="submit" class="btn sm">Ajouter à cette revue</button>
-      </form>
-      {% endif %}
-    </div>
-
-    {# ===== ACTIONS ===== #}
-    <div class="profile-section" style="margin-bottom:32px">
-      <div class="profile-section-head">
-        <h2>Actions</h2>
-      </div>
-      <div x-data="{ open: false, submitting: false }">
-        <button type="button" class="btn ghost sm" @click="open = true">
-          Réinitialiser le mot de passe
-        </button>
-        <template x-teleport="body">
-          <div x-show="open" x-cloak class="modal-backdrop" @click.self="open = false" @keydown.escape.window="open = false" x-transition.opacity>
-            <div class="modal" role="dialog" aria-modal="true" style="max-width:420px">
-              <div class="modal-head">
-                <h3>Réinitialiser le mot de passe ?</h3>
-              </div>
-              <div class="modal-body">
-                <p style="font-size:14px;color:var(--ink-muted);margin:0">
-                  Un nouveau mot de passe temporaire sera généré. {{ target_user.first_name }} devra le changer à sa prochaine connexion. L'ancien mot de passe sera invalidé.
-                </p>
-              </div>
-              <div class="modal-foot">
-                <button type="button" class="btn ghost sm" @click="open = false">Annuler</button>
-                <form method="post" action="{% url 'administration:user_reset_password' user_id=target_user.pk %}" @submit="submitting = true">
-                  {% csrf_token %}
-                  <button type="submit" class="btn sm" :disabled="submitting">
-                    <span x-text="submitting ? 'Traitement…' : 'Réinitialiser'"></span>
-                  </button>
-                </form>
-              </div>
-            </div>
           </div>
-        </template>
+        </div>
+        {% endif %}
       </div>
+
+      {% if memberships %}
+      <ul class="admin-members-list">
+        {% for m in memberships %}
+        <li class="admin-member-row">
+          <div class="avatar sm" style="background:var(--accent-{{ m.journal.accent_color }}-soft);color:var(--accent-{{ m.journal.accent_color }});border-radius:6px">
+            {{ m.journal.name|slice:":2"|upper }}
+          </div>
+          <div style="flex:1;min-width:0">
+            <div class="n">
+              <a href="{% url 'administration:journal_members' slug=m.journal.slug %}"
+                 style="text-decoration:none;color:inherit">
+                {{ m.journal.name }}
+              </a>
+            </div>
+            <div style="font-size:12px;color:var(--ink-faint)">Membre depuis le {{ m.created_at|date:"d/m/Y" }}</div>
+          </div>
+          {% url 'administration:user_remove_journal' user_id=target_user.pk slug=m.journal.slug as remove_url %}
+          {% include "partials/_confirm_delete.html" with delete_url=remove_url trigger_label="Retirer" trigger_cls="btn ghost sm" title="Retirer de cette revue ?" message="L'utilisateur·ice perdra l'accès à cette revue." confirm_label="Retirer" %}
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <div class="admin-empty">Aucune revue.</div>
+      {% endif %}
     </div>
 
-    {# ===== INFORMATIONS ===== #}
-    <div class="profile-section">
-      <div class="profile-section-head">
-        <h2>Informations</h2>
+    {# ===== ZONE SENSIBLE ===== #}
+    <div class="profile-section danger" style="margin-bottom:20px">
+      <div class="profile-section-head" style="margin-bottom:12px">
+        <h2 style="font-family:var(--font-ui);font-size:15px;font-weight:600">Zone sensible</h2>
+        <div style="font-size:12.5px;color:var(--ink-muted)">Ces actions modifient l'accès à la plateforme.</div>
       </div>
-      <dl style="display:grid;gap:10px;font-size:14px">
-        <div style="display:flex;gap:8px">
-          <dt style="color:var(--ink-muted);min-width:180px">Inscrit·e le</dt>
-          <dd style="margin:0">{{ target_user.date_joined|date:"d/m/Y à H:i" }}</dd>
-        </div>
-        <div style="display:flex;gap:8px">
-          <dt style="color:var(--ink-muted);min-width:180px">Dernière connexion</dt>
-          <dd style="margin:0">{{ target_user.last_login|date:"d/m/Y à H:i"|default:"Jamais" }}</dd>
-        </div>
-        <div style="display:flex;gap:8px">
-          <dt style="color:var(--ink-muted);min-width:180px">Superutilisateur·ice</dt>
-          <dd style="margin:0">{{ target_user.is_superuser|yesno:"Oui,Non" }}</dd>
-        </div>
-        <div style="display:flex;gap:8px">
-          <dt style="color:var(--ink-muted);min-width:180px">Mdp temporaire actif</dt>
-          <dd style="margin:0">{{ target_user.must_change_password|yesno:"Oui,Non" }}</dd>
-        </div>
-      </dl>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <form x-data method="post" action="{% url 'administration:user_toggle_active' user_id=target_user.pk %}"
+              @submit.prevent="fetch($el.action, { method:'POST', headers:{'X-CSRFToken':'{{ csrf_token }}'} }).then(r => r.ok && window.location.reload())">
+          {% csrf_token %}
+          {% if target_user.is_active %}
+          <button type="submit" class="btn danger-ghost">Désactiver ce compte</button>
+          {% else %}
+          <button type="submit" class="btn ghost">Réactiver ce compte</button>
+          {% endif %}
+        </form>
+      </div>
     </div>
 
   </main>

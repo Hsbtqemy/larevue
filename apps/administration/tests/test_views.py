@@ -309,3 +309,99 @@ class TestJournalMemberQuickCreateView:
         )
         assert response.status_code == 400
         assert "email" in response.json()["errors"]
+
+
+# ------------------------------------------------------------------ #
+# UserToggleActiveView                                                #
+# ------------------------------------------------------------------ #
+
+
+@pytest.mark.django_db
+class TestUserToggleActiveView:
+    def test_disables_active_user(self, client, superuser, user):
+        user.is_active = True
+        user.save()
+        client.force_login(superuser)
+        response = client.post(
+            reverse("administration:user_toggle_active", kwargs={"user_id": user.pk})
+        )
+        assert response.status_code == 200
+        user.refresh_from_db()
+        assert user.is_active is False
+
+    def test_reenables_inactive_user(self, client, superuser, user):
+        user.is_active = False
+        user.save()
+        client.force_login(superuser)
+        response = client.post(
+            reverse("administration:user_toggle_active", kwargs={"user_id": user.pk})
+        )
+        assert response.status_code == 200
+        user.refresh_from_db()
+        assert user.is_active is True
+
+    def test_non_superuser_gets_403(self, client, user):
+        client.force_login(user)
+        response = client.post(
+            reverse("administration:user_toggle_active", kwargs={"user_id": user.pk})
+        )
+        assert response.status_code == 403
+
+
+# ------------------------------------------------------------------ #
+# UserCreateView — journal memberships                               #
+# ------------------------------------------------------------------ #
+
+
+@pytest.mark.django_db
+class TestUserCreateViewWithJournals:
+    def test_creates_user_with_journal_memberships(self, client, superuser, journal):
+        client.force_login(superuser)
+        response = client.post(
+            reverse("administration:user_create"),
+            {
+                "email": "member@example.com",
+                "first_name": "Alice",
+                "last_name": "Dupont",
+                "journal_ids": [journal.pk],
+            },
+        )
+        assert response.status_code == 200
+        user = User.objects.get(email="member@example.com")
+        assert Membership.objects.filter(user=user, journal=journal).exists()
+
+    def test_creates_user_without_journals_when_none_selected(self, client, superuser):
+        client.force_login(superuser)
+        response = client.post(
+            reverse("administration:user_create"),
+            {"email": "nojournals@example.com", "first_name": "Bob", "last_name": "Martin"},
+        )
+        assert response.status_code == 200
+        user = User.objects.get(email="nojournals@example.com")
+        assert user.memberships.count() == 0
+
+
+# ------------------------------------------------------------------ #
+# JournalDeleteView                                                   #
+# ------------------------------------------------------------------ #
+
+
+@pytest.mark.django_db
+class TestJournalDeleteView:
+    def test_deletes_journal(self, client, superuser, journal):
+        client.force_login(superuser)
+        slug = journal.slug
+        response = client.delete(
+            reverse("administration:journal_delete", kwargs={"slug": slug})
+        )
+        assert response.status_code == 200
+        assert "redirect_url" in response.json()
+        assert not Journal.objects.filter(slug=slug).exists()
+
+    def test_non_superuser_gets_403(self, client, user, journal):
+        client.force_login(user)
+        response = client.delete(
+            reverse("administration:journal_delete", kwargs={"slug": journal.slug})
+        )
+        assert response.status_code == 403
+        assert Journal.objects.filter(slug=journal.slug).exists()

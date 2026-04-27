@@ -1,17 +1,17 @@
 {% extends "base.html" %}
 {% load static edito %}
 
-{% block title %}{{ journal.name }} — Membres — Administration — Edito{% endblock %}
+{% block title %}{{ journal.name }} — Administration — Edito{% endblock %}
 
 {% block extra_head %}
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter+Tight:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="{% static 'css/edito.css' %}?v=20260425c">
+<link rel="stylesheet" href="{% static 'css/edito.css' %}?v=20260427a">
 {% endblock %}
 
 {% block content %}
-<div style="min-height:100vh;background:var(--bg)">
+<div style="min-height:100vh;background:var(--bg)" data-accent="{{ journal.accent_color }}">
 
   <nav style="display:flex;align-items:center;gap:16px;padding:14px 24px;border-bottom:1px solid var(--line);background:var(--surface)">
     <a href="{% url 'home' %}" style="display:flex;align-items:center;gap:8px;text-decoration:none;color:var(--ink)">
@@ -21,50 +21,128 @@
     <span style="color:var(--line-strong)">›</span>
     <a href="{% url 'administration:index' %}" style="font-size:13.5px;color:var(--ink-muted);text-decoration:none">Administration</a>
     <span style="color:var(--line-strong)">›</span>
-    <span style="font-size:13.5px;color:var(--ink-muted)">{{ journal.name }} — Membres</span>
-    <a href="{{ journal_edit_url }}" class="btn ghost sm" style="margin-left:auto">Modifier la revue</a>
+    <span style="font-size:13.5px;color:var(--ink-muted)">{{ journal.name }}</span>
   </nav>
 
-  <main style="max-width:720px;margin:0 auto;padding:40px 24px">
+  <main style="max-width:900px;margin:0 auto;padding:32px 24px 60px">
 
-    <h1 style="font-family:var(--font-display);font-size:22px;font-weight:500;margin:0 0 32px">
-      {{ journal.name }} — Membres
-    </h1>
-
-    {# ===== LISTE DES MEMBRES ===== #}
-    <div class="profile-section" style="margin-bottom:32px">
-      <div class="profile-section-head">
-        <h2>Membres actuels <span style="font-weight:400;color:var(--ink-muted)">({{ memberships|length }})</span></h2>
+    {# ===== HEADER ===== #}
+    <div style="margin-bottom:28px">
+      <a href="{% url 'administration:index' %}" class="btn sm" style="margin-bottom:16px;display:inline-flex">
+        {% icon "back" 13 %} Administration
+      </a>
+      <div class="admin-detail-head">
+        <div class="avatar" style="width:48px;height:48px;border-radius:10px;font-size:14px;font-weight:600;flex-shrink:0;background:var(--accent-{{ journal.accent_color }}-soft);color:var(--accent-{{ journal.accent_color }})">
+          {{ journal.name|slice:":2"|upper }}
+        </div>
+        <div>
+          <h1 style="font-family:var(--font-display);font-size:24px;font-weight:500;margin:0 0 4px">{{ journal.name }}</h1>
+          {% if journal.description %}
+          <div style="font-size:14px;color:var(--ink-muted)">{{ journal.description }}</div>
+          {% endif %}
+        </div>
+        <div style="margin-left:auto;display:flex;gap:8px;flex-shrink:0">
+          <a href="{{ journal_edit_url }}" class="btn sm">{% icon "edit" 13 %} Modifier la revue</a>
+        </div>
       </div>
+    </div>
+
+    {# ===== STATS ===== #}
+    <div class="admin-stats-grid">
+      <div class="admin-stat">
+        <div class="lbl">Membres</div>
+        <div class="val">{{ memberships|length }}</div>
+      </div>
+      <div class="admin-stat">
+        <div class="lbl">Numéros en cours</div>
+        <div class="val">{{ active_issue_count }}</div>
+      </div>
+      <div class="admin-stat">
+        <div class="lbl">Numéros publiés</div>
+        <div class="val">{{ published_issue_count }}</div>
+      </div>
+      <div class="admin-stat">
+        <div class="lbl">Archives</div>
+        <div class="val">{{ archived_issue_count }}</div>
+      </div>
+    </div>
+
+    {# ===== PARAMÈTRES ===== #}
+    <div class="profile-section" style="margin-bottom:20px">
+      <div class="profile-section-head">
+        <h2 style="font-family:var(--font-ui);font-size:15px;font-weight:600">Paramètres</h2>
+      </div>
+      <div class="admin-meta-grid">
+        <div>
+          <span class="lbl">Identifiant URL</span>
+          <span class="val" style="font-family:var(--font-mono);font-size:13px">{{ journal.slug }}</span>
+        </div>
+        <div>
+          <span class="lbl">Couleur d'accent</span>
+          <span class="val">
+            <span class="accent-swatch" style="background:var(--accent-{{ journal.accent_color }})"></span>
+            {{ journal.get_accent_color_display }}
+          </span>
+        </div>
+        <div>
+          <span class="lbl">Créée le</span>
+          <span class="val">{{ journal.created_at|date:"d/m/Y" }}</span>
+        </div>
+        {% if journal.periodicity %}
+        <div>
+          <span class="lbl">Périodicité</span>
+          <span class="val">{{ journal.periodicity }}</span>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    {# ===== MEMBRES ===== #}
+    <div class="profile-section" style="margin-bottom:20px">
+      <div class="profile-section-head" style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px">
+        <div>
+          <h2 style="font-family:var(--font-ui);font-size:15px;font-weight:600;margin:0 0 3px">
+            Membres <span style="font-weight:400;color:var(--ink-muted)">({{ memberships|length }})</span>
+          </h2>
+          <div style="font-size:12.5px;color:var(--ink-muted)">Personnes ayant accès à cette revue.</div>
+        </div>
+        {# Bouton Ajouter un membre — déclenche la section ci-dessous #}
+        <button type="button" class="btn sm" @click="document.getElementById('add-member-section').scrollIntoView({behavior:'smooth'})">
+          {% icon "plus" 12 %} Ajouter
+        </button>
+      </div>
+
       {% if memberships %}
-        <table class="data-table" style="width:100%;margin-bottom:0">
-          <tbody>
-            {% for m in memberships %}
-            <tr>
-              <td>
-                <a href="{% url 'administration:user_detail' user_id=m.user.pk %}" style="text-decoration:none;color:inherit;font-weight:500">
-                  {{ m.user.get_full_name|default:m.user.email }}
-                </a>
-              </td>
-              <td style="color:var(--ink-muted);font-size:13px">{{ m.user.email }}</td>
-              <td style="color:var(--ink-muted);font-size:13px">Depuis le {{ m.created_at|date:"d/m/Y" }}</td>
-              <td style="text-align:right">
-                {% url 'administration:journal_member_remove' slug=journal.slug user_id=m.user.pk as remove_member_url %}
-                {% include "partials/_confirm_delete.html" with delete_url=remove_member_url trigger_label="Retirer" trigger_cls="btn ghost sm" title="Retirer ce membre ?" message="L'utilisateur·ice perdra l'accès à cette revue." %}
-              </td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
+      <ul class="admin-members-list">
+        {% for m in memberships %}
+        <li class="admin-member-row">
+          <div class="avatar sm">{{ m.user.first_name|slice:":1" }}{{ m.user.last_name|slice:":1" }}</div>
+          <div style="flex:1;min-width:0">
+            <div class="n">
+              <a href="{% url 'administration:user_detail' user_id=m.user.pk %}"
+                 style="text-decoration:none;color:inherit">
+                {{ m.user.get_full_name|default:m.user.email }}
+              </a>
+            </div>
+            <div style="font-size:12px;color:var(--ink-faint)">{{ m.user.email }} · depuis le {{ m.created_at|date:"d/m/Y" }}</div>
+          </div>
+          {% if m.user.is_superuser %}
+          <span class="superuser-pill">{% icon "lock" 9 cls="icon" %} superuser</span>
+          {% endif %}
+          {% url 'administration:journal_member_remove' slug=journal.slug user_id=m.user.pk as remove_url %}
+          {% include "partials/_confirm_delete.html" with delete_url=remove_url trigger_label="Retirer" trigger_cls="btn ghost sm" title="Retirer ce membre ?" message="L'utilisateur·ice perdra l'accès à cette revue." confirm_label="Retirer" %}
+        </li>
+        {% endfor %}
+      </ul>
       {% else %}
-        <p style="font-size:14px;color:var(--ink-muted)">Aucun membre.</p>
+      <div class="admin-empty">Aucun membre.</div>
       {% endif %}
     </div>
 
     {# ===== AJOUTER UN MEMBRE ===== #}
-    <div class="profile-section" style="margin-bottom:32px">
-      <div class="profile-section-head">
-        <h2>Ajouter un membre</h2>
+    <div class="profile-section" id="add-member-section" style="margin-bottom:20px">
+      <div class="profile-section-head" style="margin-bottom:16px">
+        <h2 style="font-family:var(--font-ui);font-size:15px;font-weight:600">Ajouter un membre existant</h2>
       </div>
       <div x-data="{
         query: '',
@@ -96,11 +174,11 @@
           <div style="flex:1;position:relative">
             <input type="text" class="text-input" placeholder="Rechercher par nom ou email…"
                    x-model="query" @input.debounce.300ms="search()" autocomplete="off">
-            <div x-show="results.length > 0" style="position:absolute;top:100%;left:0;right:0;background:var(--surface);border:1px solid var(--line);border-radius:8px;margin-top:4px;z-index:50;box-shadow:0 4px 12px rgba(0,0,0,.08)">
+            <div x-show="results.length > 0"
+                 style="position:absolute;top:100%;left:0;right:0;background:var(--surface);border:1px solid var(--line);border-radius:8px;margin-top:4px;z-index:50;box-shadow:var(--shadow-md)">
               <template x-for="r in results" :key="r.id">
                 <button type="button" @click="select(r)"
-                        style="display:block;width:100%;text-align:left;padding:10px 14px;font-size:13.5px;border:none;background:none;cursor:pointer;color:var(--ink)"
-                        onmouseover="this.style.background='var(--bg-hover)'" onmouseout="this.style.background='none'">
+                        class="popover-item" style="width:100%;display:flex;gap:8px">
                   <span x-text="r.name" style="font-weight:500"></span>
                   <span x-text="' — ' + r.email" style="color:var(--ink-muted)"></span>
                 </button>
@@ -125,11 +203,11 @@
             <div x-show="open" x-cloak class="modal-backdrop" @click.self="close()" @keydown.escape.window="close()" x-transition.opacity>
               <div class="modal" role="dialog" aria-modal="true" style="max-width:440px">
                 <div class="modal-head">
-                  <h3>Créer un compte et ajouter à {{ journal.name }}</h3>
+                  <h3>Créer un compte et ajouter</h3>
                   <div class="sub">Un mot de passe temporaire sera généré automatiquement.</div>
                 </div>
                 <div class="modal-body">
-                  <form id="quick-create-form" @submit.prevent="submit($el)">
+                  <form id="quick-create-form" @submit.prevent="submit($el)" class="modal-form">
                     {% csrf_token %}
                     <div class="form-field">
                       <label class="form-label">Adresse e-mail *</label>
@@ -161,7 +239,7 @@
                 </div>
                 <div class="modal-foot">
                   <button type="button" class="btn ghost sm" @click="close()">Annuler</button>
-                  <button type="submit" form="quick-create-form" class="btn sm" :disabled="saving">
+                  <button type="submit" form="quick-create-form" class="btn primary sm" :disabled="saving">
                     <span x-text="saving ? 'Création…' : 'Créer et ajouter'"></span>
                   </button>
                 </div>
@@ -169,6 +247,18 @@
             </div>
           </template>
         </div>
+      </div>
+    </div>
+
+    {# ===== ZONE SENSIBLE ===== #}
+    <div class="profile-section danger" style="margin-bottom:20px">
+      <div class="profile-section-head" style="margin-bottom:12px">
+        <h2 style="font-family:var(--font-ui);font-size:15px;font-weight:600">Zone sensible</h2>
+        <div style="font-size:12.5px;color:var(--ink-muted)">Ces actions sont irréversibles.</div>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        {% url 'administration:journal_delete' slug=journal.slug as delete_journal_url %}
+        {% include "partials/_confirm_delete.html" with delete_url=delete_journal_url trigger_label="Supprimer la revue" trigger_cls="btn danger-ghost" title="Supprimer « "|add:journal.name|add:" » ?" message="Cette action est irréversible. Tous les numéros, articles et membres seront supprimés." confirm_label="Supprimer définitivement" require_typing=journal.slug %}
       </div>
     </div>
 

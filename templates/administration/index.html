@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter+Tight:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="{% static 'css/edito.css' %}?v=20260425c">
+<link rel="stylesheet" href="{% static 'css/edito.css' %}?v=20260427a">
 {% endblock %}
 
 {% block content %}
@@ -22,28 +22,38 @@
     <span style="font-size:13.5px;color:var(--ink-muted)">Administration</span>
   </nav>
 
-  <main style="max-width:900px;margin:0 auto;padding:40px 24px">
+  <main style="max-width:1180px;margin:0 auto;padding:32px 24px 60px">
 
-    <h1 style="font-family:var(--font-display);font-size:24px;font-weight:500;margin:0 0 40px">Administration</h1>
+    <div style="margin-bottom:28px">
+      <div class="admin-eyebrow">{% icon "lock" 11 cls="icon" %} Espace superuser</div>
+      <h1 style="font-family:var(--font-display);font-size:26px;font-weight:500;margin:0 0 6px">Administration</h1>
+      <div style="font-size:14px;color:var(--ink-muted)">Pilotage de la plateforme : revues, utilisateurs, accès.</div>
+    </div>
 
-    {# ===== SECTION REVUES ===== #}
-    <section style="margin-bottom:56px">
-      <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px">
-        <h2 style="font-size:16px;font-weight:600;margin:0">Revues <span style="font-weight:400;color:var(--ink-muted)">({{ journals.count }})</span></h2>
-        <div x-data="editModal('{% url 'administration:journal_create' %}')" style="margin-left:auto">
-          <button type="button" class="btn sm" @click="openModal()">+ Créer une revue</button>
+    {# ========== REVUES ========== #}
+    <section class="admin-section">
+      <header class="admin-section-head">
+        <div>
+          <h2>Revues <span class="count">{{ journals|length }}</span></h2>
+          <div class="admin-section-sub">Une revue regroupe ses propres membres, numéros et archives.</div>
+        </div>
+        <div x-data="editModal('{% url 'administration:journal_create' %}')">
+          <button type="button" class="btn primary" @click="openModal()">
+            {% icon "plus" 13 %} Créer une revue
+          </button>
           <template x-teleport="body">
             <div x-show="open" x-cloak class="modal-backdrop" @click.self="close()" @keydown.escape.window="close()" x-transition.opacity>
               <div class="modal" role="dialog" aria-modal="true" style="max-width:480px">
                 <div class="modal-head">
                   <h3>Créer une revue</h3>
+                  <div class="sub">Une nouvelle revue avec ses propres membres et numéros.</div>
                 </div>
                 <div class="modal-body">
-                  <form id="journal-create-form" @submit.prevent="submit($el)">
+                  <form id="journal-create-form" @submit.prevent="submit($el)" class="modal-form">
                     {% csrf_token %}
                     <div class="form-field">
-                      <label class="form-label">Nom *</label>
-                      <input type="text" name="name" class="text-input" required
+                      <label class="form-label">Nom complet *</label>
+                      <input type="text" name="name" class="text-input" required autofocus
                              @input="$el.closest('form').querySelector('[name=slug]').value = $el.value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')">
                       <template x-if="fieldErrors('name').length">
                         <div class="form-error" x-text="fieldErrors('name').join(', ')"></div>
@@ -57,18 +67,19 @@
                       </template>
                     </div>
                     <div class="form-field">
-                      <label class="form-label">Description</label>
-                      <textarea name="description" class="text-input" rows="3"></textarea>
-                    </div>
-                    <div class="form-field">
-                      <label class="form-label">Couleur d'accentuation</label>
-                      <select name="accent_color" class="text-input">
-                        <option value="terracotta">Terracotta</option>
-                        <option value="olive">Olive</option>
-                        <option value="slate">Ardoise</option>
-                        <option value="plum">Prune</option>
-                        <option value="ochre">Ocre</option>
-                      </select>
+                      <label class="form-label">Couleur d'accent</label>
+                      <div class="accent-picker" x-data="{ accent: '{{ accent_choices.0.0 }}' }">
+                        {% for value, label in accent_choices %}
+                        <button type="button"
+                                class="accent-pick"
+                                :class="{ on: accent === '{{ value }}' }"
+                                @click="accent = '{{ value }}'">
+                          <input type="radio" name="accent_color" value="{{ value }}" :checked="accent === '{{ value }}'" style="display:none">
+                          <span class="dot" style="background:var(--accent-{{ value }})"></span>
+                          {{ label }}
+                        </button>
+                        {% endfor %}
+                      </div>
                     </div>
                     <template x-if="fieldErrors('__all__').length">
                       <div class="form-error" x-text="fieldErrors('__all__').join(', ')"></div>
@@ -77,7 +88,7 @@
                 </div>
                 <div class="modal-foot">
                   <button type="button" class="btn ghost sm" @click="close()">Annuler</button>
-                  <button type="submit" form="journal-create-form" class="btn sm" :disabled="saving">
+                  <button type="submit" form="journal-create-form" class="btn primary sm" :disabled="saving">
                     <span x-text="saving ? 'Création…' : 'Créer la revue'"></span>
                   </button>
                 </div>
@@ -85,55 +96,90 @@
             </div>
           </template>
         </div>
-      </div>
+      </header>
 
-      {% if journals %}
-      <table class="data-table" style="width:100%">
-        <thead>
-          <tr>
-            <th>Nom</th>
-            <th style="text-align:center">Membres</th>
-            <th style="text-align:center">Numéros</th>
-            <th>Créée le</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for journal in journals %}
-          <tr>
-            <td><strong>{{ journal.name }}</strong></td>
-            <td style="text-align:center">{{ journal.member_count }}</td>
-            <td style="text-align:center">{{ journal.issue_count }}</td>
-            <td style="color:var(--ink-muted);font-size:13px">{{ journal.created_at|date:"d/m/Y" }}</td>
-            <td style="text-align:right">
-              <a href="{% url 'administration:journal_members' slug=journal.slug %}" class="btn ghost sm">
-                Membres
-              </a>
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-      {% else %}
-      <p style="color:var(--ink-muted);font-size:14px">Aucune revue créée.</p>
-      {% endif %}
+      <div class="admin-table-wrap">
+        {% if journals %}
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th class="col-main">Revue</th>
+              <th class="col-num">Membres</th>
+              <th class="col-num">Numéros</th>
+              <th class="col-date">Créée le</th>
+              <th class="col-actions"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for j in journals %}
+            <tr @click="window.location='{% url 'administration:journal_members' slug=j.slug %}'">
+              <td class="col-main">
+                <div class="admin-revue-cell">
+                  <div class="avatar" style="background:var(--accent-{{ j.accent_color }}-soft);color:var(--accent-{{ j.accent_color }});border-radius:8px;font-size:11px;font-weight:600;flex-shrink:0">
+                    {{ j.name|slice:":2"|upper }}
+                  </div>
+                  <div class="admin-revue-text">
+                    <div class="n">{{ j.name }}</div>
+                    {% if j.description %}<div class="d">{{ j.description|truncatechars:60 }}</div>{% endif %}
+                  </div>
+                </div>
+              </td>
+              <td class="col-num">
+                <div class="num-stack">
+                  <span class="num">{{ j.member_count }}</span>
+                  <span class="num-sub">{{ j.member_count|pluralize:"personne,personnes" }}</span>
+                </div>
+              </td>
+              <td class="col-num">
+                <div class="num-stack">
+                  <span class="num">{{ j.issue_count }}</span>
+                  <span class="num-sub">{{ j.active_issue_count }} en cours</span>
+                </div>
+              </td>
+              <td class="col-date" style="color:var(--ink-muted);font-size:13px">{{ j.created_at|date:"d/m/Y" }}</td>
+              <td class="col-actions" @click.stop>
+                <div class="row-menu" x-data="{ open: false }" @click.outside="open = false">
+                  <button type="button" class="row-menu-btn" aria-label="Actions" @click.stop="open = !open">
+                    {% icon "dots" 16 %}
+                  </button>
+                  <div class="popover row-menu-pop" x-show="open" x-cloak role="menu">
+                    <a href="{% url 'administration:journal_members' slug=j.slug %}"
+                       class="popover-item" style="text-decoration:none" role="menuitem">
+                      {% icon "chevronR" 13 %} <span style="flex:1">Ouvrir la fiche</span>
+                    </a>
+                  </div>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+        <div class="admin-empty">Aucune revue créée.</div>
+        {% endif %}
+      </div>
     </section>
 
-    {# ===== SECTION UTILISATEURS ===== #}
-    <section>
-      <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px">
-        <h2 style="font-size:16px;font-weight:600;margin:0">Utilisateurs <span style="font-weight:400;color:var(--ink-muted)">({{ users.count }})</span></h2>
-        <div x-data="editModal('{% url 'administration:user_create' %}')" style="margin-left:auto">
-          <button type="button" class="btn sm" @click="openModal()">+ Créer un utilisateur</button>
+    {# ========== UTILISATEURS ========== #}
+    <section class="admin-section">
+      <header class="admin-section-head">
+        <div>
+          <h2>Utilisateurs <span class="count">{{ users|length }}</span></h2>
+          <div class="admin-section-sub">Comptes pouvant se connecter à Edito, toutes revues confondues.</div>
+        </div>
+        <div x-data="editModal('{% url 'administration:user_create' %}')">
+          <button type="button" class="btn primary" @click="openModal()">
+            {% icon "plus" 13 %} Créer un utilisateur
+          </button>
           <template x-teleport="body">
             <div x-show="open" x-cloak class="modal-backdrop" @click.self="close()" @keydown.escape.window="close()" x-transition.opacity>
-              <div class="modal" role="dialog" aria-modal="true" style="max-width:440px">
+              <div class="modal" role="dialog" aria-modal="true" style="max-width:460px">
                 <div class="modal-head">
                   <h3>Créer un utilisateur</h3>
                   <div class="sub">Un mot de passe temporaire sera généré automatiquement.</div>
                 </div>
                 <div class="modal-body">
-                  <form id="user-create-form" @submit.prevent="submit($el)">
+                  <form id="user-create-form" @submit.prevent="submit($el)" class="modal-form">
                     {% csrf_token %}
                     <div class="form-field">
                       <label class="form-label">Adresse e-mail *</label>
@@ -158,10 +204,31 @@
                         </template>
                       </div>
                     </div>
-                    <div class="form-field" style="display:flex;align-items:center;gap:8px">
-                      <input type="checkbox" name="is_superuser" id="is_superuser_check" value="true" style="width:16px;height:16px;cursor:pointer">
-                      <label for="is_superuser_check" style="font-size:13.5px;cursor:pointer">Superutilisateur·ice</label>
+                    {% if journals %}
+                    <div class="form-field">
+                      <label class="form-label">Accès aux revues</label>
+                      <div class="revue-checkboxes">
+                        {% for j in journals %}
+                        <label class="revue-checkbox-label" x-data
+                               :class="{ checked: $el.querySelector('input').checked }"
+                               @change="$el.classList.toggle('checked', $el.querySelector('input').checked)">
+                          <input type="checkbox" name="journal_ids" value="{{ j.pk }}">
+                          {{ j.name }}
+                        </label>
+                        {% endfor %}
+                      </div>
+                      <div style="font-size:11.5px;color:var(--ink-faint);margin-top:6px">
+                        La personne pourra être ajoutée à d'autres revues depuis les fiches.
+                      </div>
                     </div>
+                    {% endif %}
+                    <label class="check-row" style="cursor:pointer;display:flex;align-items:flex-start;gap:10px">
+                      <input type="checkbox" name="is_superuser" value="true" style="margin-top:2px;accent-color:var(--ink);flex-shrink:0">
+                      <span>
+                        <span style="display:block;font-weight:500;font-size:13.5px">Droits superuser</span>
+                        <span style="font-size:12px;color:var(--ink-faint)">Accès total à l'administration de la plateforme.</span>
+                      </span>
+                    </label>
                     <template x-if="fieldErrors('__all__').length">
                       <div class="form-error" x-text="fieldErrors('__all__').join(', ')"></div>
                     </template>
@@ -169,7 +236,7 @@
                 </div>
                 <div class="modal-foot">
                   <button type="button" class="btn ghost sm" @click="close()">Annuler</button>
-                  <button type="submit" form="user-create-form" class="btn sm" :disabled="saving">
+                  <button type="submit" form="user-create-form" class="btn primary sm" :disabled="saving">
                     <span x-text="saving ? 'Création…' : 'Créer le compte'"></span>
                   </button>
                 </div>
@@ -177,38 +244,105 @@
             </div>
           </template>
         </div>
-      </div>
+      </header>
 
-      {% if users %}
-      <table class="data-table" style="width:100%">
-        <thead>
-          <tr>
-            <th>Nom</th>
-            <th>E-mail</th>
-            <th style="text-align:center">Revues</th>
-            <th>Inscrit·e le</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for u in users %}
-          <tr>
-            <td>
-              <a href="{% url 'administration:user_detail' user_id=u.pk %}" style="text-decoration:none;color:inherit;font-weight:500">
-                {{ u.get_full_name|default:u.email }}
-              </a>
-              {% if u.is_superuser %}<span class="badge" style="margin-left:6px;font-size:11px;background:var(--bg-sunken);color:var(--ink-muted)">superuser</span>{% endif %}
-              {% if u.must_change_password %}<span class="badge" style="margin-left:4px;font-size:11px;background:#fef3c7;color:#92400e">mdp temp.</span>{% endif %}
-            </td>
-            <td style="color:var(--ink-muted);font-size:13px">{{ u.email }}</td>
-            <td style="text-align:center">{{ u.journal_count }}</td>
-            <td style="color:var(--ink-muted);font-size:13px">{{ u.date_joined|date:"d/m/Y" }}</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-      {% else %}
-      <p style="color:var(--ink-muted);font-size:14px">Aucun utilisateur.</p>
-      {% endif %}
+      <div class="admin-table-wrap">
+        {% if users %}
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th class="col-main">Nom</th>
+              <th class="col-email">Adresse e-mail</th>
+              <th class="col-revues">Revues</th>
+              <th class="col-status">Statut</th>
+              <th class="col-date">Inscrit·e le</th>
+              <th class="col-actions"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for u in users %}
+            <tr @click="window.location='{% url 'administration:user_detail' user_id=u.pk %}'">
+              <td class="col-main">
+                <div class="admin-user-cell">
+                  <div class="avatar">{{ u.first_name|slice:":1" }}{{ u.last_name|slice:":1" }}</div>
+                  <div class="admin-user-text">
+                    <div class="n">
+                      {{ u.get_full_name|default:u.email }}
+                      {% if u.is_superuser %}
+                      <span class="superuser-pill">{% icon "lock" 9 cls="icon" %} superuser</span>
+                      {% endif %}
+                      {% if u.must_change_password %}
+                      <span class="badge warn no-dot" style="font-size:10.5px;padding:1px 7px">mdp temp.</span>
+                      {% endif %}
+                    </div>
+                    <div class="d">{{ u.journal_count }} {{ u.journal_count|pluralize:"revue,revues" }}</div>
+                  </div>
+                </div>
+              </td>
+              <td class="col-email">
+                <span style="font-family:var(--font-mono);font-size:12.5px;color:var(--ink-muted)">{{ u.email }}</span>
+              </td>
+              <td class="col-revues">
+                <div class="revue-dots-row">
+                  {% for m in u.memberships_preview|slice:":3" %}
+                  <span class="revue-dot-mini"
+                        style="background:var(--accent-{{ m.journal.accent_color }}-soft);color:var(--accent-{{ m.journal.accent_color }})"
+                        title="{{ m.journal.name }}">
+                    {{ m.journal.name|slice:":1"|upper }}
+                  </span>
+                  {% empty %}
+                  <span style="font-size:12px;color:var(--ink-faint)">—</span>
+                  {% endfor %}
+                  {% if u.journal_count > 3 %}
+                  <span class="revue-dot-mini more">+{{ u.journal_count|add:"-3" }}</span>
+                  {% endif %}
+                </div>
+              </td>
+              <td class="col-status">
+                {% if u.is_active %}
+                <span class="badge done no-dot" style="font-size:12px">Actif</span>
+                {% else %}
+                <span class="badge refused no-dot" style="font-size:12px">Désactivé</span>
+                {% endif %}
+              </td>
+              <td class="col-date" style="color:var(--ink-muted);font-size:13px">{{ u.date_joined|date:"d/m/Y" }}</td>
+              <td class="col-actions" @click.stop>
+                <div class="row-menu" x-data="{ open: false }" @click.outside="open = false">
+                  <button type="button" class="row-menu-btn" aria-label="Actions" @click.stop="open = !open">
+                    {% icon "dots" 16 %}
+                  </button>
+                  <div class="popover row-menu-pop" x-show="open" x-cloak role="menu">
+                    <a href="{% url 'administration:user_detail' user_id=u.pk %}"
+                       class="popover-item" style="text-decoration:none" role="menuitem">
+                      {% icon "chevronR" 13 %} <span style="flex:1">Ouvrir la fiche</span>
+                    </a>
+                    <div class="popover-sep"></div>
+                    <form method="post" action="{% url 'administration:user_toggle_active' user_id=u.pk %}" @submit.prevent="
+                      open=false;
+                      fetch($el.action, { method:'POST', headers:{'X-CSRFToken':'{{ csrf_token }}'} })
+                        .then(r => r.ok && window.location.reload())">
+                      {% csrf_token %}
+                      {% if u.is_active %}
+                      <button type="submit" class="popover-item danger" role="menuitem" style="width:100%;text-align:left">
+                        {% icon "close" 13 %} <span style="flex:1">Désactiver le compte</span>
+                      </button>
+                      {% else %}
+                      <button type="submit" class="popover-item" role="menuitem" style="width:100%;text-align:left">
+                        {% icon "check" 13 %} <span style="flex:1">Réactiver le compte</span>
+                      </button>
+                      {% endif %}
+                    </form>
+                  </div>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+        <div class="admin-empty">Aucun utilisateur.</div>
+        {% endif %}
+      </div>
     </section>
 
   </main>

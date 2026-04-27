@@ -1,5 +1,5 @@
 {% load edito %}
-{# sidebar_active: "dashboard" | "issues" | "contacts" | "journal_edit" #}
+{# sidebar_active: "dashboard" | "issues" | "contacts" | "archives" | "journal_edit" | "admin" #}
 <aside class="sidebar">
 
   <div class="sidebar-brand">
@@ -30,7 +30,7 @@
              style="text-decoration:none"
              role="menuitem"
              @click="close()">
-            <span class="revue-dot" style="background:{{ j.accent_color|default:'var(--accent)' }}"></span>
+            <span style="display:inline-block;width:10px;height:10px;border-radius:50%;flex-shrink:0;background:var(--accent-{{ j.accent_color }})"></span>
             <span style="flex:1">{{ j.name }}</span>
             {% if j.pk == journal.pk %}{% icon "check" 14 %}{% endif %}
           </a>
@@ -84,6 +84,15 @@
       {% icon "edit" 17 cls="icon" %}
       Modifier la revue
     </a>
+    {% if request.user.is_superuser %}
+    <div class="nav-sep" aria-hidden="true"><span>Superuser</span></div>
+    <a href="{% url 'administration:index' %}"
+       class="nav-item nav-item-admin{% if sidebar_active == 'admin' %} active{% endif %}"
+       style="text-decoration:none">
+      {% icon "lock" 17 cls="icon" %}
+      Administration
+    </a>
+    {% endif %}
   </nav>
 
   <div class="sidebar-user">
@@ -91,9 +100,6 @@
     <div class="sidebar-user-info">
       <div class="n">{{ request.user.get_full_name }}</div>
       <div class="e">{{ request.user.email }}</div>
-      {% if request.user.is_superuser %}
-        <a href="{% url 'administration:index' %}" class="sidebar-user-profile-link">Administration</a>
-      {% endif %}
       <a href="{% url 'accounts:profile' %}" class="sidebar-user-profile-link">Mon profil</a>
     </div>
     <form method="post" action="{% url 'account_logout' %}" style="margin-left:auto;flex-shrink:0">
