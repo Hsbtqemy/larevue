@@ -251,3 +251,45 @@ class TestProfilePasswordView:
         assert res.status_code == 200
         user.refresh_from_db()
         assert user.check_password("testpass123")
+
+    def test_get_profile_password_returns_200(self, client, user):
+        client.force_login(user)
+        res = client.get(PASSWORD_URL)
+        assert res.status_code == 200
+
+    def test_must_change_password_no_current_required(self, client):
+        u = User.objects.create_user(
+            email="newbie@example.com",
+            password="temppass123",
+            first_name="Alice",
+            last_name="Durand",
+        )
+        u.must_change_password = True
+        u.save()
+        client.force_login(u)
+        res = _change_password(client, "", "newpass456", "newpass456")
+        assert res.status_code == 302
+        u.refresh_from_db()
+        assert u.check_password("newpass456")
+        assert not u.must_change_password
+
+    def test_must_change_password_cleared_after_success(self, client):
+        u = User.objects.create_user(
+            email="newbie2@example.com",
+            password="temppass123",
+            first_name="Bob",
+            last_name="Martin",
+        )
+        u.must_change_password = True
+        u.save()
+        client.force_login(u)
+        _change_password(client, "", "newpass456", "newpass456")
+        u.refresh_from_db()
+        assert not u.must_change_password
+
+    def test_missing_current_password_rejected_for_normal_user(self, client, user):
+        client.force_login(user)
+        res = _change_password(client, "", "newpass456", "newpass456")
+        assert res.status_code == 200
+        user.refresh_from_db()
+        assert user.check_password("testpass123")

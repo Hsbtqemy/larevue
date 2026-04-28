@@ -35,10 +35,6 @@ class ProfilePasswordForm(forms.Form):
         cleaned = super().clean()
         if not self._user.must_change_password and not cleaned.get("current_password"):
             self.add_error("current_password", "Ce champ est obligatoire.")
-        return cleaned
-
-    def clean(self):
-        cleaned = super().clean()
         p1 = cleaned.get("new_password")
         p2 = cleaned.get("new_password_confirm")
         if p1 and p2 and p1 != p2:
