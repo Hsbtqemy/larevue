@@ -274,7 +274,7 @@ sudo -u edito git -C /home/edito/edito pull
 sudo -u edito bash -c "cd /home/edito/edito && source venv/bin/activate && pip install -r requirements/production.txt"
 sudo -u edito bash -c "cd /home/edito/edito && npm install && npm run build:css"
 sudo -u edito bash -c "cd /home/edito/edito && source venv/bin/activate && DJANGO_SETTINGS_MODULE=config.settings.production python manage.py migrate"
-sudo -u edito bash -c "cd /home/edito/edito && source venv/bin/activate && DJANGO_SETTINGS_MODULE=config.settings.production python manage.py collectstatic --noinput"
+sudo -u edito bash -c "cd /home/edito/edito && source venv/bin/activate && DJANGO_SETTINGS_MODULE=config.settings.production python manage.py collectstatic --clear --noinput"
 sudo systemctl restart edito
 ```
 
@@ -352,3 +352,32 @@ sudo systemctl status edito
 ```
 
 Tester que l'app répond sur https://edito-revue.fr et que les données sont bien là.
+
+> **Note sur les erreurs `ALTER TABLE … OWNER TO edito_user`** : ces lignes
+> échouent si le rôle `edito_user` n'existe pas encore (ex. restauration sur
+> une machine fraîche). Elles sont non bloquantes — les données sont importées
+> normalement. Relancer les `CREATE USER` / `GRANT` de la section "Base de
+> données" si nécessaire, puis vérifier que les sequences et FK sont intactes.
+
+---
+
+## Test de restauration — 2026-04-28
+
+Test complet réalisé en local (macOS, PostgreSQL 17 Homebrew) à partir du
+backup du 28 avril 2026 (`edito_db_20260428_023002.sql.gz` +
+`edito_files_20260428_023002.tar.gz`).
+
+**Résultats :**
+
+| Vérification | Résultat |
+|---|---|
+| 23 tables créées | ✓ |
+| 4 utilisateurs, 2 revues, 4 membres | ✓ |
+| 3 numéros, 3 articles | ✓ |
+| 1 document (issue_documents) | ✓ |
+| Fichier media extrait et cohérent avec la DB | ✓ |
+| Séquences (`setval`) restaurées | ✓ |
+| Erreurs `ALTER OWNER TO edito_user` | non bloquant (rôle absent en local) |
+
+**Conclusion** : les backups B2 sont restaurables et intègres. Procédure
+validée — aucune modification de la procédure nécessaire.
