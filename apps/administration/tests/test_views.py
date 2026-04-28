@@ -405,3 +405,111 @@ class TestJournalDeleteView:
         )
         assert response.status_code == 403
         assert Journal.objects.filter(slug=journal.slug).exists()
+
+
+# ------------------------------------------------------------------ #
+# UserEditView                                                        #
+# ------------------------------------------------------------------ #
+
+
+def _edit_url(user_id):
+    return reverse("administration:user_edit", kwargs={"user_id": user_id})
+
+
+def _edit(client, user_id, **fields):
+    return client.post(_edit_url(user_id), fields)
+
+
+@pytest.mark.django_db
+class TestUserEditView:
+    def test_valid_edit_persists(self, client, superuser, user):
+        client.force_login(superuser)
+        res = _edit(client, user.pk,
+                    first_name="Alice", last_name="Durand",
+                    email="alice@example.com", is_superuser="")
+        assert res.status_code == 200
+        user.refresh_from_db()
+        assert user.first_name == "Alice"
+        assert user.last_name == "Durand"
+        assert user.email == "alice@example.com"
+
+    def test_email_unchanged_is_valid(self, client, superuser, user):
+        original = user.email
+        client.force_login(superuser)
+        res = _edit(client, user.pk,
+                    first_name=user.first_name, last_name=user.last_name,
+                    email=original, is_superuser="")
+        assert res.status_code == 200
+        user.refresh_from_db()
+        assert user.email == original
+
+    def test_duplicate_email_returns_400(self, client, superuser, user):
+        other = User.objects.create_user(
+            email="taken@example.com", password="pass",
+            first_name="X", last_name="Y",
+        )
+        client.force_login(superuser)
+        res = _edit(client, user.pk,
+                    first_name=user.first_name, last_name=user.last_name,
+                    email=other.email, is_superuser="")
+        assert res.status_code == 400
+        assert "email" in res.json()["errors"]
+
+    def test_invalid_email_returns_400(self, client, superuser, user):
+        client.force_login(superuser)
+        res = _edit(client, user.pk,
+                    first_name=user.first_name, last_name=user.last_name,
+                    email="not-an-email", is_superuser="")
+        assert res.status_code == 400
+        assert "email" in res.json()["errors"]
+
+    def test_empty_first_name_returns_400(self, client, superuser, user):
+        client.force_login(superuser)
+        res = _edit(client, user.pk,
+                    first_name="", last_name=user.last_name,
+                    email=user.email, is_superuser="")
+        assert res.status_code == 400
+        assert "first_name" in res.json()["errors"]
+
+    def test_empty_last_name_returns_400(self, client, superuser, user):
+        client.force_login(superuser)
+        res = _edit(client, user.pk,
+                    first_name=user.first_name, last_name="",
+                    email=user.email, is_superuser="")
+        assert res.status_code == 400
+        assert "last_name" in res.json()["errors"]
+
+    def test_non_superuser_gets_403(self, client, user):
+        target = User.objects.create_user(
+            email="target@example.com", password="pass",
+            first_name="T", last_name="U",
+        )
+        client.force_login(user)
+        res = _edit(client, target.pk,
+                    first_name="Hacked", last_name="Name",
+                    email="hacked@example.com", is_superuser="")
+        assert res.status_code == 403
+
+    def test_get_returns_405(self, client, superuser, user):
+        client.force_login(superuser)
+        res = client.get(_edit_url(user.pk))
+        assert res.status_code == 405
+
+    def test_self_revoke_superuser_returns_400(self, client, superuser):
+        client.force_login(superuser)
+        res = _edit(client, superuser.pk,
+                    first_name=superuser.first_name, last_name=superuser.last_name,
+                    email=superuser.email, is_superuser="")
+        assert res.status_code == 400
+        assert "is_superuser" in res.json()["errors"]
+        superuser.refresh_from_db()
+        assert superuser.is_superuser
+
+    def test_superuser_can_promote_another(self, client, superuser, user):
+        client.force_login(superuser)
+        res = _edit(client, user.pk,
+                    first_name=user.first_name, last_name=user.last_name,
+                    email=user.email, is_superuser="on")
+        assert res.status_code == 200
+        user.refresh_from_db()
+        assert user.is_superuser

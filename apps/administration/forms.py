@@ -34,6 +34,22 @@ class UserCreateForm(forms.ModelForm):
         return email
 
 
+class UserEditForm(forms.ModelForm):
+    class Meta:
+        model = User
+        fields = ["first_name", "last_name", "email", "is_superuser"]
+
+    def __init__(self, instance, *args, **kwargs):
+        super().__init__(*args, instance=instance, **kwargs)
+
+    def clean_email(self):
+        email = self.cleaned_data["email"].strip().lower()
+        qs = User.objects.filter(email=email).exclude(pk=self.instance.pk)
+        if qs.exists():
+            raise forms.ValidationError("Un compte avec cet email existe déjà.")
+        return email
+
+
 class UserQuickCreateForm(forms.ModelForm):
     """Lightweight form for creating a user directly from a journal's member page."""
 

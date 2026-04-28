@@ -9,6 +9,7 @@ from django.views import View
 from apps.administration.forms import (
     JournalCreateAdminForm,
     UserCreateForm,
+    UserEditForm,
     UserQuickCreateForm,
 )
 from apps.core.mixins import SuperuserRequiredMixin
@@ -199,6 +200,27 @@ class UserRemoveJournalView(SuperuserRequiredMixin, View):
         return JsonResponse({
             "redirect_url": reverse("administration:user_detail", kwargs={"user_id": user.pk})
         })
+
+
+class UserEditView(SuperuserRequiredMixin, View):
+    def post(self, request, user_id):
+        user = get_object_or_404(User, pk=user_id)
+        form = UserEditForm(user, request.POST)
+        if not form.is_valid():
+            return JsonResponse({"errors": _form_errors(form)}, status=400)
+
+        # Prevent a superuser from revoking their own superuser flag.
+        if user.pk == request.user.pk and not form.cleaned_data["is_superuser"]:
+            return JsonResponse(
+                {"errors": {"is_superuser": [
+                    "Vous ne pouvez pas révoquer vos propres droits superuser. "
+                    "Demandez à un autre superuser de le faire."
+                ]}},
+                status=400,
+            )
+
+        form.save()
+        return JsonResponse({"ok": True})
 
 
 class JournalMembersView(SuperuserRequiredMixin, View):

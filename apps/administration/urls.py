@@ -18,6 +18,7 @@ urlpatterns = [
     path("utilisateurs/<int:user_id>/revues/add/", views.UserAddJournalView.as_view(), name="user_add_journal"),
     path("utilisateurs/<int:user_id>/revues/<slug:slug>/remove/", views.UserRemoveJournalView.as_view(), name="user_remove_journal"),
     path("utilisateurs/<int:user_id>/password/", views.UserPasswordDisplayView.as_view(), name="user_password_display"),
+    path("utilisateurs/<int:user_id>/edit/", views.UserEditView.as_view(), name="user_edit"),
     path("utilisateurs/<int:user_id>/toggle-active/", views.UserToggleActiveView.as_view(), name="user_toggle_active"),
     path("revues/<slug:slug>/delete/", views.JournalDeleteView.as_view(), name="journal_delete"),
 ]
