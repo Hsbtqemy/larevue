@@ -41,6 +41,91 @@
           <div style="font-family:var(--font-mono);font-size:12.5px;color:var(--ink-muted)">{{ target_user.email }}</div>
         </div>
         <div style="display:flex;gap:8px;flex-shrink:0">
+
+          {# ---- Modifier le profil ---- #}
+          <div x-data="{
+            open: false,
+            saving: false,
+            errors: {},
+            firstName: '{{ target_user.first_name|escapejs }}',
+            lastName: '{{ target_user.last_name|escapejs }}',
+            email: '{{ target_user.email|escapejs }}',
+            isSuperuser: {{ target_user.is_superuser|yesno:'true,false' }},
+            isSelf: {{ target_user.pk }}  === {{ request.user.pk }},
+            async save() {
+              this.errors = {};
+              this.saving = true;
+              try {
+                const res = await fetch('{% url "administration:user_edit" user_id=target_user.pk %}', {
+                  method: 'POST',
+                  headers: { 'X-CSRFToken': '{{ csrf_token }}', 'Content-Type': 'application/x-www-form-urlencoded' },
+                  body: new URLSearchParams({
+                    first_name: this.firstName,
+                    last_name: this.lastName,
+                    email: this.email,
+                    ...(this.isSuperuser ? { is_superuser: 'on' } : {}),
+                  }),
+                });
+                const data = await res.json();
+                if (res.ok) { window.location.reload(); }
+                else { this.errors = data.errors || {}; }
+              } finally { this.saving = false; }
+            },
+          }">
+            <button type="button" class="btn ghost sm" @click="open = true">
+              {% icon "edit" 13 %} Modifier le profil
+            </button>
+            <template x-teleport="body">
+              <div x-show="open" x-cloak class="modal-backdrop"
+                   @click.self="open = false" @keydown.escape.window="open = false"
+                   x-transition.opacity>
+                <div class="modal" role="dialog" aria-modal="true" style="max-width:460px">
+                  <div class="modal-head">
+                    <h3>Modifier le profil</h3>
+                  </div>
+                  <div class="modal-body">
+                    <div class="field">
+                      <label>Prénom <span class="req">*</span></label>
+                      <input type="text" x-model="firstName" class="text-input" placeholder="Prénom">
+                      <template x-if="errors.first_name">
+                        <div class="form-msg err" x-text="errors.first_name[0]"></div>
+                      </template>
+                    </div>
+                    <div class="field">
+                      <label>Nom <span class="req">*</span></label>
+                      <input type="text" x-model="lastName" class="text-input" placeholder="Nom">
+                      <template x-if="errors.last_name">
+                        <div class="form-msg err" x-text="errors.last_name[0]"></div>
+                      </template>
+                    </div>
+                    <div class="field">
+                      <label>Adresse e-mail <span class="req">*</span></label>
+                      <input type="email" x-model="email" class="text-input" placeholder="email@exemple.fr">
+                      <template x-if="errors.email">
+                        <div class="form-msg err" x-text="errors.email[0]"></div>
+                      </template>
+                    </div>
+                    <div class="field" style="display:flex;align-items:center;gap:10px">
+                      <input type="checkbox" id="edit-is-superuser" x-model="isSuperuser"
+                             :disabled="isSelf && !isSuperuser">
+                      <label for="edit-is-superuser" style="margin:0;font-weight:400;cursor:pointer">Superutilisateur·ice</label>
+                      <template x-if="errors.is_superuser">
+                        <div class="form-msg err" x-text="errors.is_superuser[0]"></div>
+                      </template>
+                    </div>
+                  </div>
+                  <div class="modal-foot">
+                    <button type="button" class="btn ghost" @click="open = false">Annuler</button>
+                    <button type="button" class="btn primary" :disabled="saving" @click="save()">
+                      <span x-text="saving ? 'Enregistrement…' : 'Enregistrer'"></span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </template>
+          </div>
+
+          {# ---- Réinitialiser mot de passe ---- #}
           <div x-data="{ open: false, submitting: false }">
             <button type="button" class="btn ghost sm" @click="open = true">
               {% icon "edit" 13 %} Réinitialiser mdp
