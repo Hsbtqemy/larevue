@@ -219,7 +219,8 @@ class UserEditView(SuperuserRequiredMixin, View):
                 status=400,
             )
 
-        form.save()
+        form.save(commit=False)
+        user.save(update_fields=["first_name", "last_name", "email", "is_superuser"])
         return JsonResponse({"ok": True})
 
 

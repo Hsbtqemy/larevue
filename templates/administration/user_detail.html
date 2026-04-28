@@ -105,10 +105,12 @@
                         <div class="form-msg err" x-text="errors.email[0]"></div>
                       </template>
                     </div>
-                    <div class="field" style="display:flex;align-items:center;gap:10px">
-                      <input type="checkbox" id="edit-is-superuser" x-model="isSuperuser"
-                             :disabled="isSelf && !isSuperuser">
-                      <label for="edit-is-superuser" style="margin:0;font-weight:400;cursor:pointer">Superutilisateur·ice</label>
+                    <div class="field">
+                      <div style="display:flex;align-items:center;gap:10px">
+                        <input type="checkbox" id="edit-is-superuser" x-model="isSuperuser"
+                               :disabled="isSelf && isSuperuser">
+                        <label for="edit-is-superuser" style="margin:0;font-weight:400;cursor:pointer">Superutilisateur·ice</label>
+                      </div>
                       <template x-if="errors.is_superuser">
                         <div class="form-msg err" x-text="errors.is_superuser[0]"></div>
                       </template>
