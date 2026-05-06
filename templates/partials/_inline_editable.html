@@ -10,7 +10,7 @@
         @click="startEdit()"
         @keydown.enter.prevent="startEdit()"
         @keydown.space.prevent="startEdit()">
-    <span x-text="displayDraft || '{{ placeholder|escapejs }}'"></span>
+    <span x-text="displayDraft !== '' ? displayDraft : '{{ placeholder|escapejs }}'"></span>
     <span x-show="justSaved" class="saved-tick" aria-hidden="true">&nbsp;✓</span>
   </span>
 

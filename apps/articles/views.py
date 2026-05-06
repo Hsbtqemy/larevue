@@ -375,11 +375,11 @@ class ArticlePatchView(_ArticleJournalMixin, JournalOwnedPatchView):
         if field_name == "order":
             try:
                 v = int(raw_value)
-                if v < 0:
-                    raise ValueError
-                return v
             except (ValueError, TypeError):
                 raise ValueError("La position doit être un entier positif.")
+            if v < 0:
+                raise ValueError("La position doit être un entier positif.")
+            return v
         return super().resolve_field_value(field_name, raw_value, field_obj)
 
     def create_audit_note(self, obj, field_name, old_value, new_value, field_obj):
