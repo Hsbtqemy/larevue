@@ -42,7 +42,8 @@ def verdict_badge(verdict):
 
 @register.inclusion_tag("partials/_inline_editable.html")
 def inline_editable(field, instance, url, input_type=None, options=None, datalist_id=None, datalist_options=None, placeholder=None):
-    value = getattr(instance, field, "") or ""
+    raw = getattr(instance, field, None)
+    value = "" if raw is None else raw
     resolved_options = list(options) if options else []
 
     if input_type is None:

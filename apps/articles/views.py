@@ -357,7 +357,7 @@ class ArticleDetailView(JournalMemberRequiredMixin, DetailView):
 
 
 class ArticlePatchView(_ArticleJournalMixin, JournalOwnedPatchView):
-    ALLOWED_FIELDS = {"title", "author", "author_name_override", "article_type", "abstract"}
+    ALLOWED_FIELDS = {"title", "author", "author_name_override", "article_type", "abstract", "order"}
     AUDIT_FIELDS = {"title", "author", "article_type"}
     FULL_CLEAN_EXCLUDE = ["state"]
 
@@ -372,6 +372,14 @@ class ArticlePatchView(_ArticleJournalMixin, JournalOwnedPatchView):
                 return Contact.objects.get(pk=int(raw_value), journal=self.request.journal)
             except (Contact.DoesNotExist, ValueError):
                 raise ValueError("Contact introuvable.")
+        if field_name == "order":
+            try:
+                v = int(raw_value)
+                if v < 0:
+                    raise ValueError
+                return v
+            except (ValueError, TypeError):
+                raise ValueError("La position doit être un entier positif.")
         return super().resolve_field_value(field_name, raw_value, field_obj)
 
     def create_audit_note(self, obj, field_name, old_value, new_value, field_obj):
