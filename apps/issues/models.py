@@ -225,6 +225,7 @@ class IssueDocument(models.Model):
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
         null=True,
+        blank=True,
         verbose_name="Ajouté par",
     )
     uploaded_at = models.DateTimeField(auto_now_add=True, verbose_name="Date d'ajout")

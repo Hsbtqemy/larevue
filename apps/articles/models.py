@@ -137,6 +137,7 @@ class ArticleVersion(TimestampedModel):
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
         null=True,
+        blank=True,
         verbose_name="Déposé par",
     )
     comment = models.TextField(blank=True, verbose_name="Commentaire")
@@ -188,6 +189,7 @@ class InternalNote(TimestampedModel):
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
         null=True,
+        blank=True,
         verbose_name="Auteur·ice",
     )
     content = models.TextField(verbose_name="Contenu")

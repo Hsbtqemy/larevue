@@ -12,6 +12,11 @@ function getCsrfToken() {
   return match ? match[1] : "";
 }
 
+document.addEventListener("htmx:configRequest", (e) => {
+  if (e.detail.verb === "get") return;
+  e.detail.headers["X-CSRFToken"] = getCsrfToken();
+});
+
 document.addEventListener("alpine:init", () => {
 
   Alpine.data("inlineEdit", (value, patchUrl, fieldName, inputType = "text", options = [], requireConfirm = false) => ({

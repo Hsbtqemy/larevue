@@ -32,6 +32,7 @@ class ReviewRequest(BaseModel):
         "contacts.Contact",
         on_delete=models.SET_NULL,
         null=True,
+        blank=True,
         verbose_name="Relecteur·ice",
     )
     reviewer_name_snapshot = models.CharField(
