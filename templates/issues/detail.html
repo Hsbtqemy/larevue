@@ -60,6 +60,11 @@
             <div class="eyebrow">
               N°{% if is_editable %}{% inline_editable "number" issue patch_url %}{% else %}{{ issue.number }}{% endif %}
             </div>
+            {% if number_conflict %}
+            <div style="margin:6px 0 8px;padding:6px 10px;background:var(--tone-warn-bg);color:var(--tone-warn-ink);border-radius:var(--radius-sm);font-size:12px">
+              ⚠ Ce numéro est partagé par un autre numéro en cours — pensez à le corriger.
+            </div>
+            {% endif %}
             <h1 class="editable-h1">
               {% if is_editable %}{% inline_editable "thematic_title" issue patch_url %}{% else %}{{ issue.thematic_title }}{% endif %}
             </h1>

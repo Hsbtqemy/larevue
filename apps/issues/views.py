@@ -195,6 +195,13 @@ class IssueListView(JournalMemberRequiredMixin, TemplateView):
         archived_qs = journal.issues.filter(state__in=Issue.ARCHIVED_STATES).order_by(
             F("planned_publication_date").desc(nulls_last=True)
         )
+        duplicate_numbers = set(
+            journal.issues.filter(state__in=Issue.ACTIVE_STATES)
+            .values("number")
+            .annotate(c=Count("id"))
+            .filter(c__gt=1)
+            .values_list("number", flat=True)
+        )
 
         ctx.update({
             "journal": journal,
@@ -203,6 +210,7 @@ class IssueListView(JournalMemberRequiredMixin, TemplateView):
             "archived_issues": archived_qs,
             "active_count": active_qs.count(),
             "archived_count": archived_qs.count(),
+            "duplicate_numbers": duplicate_numbers,
             "user_journal_count": self.request.user.memberships.count(),
         })
         return ctx
@@ -286,6 +294,9 @@ class IssueDetailView(JournalOwnedObjectMixin, JournalMemberRequiredMixin, Templ
             "member_names": member_names,
             "user_journal_count": self.request.user.memberships.count(),
             "timeline": _build_timeline(issue),
+            "number_conflict": issue.state in Issue.ACTIVE_STATES and journal.issues.filter(
+                state__in=Issue.ACTIVE_STATES, number=issue.number
+            ).exclude(pk=issue.pk).exists(),
         })
         return ctx
 

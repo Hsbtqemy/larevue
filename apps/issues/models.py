@@ -107,9 +107,6 @@ class Issue(BaseModel):
         verbose_name = "Numéro"
         verbose_name_plural = "Numéros"
         ordering = ["-number"]
-        constraints = [
-            models.UniqueConstraint(fields=["journal", "number"], name="unique_issue_number")
-        ]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

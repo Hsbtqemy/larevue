@@ -1,5 +1,4 @@
 import pytest
-from django.db import IntegrityError
 from django.utils import timezone
 
 from apps.issues.models import Issue
@@ -11,14 +10,14 @@ class TestIssue:
         assert "N°1" in str(issue)
         assert "Numéro de test" in str(issue)
 
-    def test_unique_constraint_journal_number(self, issue, journal):
-        with pytest.raises(IntegrityError):
-            Issue.objects.create(
-                journal=journal,
-                number="1",
-                thematic_title="Autre titre",
-                editor_name="Autre éditeur",
-            )
+    def test_duplicate_number_allowed(self, issue, journal):
+        duplicate = Issue.objects.create(
+            journal=journal,
+            number="1",
+            thematic_title="Autre titre",
+            editor_name="Autre éditeur",
+        )
+        assert duplicate.pk is not None
 
     def test_progress_no_articles(self, issue):
         assert issue.progress == 0

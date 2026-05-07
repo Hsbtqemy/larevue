@@ -85,6 +85,7 @@
                     <div>
                       <div class="issue-card-num">
                         N°{{ issue.number }}{% if issue.planned_publication_date %}&nbsp;· parution {{ issue.planned_publication_date|date:"d/m/Y" }}{% endif %}
+                        {% if issue.number in duplicate_numbers %}<span class="badge warn" title="Ce numéro est partagé par plusieurs numéros en cours" style="margin-left:6px;font-size:10px">doublon</span>{% endif %}
                       </div>
                       <h3>{{ issue.thematic_title }}</h3>
                     </div>
