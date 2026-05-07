@@ -392,12 +392,10 @@
               <div></div>
             </div>
             {% for article in articles %}
-              {% url 'articles:detail' slug=journal.slug issue_id=issue.pk article_id=article.pk as article_detail_url %}
               {% url 'articles:patch' slug=journal.slug issue_id=issue.pk article_id=article.pk as article_patch_url %}
-              <div class="article-row"
-                   role="link" tabindex="0"
-                   onclick="if(!event.target.closest('.order-col'))window.location.href='{{ article_detail_url }}'"
-                   onkeydown="if(event.key==='Enter'&&!event.target.closest('.order-col'))window.location.href='{{ article_detail_url }}'">
+              <a href="{% url 'articles:detail' slug=journal.slug issue_id=issue.pk article_id=article.pk %}"
+                 class="article-row" style="text-decoration:none"
+                 onclick="if(event.target.closest('.order-col'))event.preventDefault()">
                 <div class="order-col" title="Modifier la position">
                   {% inline_editable "order" article article_patch_url input_type="number" %}
                 </div>
@@ -420,7 +418,7 @@
                 </div>
                 <div class="state-col">{% state_badge article %}</div>
                 <div class="chev">{% icon "chevronR" 14 %}</div>
-              </div>
+              </a>
             {% endfor %}
           </div>
         {% else %}

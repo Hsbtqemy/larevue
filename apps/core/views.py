@@ -88,10 +88,10 @@ class JournalOwnedCreateView(JournalMemberRequiredMixin, View):
             self.prepare_instance(instance, form)
             try:
                 instance.save()
+                self.post_create(instance, form)
             except IntegrityError:
                 form.add_error(None, "Un enregistrement identique existe déjà.")
                 return render(request, self.template_name, self.get_context_data(form))
-            self.post_create(instance, form)
             return redirect(self.get_success_url(instance))
         return render(request, self.template_name, self.get_context_data(form))
 
