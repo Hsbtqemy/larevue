@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.db import models
+from django.db.models import Max
 from django_fsm import FSMField, transition
 
 from apps.core.models import BaseModel, TimestampedModel
@@ -77,6 +78,11 @@ class Article(BaseModel):
         if self.author_name_override:
             return self.author_name_override
         return self.author.full_name if self.author else ""
+
+    @classmethod
+    def next_order(cls, issue):
+        last = issue.articles.aggregate(Max("order"))["order__max"]
+        return (last or 0) + 1
 
     # ------------------------------------------------------------------ #
     # Transitions FSM                                                      #
