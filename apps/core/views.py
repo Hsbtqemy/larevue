@@ -1,6 +1,7 @@
 import json
 
 from django.core.exceptions import ValidationError
+from django.db import IntegrityError
 from django.http import JsonResponse
 from django.shortcuts import redirect, render
 from django.views import View
@@ -85,7 +86,11 @@ class JournalOwnedCreateView(JournalMemberRequiredMixin, View):
             instance = form.save(commit=False)
             instance.journal = request.journal
             self.prepare_instance(instance, form)
-            instance.save()
+            try:
+                instance.save()
+            except IntegrityError:
+                form.add_error(None, "Un enregistrement identique existe déjà.")
+                return render(request, self.template_name, self.get_context_data(form))
             self.post_create(instance, form)
             return redirect(self.get_success_url(instance))
         return render(request, self.template_name, self.get_context_data(form))
