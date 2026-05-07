@@ -393,8 +393,9 @@
             </div>
             {% for article in articles %}
               <a href="{% url 'articles:detail' slug=journal.slug issue_id=issue.pk article_id=article.pk %}" class="article-row" style="text-decoration:none">
-                <div class="order-col">
-                  <span class="order-num">{{ article.order }}</span>
+                {% url 'articles:patch' slug=journal.slug issue_id=issue.pk article_id=article.pk as article_patch_url %}
+                <div class="order-col" onclick="event.stopPropagation()" title="Modifier la position">
+                  {% inline_editable "order" article article_patch_url input_type="number" %}
                 </div>
                 <div class="title-col">
                   <div class="t">{{ article.title }}</div>

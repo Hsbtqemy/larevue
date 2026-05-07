@@ -1,7 +1,7 @@
 from django.contrib import messages
 from django.core.exceptions import PermissionDenied
 from django.db import transaction
-from django.db.models import Prefetch
+from django.db.models import Max, Prefetch
 from django.http import Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template.loader import render_to_string
@@ -24,6 +24,11 @@ from apps.core.utils import actor_name, create_audit_note, file_response
 from apps.core.views import JournalOwnedCreateView, JournalOwnedPatchView, JournalOwnedTransitionView, compute_transitions
 from apps.issues.models import Issue
 from apps.reviews.models import ReviewRequest
+
+
+def _next_article_order(issue):
+    last = issue.articles.aggregate(Max("order"))["order__max"]
+    return (last or 0) + 1
 
 
 def _check_article_archived(article):
@@ -85,6 +90,7 @@ class ArticleCreateView(JournalOwnedCreateView):
 
     def prepare_instance(self, instance, form):
         instance.issue = self.issue
+        instance.order = _next_article_order(self.issue)
 
     def post_create(self, instance, form):
         _apply_article_creation_extras(instance, self.request.POST, self.request.journal, form, self.request.user)
@@ -124,6 +130,7 @@ class ArticleCreateFromJournalView(JournalOwnedCreateView):
 
     def prepare_instance(self, instance, form):
         instance.issue = form.cleaned_data["issue"]
+        instance.order = _next_article_order(instance.issue)
 
     def post_create(self, instance, form):
         _apply_article_creation_extras(instance, self.request.POST, self.request.journal, form, self.request.user)
