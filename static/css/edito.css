@@ -2301,6 +2301,7 @@ hr.sep {
   line-height: inherit;
   min-width: 3ch;
 }
+.editable-input[type="number"] { width: 5ch; }
 .editable-input.textarea {
   width: 100%;
   min-height: 80px;
