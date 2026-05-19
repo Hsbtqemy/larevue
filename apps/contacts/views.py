@@ -1,7 +1,7 @@
 from django.contrib import messages
 from django.db import transaction
 from django.db.models import Count, Q
-from django.http import JsonResponse
+from django.http import Http404, JsonResponse
 from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.views import View
@@ -55,7 +55,12 @@ class ContactDetailView(JournalOwnedObjectMixin, JournalMemberRequiredMixin, Vie
     model = Contact
 
     def get(self, request, **kwargs):
-        contact = self.get_object_or_404()
+        try:
+            contact = Contact.objects.select_related("user").get(
+                pk=self.kwargs["pk"], journal=request.journal
+            )
+        except Contact.DoesNotExist:
+            raise Http404
         articles = (
             Article.objects
             .filter(author=contact)
@@ -88,6 +93,7 @@ class ContactDetailView(JournalOwnedObjectMixin, JournalMemberRequiredMixin, Vie
                 "contacts:delete",
                 kwargs={"slug": request.journal.slug, "pk": contact.pk},
             ),
+            "invite_url": reverse("reviewer_invite", kwargs={"slug": request.journal.slug}),
         })
 
 

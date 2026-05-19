@@ -64,10 +64,18 @@
                   {% endfor %}
                 </div>
 
-                <div style="margin-top:12px">
+                <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
                   <button type="button" class="btn ghost sm" @click="openModal()">
                     {% icon "edit" 13 cls="icon" %} Modifier les rôles
                   </button>
+                  {% if contact.user and contact.user.is_active and contact.user.is_reviewer %}
+                    <span class="role-pill reviewer-pill">{% icon "users" 9 cls="icon" %} relecteur·ice actif·ve</span>
+                  {% elif contact.email %}
+                    <a href="{{ invite_url }}?email={{ contact.email|urlencode }}&first_name={{ contact.first_name|urlencode }}&last_name={{ contact.last_name|urlencode }}"
+                       class="btn ghost sm">{% icon "mail" 13 cls="icon" %}
+                      {% if contact.user and not contact.user.is_active %}Renvoyer l'invitation{% else %}Inviter comme relecteur·ice{% endif %}
+                    </a>
+                  {% endif %}
                 </div>
 
                 {% if contact.notes %}

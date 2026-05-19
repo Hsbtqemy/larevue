@@ -137,8 +137,9 @@ class ReviewerInviteView(JournalMemberRequiredMixin, View):
 
     def get(self, request, slug):
         contact_search_url = reverse("contacts:search", kwargs={"slug": slug})
+        initial = {k: request.GET.get(k, "") for k in ("email", "first_name", "last_name")}
         return render(request, self.template_name, {
-            "form": ReviewerInviteForm(),
+            "form": ReviewerInviteForm(initial=initial),
             "contact_search_url": contact_search_url,
         })
 
