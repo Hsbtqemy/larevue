@@ -59,6 +59,7 @@
           <div style="flex:1;min-width:0">
             <div class="eyebrow">
               N°{% if is_editable %}{% inline_editable "number" issue patch_url %}{% else %}{{ issue.number }}{% endif %}
+              {% if is_editable %}<span style="font-size:11px;color:var(--ink-muted);margin-left:10px;font-weight:400">Ordre&nbsp;: {% inline_editable "sort_order" issue patch_url %}</span>{% endif %}
             </div>
             {% if number_conflict %}
             <div style="margin:6px 0 8px;padding:6px 10px;background:var(--tone-warn-bg);color:var(--tone-warn-ink);border-radius:var(--radius-sm);font-size:12px">

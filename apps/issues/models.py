@@ -3,6 +3,7 @@ import uuid
 
 from django.conf import settings
 from django.db import models
+from django.db.models import F
 from django.db.models.signals import post_delete
 from django.dispatch import receiver
 from django.utils import timezone
@@ -48,6 +49,13 @@ class Issue(BaseModel):
         max_length=20,
         verbose_name="Numéro",
         help_text="Ex : « 14 » ou « 14-15 » pour un double numéro.",
+    )
+    sort_order = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        verbose_name="Ordre de tri",
+        help_text="Entier utilisé pour trier les numéros. Auto-calculé depuis le numéro ; "
+                  "à corriger manuellement pour les doubles numéros si nécessaire.",
     )
     thematic_title = models.CharField(max_length=300, verbose_name="Titre thématique")
     description = models.TextField(blank=True, verbose_name="Description")
@@ -106,7 +114,7 @@ class Issue(BaseModel):
     class Meta:
         verbose_name = "Numéro"
         verbose_name_plural = "Numéros"
-        ordering = ["-number"]
+        ordering = [F("sort_order").desc(nulls_last=True)]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -117,6 +125,11 @@ class Issue(BaseModel):
         return self.published_at or self.refused_at
 
     def save(self, *args, **kwargs):
+        if self.sort_order is None:
+            try:
+                self.sort_order = int(self.number.split("-")[0].strip())
+            except (ValueError, AttributeError):
+                pass
         if self.state != self._original_state:
             now = timezone.now()
             if self.state == self.State.PUBLISHED and not self.published_at:

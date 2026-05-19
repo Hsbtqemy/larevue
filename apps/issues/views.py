@@ -305,7 +305,7 @@ class IssuePatchView(JournalOwnedPatchView):
     model = Issue
     pk_url_kwarg = "issue_id"
     ALLOWED_FIELDS = {
-        "number", "thematic_title", "editor_name", "planned_publication_date", "description",
+        "number", "sort_order", "thematic_title", "editor_name", "planned_publication_date", "description",
         "deadline_articles", "deadline_reviews", "deadline_v2",
         "deadline_final_check", "deadline_sent_to_publisher",
     }
