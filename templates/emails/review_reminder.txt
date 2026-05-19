@@ -1,0 +1,13 @@
+{% extends "emails/base.txt" %}
+{% block body %}
+Bonjour {{ reviewer_name }},
+
+Ceci est un rappel concernant la relecture que vous avez acceptée pour {{ journal_name }}.
+
+  Article    : {{ article_title }}
+  Date limite : {{ deadline }}
+
+Si vous avez déjà déposé votre relecture, merci d'ignorer ce message.
+
+Déposer ma relecture : {{ site_url }}
+{% endblock %}

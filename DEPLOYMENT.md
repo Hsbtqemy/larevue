@@ -91,13 +91,23 @@ LOG_FILE=/var/log/edito/edito.log
 
 CSRF_TRUSTED_ORIGINS=https://edito-revue.fr,https://www.edito-revue.fr
 
-# Email SMTP (configurer pour reset de mot de passe, etc.)
-# EMAIL_HOST=smtp.example.com
-# EMAIL_PORT=587
-# EMAIL_HOST_USER=contact@domaine.fr
-# EMAIL_HOST_PASSWORD=
-# EMAIL_USE_TLS=True
-# DEFAULT_FROM_EMAIL=noreply@domaine.fr
+# Email SMTP — Infomaniak
+# Créer une adresse dédiée dans le panel Infomaniak (ex. noreply@votredomaine.fr)
+# Paramètres SMTP Infomaniak : mail.infomaniak.com, port 587, STARTTLS
+EMAIL_HOST=mail.infomaniak.com
+EMAIL_PORT=587
+EMAIL_HOST_USER=noreply@votredomaine.fr
+EMAIL_HOST_PASSWORD=
+EMAIL_USE_TLS=True
+DEFAULT_FROM_EMAIL=noreply@votredomaine.fr
+SITE_URL=https://votredomaine.fr
+```
+
+Pour vérifier la configuration SMTP après déploiement :
+
+```bash
+export DJANGO_SETTINGS_MODULE=config.settings.production
+python manage.py send_test_email votre@adresse.fr
 ```
 
 **Important** : `DJANGO_SETTINGS_MODULE` dans `.env` n'est pas lu par

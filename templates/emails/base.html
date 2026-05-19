@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block subject %}Outil éditorial{% endblock %}</title>
+</head>
+<body style="margin:0;padding:0;background:#f5f0e8;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;color:#2d231a;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f0e8;padding:32px 16px;">
+    <tr>
+      <td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;">
+
+          <!-- En-tête -->
+          <tr>
+            <td style="background:#2d231a;border-radius:8px 8px 0 0;padding:24px 32px;">
+              <p style="margin:0;font-size:13px;color:#c9a87c;letter-spacing:0.05em;text-transform:uppercase;">{{ journal_name }}</p>
+              <p style="margin:6px 0 0;font-size:11px;color:#8a7060;">Outil éditorial</p>
+            </td>
+          </tr>
+
+          <!-- Corps -->
+          <tr>
+            <td style="background:#ffffff;padding:32px;border-left:1px solid #e8e0d0;border-right:1px solid #e8e0d0;">
+              {% block body %}{% endblock %}
+            </td>
+          </tr>
+
+          <!-- Pied de page -->
+          <tr>
+            <td style="background:#faf6ee;border:1px solid #e8e0d0;border-top:none;border-radius:0 0 8px 8px;padding:16px 32px;">
+              <p style="margin:0;font-size:11px;color:#8a7060;line-height:1.6;">
+                Cet email a été envoyé automatiquement par l'outil éditorial de <strong>{{ journal_name }}</strong>.<br>
+                Si vous avez reçu ce message par erreur, vous pouvez l'ignorer.
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

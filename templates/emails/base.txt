@@ -1,0 +1,8 @@
+{{ journal_name }} — Outil éditorial
+======================================
+
+{% block body %}{% endblock %}
+
+--
+Cet email a été envoyé automatiquement par l'outil éditorial de {{ journal_name }}.
+Si vous avez reçu ce message par erreur, vous pouvez l'ignorer.

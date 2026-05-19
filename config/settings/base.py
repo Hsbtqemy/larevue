@@ -125,3 +125,5 @@ MEDIA_URL = config("MEDIA_URL", default="/media/")
 MEDIA_ROOT = config("MEDIA_ROOT", default=str(BASE_DIR / "media"))
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+SITE_URL = config("SITE_URL", default="http://localhost:8000")

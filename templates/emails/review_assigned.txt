@@ -1,0 +1,17 @@
+{% extends "emails/base.txt" %}
+{% block body %}
+Bonjour {{ reviewer_name }},
+
+La rédaction de {{ journal_name }} vous confie la relecture de l'article suivant :
+
+  Article    : {{ article_title }}
+  Date limite : {{ deadline }}
+{% if instructions %}
+
+Instructions : {{ instructions }}
+{% endif %}
+
+Vous trouverez la version à relire dans votre espace relecteur.
+
+Accéder à ma relecture : {{ site_url }}
+{% endblock %}
