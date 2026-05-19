@@ -328,7 +328,7 @@ def _review_with_deadline_context(journal):
         "reviewer_name": "Marie Dupont",
         "article_title": _sample_article_title(journal),
         "deadline": "30/06/2026",
-        "dashboard_url": "https://example.com/accounts/reviewer/",
+        "dashboard_url": settings.SITE_URL + reverse("accounts:reviewer_dashboard"),
     }
 
 

@@ -568,7 +568,7 @@ class ReviewRequestCreateView(_ArticleJournalMixin, JournalMemberRequiredMixin, 
 
         if reviewer_id:
             try:
-                contact = Contact.objects.get(pk=int(reviewer_id))
+                contact = Contact.objects.select_related("user").get(pk=int(reviewer_id))
                 if contact.journal != request.journal:
                     return JsonResponse({"error": "Ce contact n'appartient pas à cette revue."}, status=400)
                 reviewer = contact

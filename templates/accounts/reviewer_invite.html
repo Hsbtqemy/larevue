@@ -33,7 +33,7 @@
     {% endif %}
 
     <form method="post" x-data="{
-      query: '{{ form.first_name.value|default:'' }} {{ form.last_name.value|default:'' }}'.trim(),
+      query: ('{{ form.first_name.value|default:''|escapejs }} {{ form.last_name.value|default:''|escapejs }}').trim(),
       results: [],
       open: false,
       async search() {
