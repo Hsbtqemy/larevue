@@ -36,6 +36,7 @@
   <link rel="stylesheet" href="{% static 'css/tailwind.css' %}">
   <script defer src="{% static 'js/edito.js' %}?v=20260506a"></script>
   <script defer src="{% static 'js/alpine.min.js' %}"></script>
+  <script>if("serviceWorker"in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("{% url 'sw' %}",{scope:"/"}));</script>
   {% block extra_head %}{% endblock %}
 </head>
 <body class="{% block body_class %}min-h-screen bg-gray-50 text-gray-900{% endblock %}">
