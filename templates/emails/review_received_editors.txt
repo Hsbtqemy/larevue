@@ -2,12 +2,10 @@
 {% block body %}
 Bonjour {{ recipient_name }},
 
-{% if to_reviewer %}Nous confirmons la bonne réception de votre relecture pour l'article :{% else %}Une relecture vient d'être déposée pour l'article :{% endif %}
+Une relecture vient d'être déposée pour l'article :
 
   Article      : {{ article_title }}
   Relecteur·ice : {{ reviewer_name }}
-{% if not to_reviewer %}
 
 Consulter la relecture : {{ review_url }}
-{% endif %}
 {% endblock %}

@@ -1,0 +1,10 @@
+{% extends "emails/base.txt" %}
+{% block body %}
+Bonjour {{ reviewer_name }},
+
+Nous confirmons la bonne réception de votre relecture pour l'article :
+
+  {{ article_title }}
+
+Merci pour votre contribution à {{ journal_name }}.
+{% endblock %}
