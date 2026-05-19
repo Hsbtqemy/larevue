@@ -80,6 +80,9 @@
               {% if review.received_at %}
                 <span class="muted">Déposée le {{ review.received_at|date:"d/m/Y" }}</span>
               {% endif %}
+              {% if review.state == review.State.RECEIVED %}
+                <a href="{% url 'accounts:reviewer_review_submit' pk=review.pk %}" class="btn ghost sm">Modifier</a>
+              {% endif %}
             </div>
           </div>
         {% endfor %}

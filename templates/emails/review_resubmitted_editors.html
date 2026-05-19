@@ -1,0 +1,18 @@
+{% extends "emails/base.html" %}
+{% block subject %}Relecture mise à jour — {{ article_title }}{% endblock %}
+{% block body %}
+<h1 style="margin:0 0 16px;font-size:22px;font-weight:600;color:#2d231a;">Relecture mise à jour</h1>
+<p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#3d3028;">
+  Bonjour {{ recipient_name }},
+</p>
+<p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#3d3028;">
+  Le relecteur·ice a mis à jour sa relecture pour l'article suivant :
+</p>
+<table cellpadding="0" cellspacing="0" style="margin:0 0 24px;background:#f0faf4;border:1px solid #a0d8b0;border-radius:6px;padding:16px 20px;width:100%;">
+  <tr><td style="font-size:13px;color:#8a7060;padding-bottom:4px;">Article</td></tr>
+  <tr><td style="font-size:16px;font-weight:600;color:#2d231a;padding-bottom:12px;">{{ article_title }}</td></tr>
+  <tr><td style="font-size:13px;color:#8a7060;padding-bottom:4px;">Relecteur·ice</td></tr>
+  <tr><td style="font-size:15px;color:#2d231a;">{{ reviewer_name }}</td></tr>
+</table>
+{% include "emails/_cta_button.html" with cta_url=review_url cta_label="Consulter la relecture →" %}
+{% endblock %}

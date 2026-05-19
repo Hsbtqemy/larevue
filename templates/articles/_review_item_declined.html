@@ -1,4 +1,5 @@
 {% load edito %}
+{% url 'articles:review_delete' slug=journal.slug issue_id=issue.pk article_id=article.pk review_id=review.pk as review_delete_url %}
 
 <div class="review-card" id="review-declined-{{ review.pk }}">
 
@@ -10,7 +11,25 @@
         {{ review.reviewer_name_snapshot }}
       {% endif %}
     </span>
-    {% state_badge review %}
+    <div style="display:flex;gap:6px;align-items:center">
+      {% state_badge review %}
+      {% if not is_archived %}
+        <div x-data="{ confirming: false }">
+          <button x-show="!confirming" @click="confirming = true" type="button" class="btn ghost sm" title="Supprimer">
+            {% icon "trash" 12 %}
+          </button>
+          <div x-show="confirming" style="display:flex;gap:4px;align-items:center">
+            <span class="small muted">Supprimer ?</span>
+            <button hx-post="{{ review_delete_url }}"
+                    hx-target="#review-declined-{{ review.pk }}"
+                    hx-swap="outerHTML"
+                    type="button"
+                    class="btn danger sm">Oui</button>
+            <button @click="confirming = false" type="button" class="btn ghost sm">Non</button>
+          </div>
+        </div>
+      {% endif %}
+    </div>
   </div>
 
   <div class="review-card-meta">

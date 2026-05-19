@@ -15,7 +15,7 @@ from django.views import View
 from apps.accounts.forms import ProfilePasswordForm, ReviewerActivateForm, ReviewerInviteForm, ReviewerSubmitForm
 from apps.accounts.tokens import load_invitation_token, make_invitation_token
 from apps.contacts.models import Contact
-from apps.core.mail import send_review_received_editors, send_review_received_reviewer, send_reviewer_added, send_reviewer_invitation
+from apps.core.mail import send_review_received_editors, send_review_received_reviewer, send_review_resubmitted_editors, send_reviewer_added, send_reviewer_invitation
 from apps.core.mixins import JournalMemberRequiredMixin
 from apps.issues.models import Issue
 from apps.reviews.models import ReviewRequest
@@ -264,7 +264,7 @@ class ReviewerReviewSubmitView(LoginRequiredMixin, View):
             return None
         if review.reviewer_id is None or review.reviewer.user_id != request.user.pk:
             return None
-        if review.state != ReviewRequest.State.SENT:
+        if review.state not in (ReviewRequest.State.SENT, ReviewRequest.State.RECEIVED):
             return None
         return review
 
@@ -272,24 +272,43 @@ class ReviewerReviewSubmitView(LoginRequiredMixin, View):
         review = self._get_review(request, pk)
         if review is None:
             return redirect("accounts:reviewer_dashboard")
+        is_resubmission = review.state == ReviewRequest.State.RECEIVED
+        form = ReviewerSubmitForm(initial={"verdict": review.verdict} if is_resubmission else None)
+        if is_resubmission:
+            form.fields["received_file"].required = False
         return render(request, self.template_name, {
             "review": review,
-            "form": ReviewerSubmitForm(),
+            "form": form,
+            "is_resubmission": is_resubmission,
         })
 
     def post(self, request, pk):
         review = self._get_review(request, pk)
         if review is None:
             return redirect("accounts:reviewer_dashboard")
+        is_resubmission = review.state == ReviewRequest.State.RECEIVED
         form = ReviewerSubmitForm(request.POST, request.FILES)
+        if is_resubmission:
+            form.fields["received_file"].required = False
         if not form.is_valid():
-            return render(request, self.template_name, {"review": review, "form": form})
-        review.received_file = form.cleaned_data["received_file"]
+            return render(request, self.template_name, {"review": review, "form": form, "is_resubmission": is_resubmission})
+
+        update_fields = ["verdict", "received_at"]
         review.verdict = form.cleaned_data["verdict"]
-        review.state = ReviewRequest.State.RECEIVED
         review.received_at = timezone.now()
-        review.save(update_fields=["received_file", "verdict", "state", "received_at"])
-        send_review_received_reviewer(review)
-        send_review_received_editors(review)
-        messages.success(request, "Votre relecture a bien été déposée. Merci !")
+        if form.cleaned_data.get("received_file"):
+            review.received_file = form.cleaned_data["received_file"]
+            update_fields.append("received_file")
+        if not is_resubmission:
+            review.state = ReviewRequest.State.RECEIVED
+            update_fields.append("state")
+        review.save(update_fields=update_fields)
+
+        if is_resubmission:
+            send_review_resubmitted_editors(review)
+            messages.success(request, "Votre relecture a bien été mise à jour.")
+        else:
+            send_review_received_reviewer(review)
+            send_review_received_editors(review)
+            messages.success(request, "Votre relecture a bien été déposée. Merci !")
         return redirect("accounts:reviewer_dashboard")

@@ -696,12 +696,13 @@ class ReviewRequestDeleteView(_ReviewRequestMixin, JournalMemberRequiredMixin, V
         guard = self._check_archived(article)
         if guard:
             return guard
-        if review.state != ReviewRequest.State.ASSIGNED:
-            return JsonResponse({"error": "Seule une demande désignée peut être annulée."}, status=400)
+        if review.state not in (ReviewRequest.State.ASSIGNED, ReviewRequest.State.DECLINED):
+            return JsonResponse({"error": "Cette relecture ne peut pas être supprimée."}, status=400)
 
         name = review.reviewer_name_snapshot
+        is_declined = review.state == ReviewRequest.State.DECLINED
         review.delete()
-        create_audit_note(article=article, author=request.user, message=f"Désignation de {name} annulée")
+        create_audit_note(article=article, author=request.user, message=f"{actor_name(request.user)} a supprimé la relecture refusée de {name}" if is_declined else f"Désignation de {name} annulée")
 
         return HttpResponse(oob_counters_html(article, request=request))
 

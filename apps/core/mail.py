@@ -149,7 +149,7 @@ def send_review_reminder(review) -> None:
         logger.exception("send_review_reminder failed for review %s", review.pk)
 
 
-def send_review_received_editors(review) -> None:
+def _send_to_journal_editors(review, subject, template_base) -> None:
     from apps.journals.models import Membership
 
     journal = review.article.issue.journal
@@ -162,8 +162,8 @@ def send_review_received_editors(review) -> None:
         try:
             send_template_email(
                 to=user.email,
-                subject=f"Relecture déposée — {review.article.title}",
-                template_base="review_received_editors",
+                subject=subject,
+                template_base=template_base,
                 context={
                     "recipient_name": user.get_full_name() or user.email,
                     "article_title": review.article.title,
@@ -173,4 +173,20 @@ def send_review_received_editors(review) -> None:
                 journal=journal,
             )
         except Exception:
-            logger.exception("send_review_received_editors failed for user %s review %s", user.pk, review.pk)
+            logger.exception("%s failed for user %s review %s", template_base, user.pk, review.pk)
+
+
+def send_review_received_editors(review) -> None:
+    _send_to_journal_editors(
+        review,
+        subject=f"Relecture déposée — {review.article.title}",
+        template_base="review_received_editors",
+    )
+
+
+def send_review_resubmitted_editors(review) -> None:
+    _send_to_journal_editors(
+        review,
+        subject=f"Relecture mise à jour — {review.article.title}",
+        template_base="review_resubmitted_editors",
+    )

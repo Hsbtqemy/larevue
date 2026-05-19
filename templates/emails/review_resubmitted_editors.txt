@@ -1,0 +1,11 @@
+{% extends "emails/base.txt" %}
+{% block body %}
+Bonjour {{ recipient_name }},
+
+Le relecteur·ice a mis à jour sa relecture pour l'article :
+
+  Article      : {{ article_title }}
+  Relecteur·ice : {{ reviewer_name }}
+
+Consulter la relecture : {{ review_url }}
+{% endblock %}

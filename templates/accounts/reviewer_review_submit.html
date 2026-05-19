@@ -26,6 +26,12 @@
     <h1 class="display" style="font-size:24px;margin:0 0 4px;line-height:1.3">{{ review.article.title }}</h1>
     <p class="muted" style="margin:0 0 32px;font-size:14px">Date limite : {{ review.deadline|date:"d/m/Y" }}</p>
 
+    {% if is_resubmission %}
+    <div style="background:var(--tone-info-bg);border:1px solid var(--tone-info-ink);border-radius:var(--radius-md);padding:12px 16px;margin-bottom:24px;font-size:13.5px;color:var(--tone-info-ink)">
+      Vous modifiez une relecture déjà déposée. Le fichier est optionnel — laissez-le vide pour conserver le fichier actuel. Les éditeurs seront notifiés de la mise à jour.
+    </div>
+    {% endif %}
+
     <form method="post" enctype="multipart/form-data">
       {% csrf_token %}
       <div style="display:flex;flex-direction:column;gap:20px">
@@ -35,11 +41,11 @@
         {% endif %}
 
         <div>
-          <label class="label" for="id_received_file">Fichier de relecture</label>
+          <label class="label" for="id_received_file">Fichier de relecture{% if is_resubmission %} <span style="font-weight:400;color:var(--ink-muted)">(optionnel)</span>{% endif %}</label>
           <p class="muted" style="font-size:12px;margin:0 0 6px">Format PDF ou Word (.doc, .docx)</p>
           <input class="input" type="file" name="received_file" id="id_received_file"
                  accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                 required>
+                 {% if not is_resubmission %}required{% endif %}>
           {% if form.received_file.errors %}
             <p class="small muted" style="color:var(--tone-error-ink);margin-top:4px">{{ form.received_file.errors.0 }}</p>
           {% endif %}
@@ -63,7 +69,7 @@
         </div>
 
         <div style="display:flex;align-items:center;gap:12px;padding-top:4px">
-          <button type="submit" class="btn primary">Déposer ma relecture</button>
+          <button type="submit" class="btn primary">{% if is_resubmission %}Mettre à jour{% else %}Déposer ma relecture{% endif %}</button>
           <a href="{% url 'accounts:reviewer_dashboard' %}" class="btn ghost">Annuler</a>
         </div>
 
