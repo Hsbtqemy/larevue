@@ -11,9 +11,11 @@ class JournalEditForm(forms.ModelForm):
             "name", "accent_color", "description", "logo",
             "directors", "publisher", "issn_print", "issn_online",
             "periodicity", "founded_year", "website",
+            "email_sender_name", "email_intro", "auto_reminder_days",
         ]
         widgets = {
             "description": forms.Textarea(attrs={"rows": 4}),
+            "email_intro": forms.Textarea(attrs={"rows": 3}),
         }
 
 

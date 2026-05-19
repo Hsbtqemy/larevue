@@ -32,7 +32,9 @@
               {{ target_user.get_full_name|default:target_user.email }}
             </h1>
             {% if target_user.is_superuser %}
-            <span class="superuser-pill big">{% icon "lock" 10 cls="icon" %} superuser</span>
+            <span class="role-pill superuser-pill big">{% icon "lock" 10 cls="icon" %} superuser</span>
+            {% elif target_user.is_reviewer %}
+            <span class="role-pill reviewer-pill big">{% icon "users" 10 cls="icon" %} relecteur·ice</span>
             {% endif %}
             {% if target_user.must_change_password %}
             <span class="badge warn no-dot" style="font-size:11px">mdp temporaire</span>
@@ -170,7 +172,7 @@
       </div>
       <div class="admin-stat">
         <div class="lbl">Rôle</div>
-        <div class="val">{% if target_user.is_superuser %}Superutilisateur·ice{% else %}Membre{% endif %}</div>
+        <div class="val">{% if target_user.is_superuser %}Superutilisateur·ice{% elif target_user.is_reviewer %}Relecteur·ice{% else %}Membre{% endif %}</div>
       </div>
       <div class="admin-stat">
         <div class="lbl">Revues</div>

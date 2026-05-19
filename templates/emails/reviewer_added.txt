@@ -1,0 +1,11 @@
+{% extends "emails/base.txt" %}
+{% block body %}
+Bonjour {{ reviewer_name }},
+
+La rédaction de {{ journal_name }} vous a ajouté·e à son équipe de relecteur·ices.
+Vos relectures sont accessibles depuis votre profil Edito :
+
+{{ profile_url }}
+
+Si vous n'attendiez pas cet email, contactez l'administrateur·ice de la revue.
+{% endblock %}

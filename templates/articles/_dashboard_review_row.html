@@ -1,0 +1,47 @@
+{% load edito %}
+{% url 'articles:review_reminder' slug=journal.slug issue_id=review.article.issue_id article_id=review.article_id review_id=review.pk as reminder_url %}
+
+<div class="dash-rv-row" id="dash-review-{{ review.pk }}" x-data="{ confirming: false }">
+  <div class="dash-rv-info">
+    <div class="dash-rv-who">
+      {% if review.reviewer %}
+        <a href="{% url 'contacts:detail' slug=journal.slug pk=review.reviewer_id %}" style="color:inherit;text-decoration:none;font-weight:500">{{ review.reviewer_name_snapshot }}</a>
+      {% else %}
+        <strong>{{ review.reviewer_name_snapshot }}</strong>
+      {% endif %}
+    </div>
+    <div class="dash-rv-what">
+      <a href="{% url 'issues:detail' slug=journal.slug issue_id=review.article.issue_id %}" style="color:inherit;text-decoration:none">N°{{ review.article.issue.number }}</a>
+      · {{ review.article.title }}
+    </div>
+  </div>
+  <div class="dash-rv-deadline">
+    {% if review.is_overdue %}
+      <span class="badge refused" style="font-size:11px">{{ review.deadline|date:"d/m/Y" }} · +{{ review.deadline|days_late }}&nbsp;j</span>
+    {% else %}
+      <span class="small muted">{{ review.deadline|date:"d/m/Y" }}</span>
+    {% endif %}
+    {% if review.reminder_sent_at %}
+      <span class="tiny faint" style="display:block;margin-top:2px">Rappel le {{ review.reminder_sent_at|date:"d/m" }}</span>
+    {% endif %}
+  </div>
+  <div class="dash-rv-action">
+    <button x-show="!confirming" @click="confirming = true" type="button" class="btn ghost sm"
+            title="{% if review.reminder_sent_at %}Rappel déjà envoyé le {{ review.reminder_sent_at|date:'d/m/Y' }}{% else %}Envoyer un rappel{% endif %}">
+      {% icon "mail" 12 %} Rappel
+    </button>
+    <div x-show="confirming" x-cloak style="display:flex;gap:4px;align-items:center">
+      {% if review.reminder_sent_at %}
+        <span class="small muted">Déjà le {{ review.reminder_sent_at|date:"d/m" }}. OK&nbsp;?</span>
+      {% else %}
+        <span class="small muted">Envoyer&nbsp;?</span>
+      {% endif %}
+      <button hx-post="{{ reminder_url }}?fmt=row"
+              hx-target="#dash-review-{{ review.pk }}"
+              hx-swap="outerHTML"
+              type="button"
+              class="btn primary sm">Oui</button>
+      <button @click="confirming = false" type="button" class="btn ghost sm">Non</button>
+    </div>
+  </div>
+</div>

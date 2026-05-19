@@ -118,7 +118,7 @@
             <div style="font-size:12px;color:var(--ink-faint)">{{ m.user.email }} · depuis le {{ m.created_at|date:"d/m/Y" }}</div>
           </div>
           {% if m.user.is_superuser %}
-          <span class="superuser-pill">{% icon "lock" 9 cls="icon" %} superuser</span>
+          <span class="role-pill superuser-pill">{% icon "lock" 9 cls="icon" %} superuser</span>
           {% endif %}
           {% url 'administration:journal_member_remove' slug=journal.slug user_id=m.user.pk as remove_url %}
           {% include "partials/_confirm_delete.html" with delete_url=remove_url trigger_label="Retirer" trigger_cls="btn ghost sm" title="Retirer ce membre ?" message="L'utilisateur·ice perdra l'accès à cette revue." confirm_label="Retirer" %}

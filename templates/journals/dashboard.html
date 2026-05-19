@@ -57,6 +57,13 @@
               <div class="tiny muted">Ajouter un auteur ou un relecteur</div>
             </div>
           </a>
+          <a href="{% url 'journal_edit' slug=journal.slug %}#emails" class="qa-btn" style="text-decoration:none">
+            <div class="qa-icon">{% icon "mail" 16 %}</div>
+            <div>
+              <div style="font-weight:500;color:var(--ink)">Emails &amp; relances</div>
+              <div class="tiny muted">Expéditeur, intro, rappels automatiques</div>
+            </div>
+          </a>
         </div>
       </div>
 
@@ -114,6 +121,21 @@
           </div>
         {% endif %}
       </div>
+
+      {# ===== Relectures en cours ===== #}
+      {% if sent_reviews %}
+      <div class="section">
+        <div class="section-head">
+          <h2>Relectures en cours</h2>
+          <span class="meta">{{ sent_reviews|length }} en attente</span>
+        </div>
+        <div>
+          {% for review in sent_reviews %}
+            {% include "articles/_dashboard_review_row.html" with journal=journal %}
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
 
       {# ===== Grille bas de page ===== #}
       <div class="dash-grid">

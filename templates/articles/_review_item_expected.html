@@ -4,6 +4,7 @@
 {% url 'articles:review_receive' slug=journal.slug issue_id=issue.pk article_id=article.pk review_id=review.pk as receive_url %}
 {% url 'articles:review_delete' slug=journal.slug issue_id=issue.pk article_id=article.pk review_id=review.pk as review_delete_url %}
 {% url 'articles:review_patch' slug=journal.slug issue_id=issue.pk article_id=article.pk review_id=review.pk as review_patch_url %}
+{% url 'articles:review_reminder' slug=journal.slug issue_id=issue.pk article_id=article.pk review_id=review.pk as review_reminder_url %}
 
 <div class="review-card" id="review-active-{{ review.pk }}"
      x-data="{ receiveOpen: false }">
@@ -45,6 +46,25 @@
             </div>
           </div>
         {% else %}
+          <div x-data="{ confirming: false }">
+            <button x-show="!confirming" @click="confirming = true" type="button" class="btn ghost sm"
+                    title="{% if review.reminder_sent_at %}Rappel envoyé le {{ review.reminder_sent_at|date:'d/m/Y' }}{% else %}Envoyer un rappel{% endif %}">
+              {% icon "mail" 12 %} Rappel
+            </button>
+            <div x-show="confirming" style="display:flex;gap:4px;align-items:center">
+              {% if review.reminder_sent_at %}
+                <span class="small muted">Déjà envoyé le {{ review.reminder_sent_at|date:"d/m" }}. Confirmer ?</span>
+              {% else %}
+                <span class="small muted">Envoyer un rappel ?</span>
+              {% endif %}
+              <button hx-post="{{ review_reminder_url }}"
+                      hx-target="#review-active-{{ review.pk }}"
+                      hx-swap="outerHTML"
+                      type="button"
+                      class="btn primary sm">Oui</button>
+              <button @click="confirming = false" type="button" class="btn ghost sm">Non</button>
+            </div>
+          </div>
           <button hx-post="{{ review_decline_url }}"
                   hx-target="#review-active-{{ review.pk }}"
                   hx-swap="outerHTML"
@@ -68,6 +88,10 @@
     {% if review.is_overdue %}
       <span class="sep">·</span>
       <span class="badge refused" style="font-size:10px">+{{ review.deadline|days_late }} j. de retard</span>
+    {% endif %}
+    {% if review.reminder_sent_at %}
+      <span class="sep">·</span>
+      <span style="color:var(--ink-faint)">Rappel le {{ review.reminder_sent_at|date:"d/m/Y" }}</span>
     {% endif %}
     <span class="sep">·</span>
     <span>v{{ review.article_version.version_number }}</span>

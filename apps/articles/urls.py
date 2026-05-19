@@ -22,5 +22,6 @@ urlpatterns = [
     path("<int:article_id>/reviews/<int:review_id>/delete/", views.ReviewRequestDeleteView.as_view(), name="review_delete"),
     path("<int:article_id>/reviews/<int:review_id>/download/", views.ReviewRequestFileDownloadView.as_view(), name="review_download"),
     path("<int:article_id>/reviews/<int:review_id>/patch/", views.ReviewRequestPatchView.as_view(), name="review_patch"),
+    path("<int:article_id>/reviews/<int:review_id>/reminder/", views.ReviewRequestReminderView.as_view(), name="review_reminder"),
     path("<int:article_id>/transition/", views.ArticleTransitionView.as_view(), name="transition"),
 ]

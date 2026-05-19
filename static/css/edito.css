@@ -1529,6 +1529,29 @@ label {
 .text-center { text-align: center; }
 .nowrap { white-space: nowrap; }
 
+/* ---------- Dashboard review rows ---------- */
+.dash-rv-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 16px;
+  align-items: center;
+  padding: 11px 16px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  font-size: 13.5px;
+  transition: border-color 120ms;
+}
+.dash-rv-row + .dash-rv-row { margin-top: 8px; }
+.dash-rv-who { font-weight: 500; color: var(--ink); margin-bottom: 2px; }
+.dash-rv-what { font-size: 12.5px; color: var(--ink-muted); }
+.dash-rv-deadline { text-align: right; white-space: nowrap; }
+.dash-rv-action { white-space: nowrap; }
+@media (max-width: 640px) {
+  .dash-rv-row { grid-template-columns: 1fr; gap: 8px; }
+  .dash-rv-deadline, .dash-rv-action { text-align: left; }
+}
+
 /* ---------- Two-col dashboard layout ---------- */
 .dash-grid {
   display: grid;
@@ -3737,7 +3760,7 @@ details.documents-section[open] .doc-toggle-chev {
 }
 
 /* Pill superuser */
-.superuser-pill {
+.role-pill {
   display: inline-flex;
   align-items: center;
   gap: 3px;
@@ -3745,19 +3768,19 @@ details.documents-section[open] .doc-toggle-chev {
   font-weight: 500;
   padding: 1px 7px 1px 6px;
   border-radius: 100px;
-  background: var(--tone-active-bg);
-  color: var(--tone-active-ink);
   text-transform: lowercase;
   letter-spacing: 0.02em;
   white-space: nowrap;
 }
-.superuser-pill.big {
+.role-pill.big {
   font-size: 11.5px;
   padding: 2px 9px 2px 8px;
   margin-left: 10px;
   vertical-align: middle;
 }
-.superuser-pill .icon { opacity: 0.65; }
+.role-pill .icon { opacity: 0.65; }
+.superuser-pill { background: var(--tone-active-bg); color: var(--tone-active-ink); }
+.reviewer-pill  { background: var(--tone-info-bg);   color: var(--tone-info-ink); }
 
 /* Cellule num (chiffre + sous-libellé) */
 .num-stack { display: flex; flex-direction: column; line-height: 1.15; }

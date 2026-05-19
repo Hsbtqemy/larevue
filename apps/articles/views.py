@@ -20,7 +20,7 @@ from apps.articles.forms import (
 from apps.articles.models import Article, ArticleVersion, InternalNote
 from apps.articles.utils import oob_counters_html
 from apps.contacts.models import Contact
-from apps.core.mail import send_review_assigned, send_review_received_editors, send_review_received_reviewer
+from apps.core.mail import send_review_assigned, send_review_received_editors, send_review_received_reviewer, send_review_reminder
 from apps.core.mixins import JournalMemberRequiredMixin, JournalOwnedObjectMixin
 from apps.core.utils import actor_name, create_audit_note, file_response
 from apps.core.views import JournalOwnedCreateView, JournalOwnedPatchView, JournalOwnedTransitionView, compute_transitions
@@ -226,7 +226,7 @@ class _ReviewRequestMixin(JournalOwnedObjectMixin):
     def get_object_or_404(self):
         try:
             return ReviewRequest.objects.select_related(
-                "article__issue", "reviewer", "article_version"
+                "article__issue", "article__issue__journal", "reviewer", "reviewer__user", "article_version"
             ).get(
                 pk=self.kwargs["review_id"],
                 article_id=self.kwargs["article_id"],
@@ -714,6 +714,36 @@ class ReviewRequestFileDownloadView(_ReviewRequestMixin, JournalMemberRequiredMi
             raise Http404
 
         return file_response(review.received_file)
+
+
+class ReviewRequestReminderView(_ReviewRequestMixin, JournalMemberRequiredMixin, View):
+    def post(self, request, issue_id, article_id, review_id, **kwargs):
+        review = self.get_object_or_404()
+
+        guard = self._check_archived(review.article)
+        if guard:
+            return guard
+        if review.state != ReviewRequest.State.SENT:
+            return JsonResponse({"error": "Le rappel ne peut être envoyé que pour une relecture en cours."}, status=400)
+
+        send_review_reminder(review)
+        review.reminder_sent_at = timezone.now()
+        review.save(update_fields=["reminder_sent_at"])
+
+        create_audit_note(
+            article=review.article, author=request.user,
+            message=f"{actor_name(request.user)} a envoyé un rappel à {review.reviewer_name_snapshot}",
+        )
+
+        if request.GET.get("fmt") == "row":
+            fragment = render_to_string(
+                "articles/_dashboard_review_row.html",
+                {"review": review, "journal": request.journal},
+                request=request,
+            )
+        else:
+            fragment = render_to_string("articles/_review_item_expected.html", _review_card_ctx(review, request), request=request)
+        return HttpResponse(fragment)
 
 
 class ReviewRequestPatchView(_ReviewRequestMixin, JournalOwnedPatchView):

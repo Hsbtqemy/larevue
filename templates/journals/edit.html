@@ -171,6 +171,56 @@
         </div>
       </div>
 
+      {# ===== Emails & relances ===== #}
+      <div class="main-content" style="padding-bottom:0" id="emails">
+        <div class="section">
+          <div class="section-head">
+            <h2>Emails &amp; relances</h2>
+          </div>
+          <div class="edit-meta-form">
+
+            <div class="field full">
+              <label for="id_email_sender_name">Nom d'expéditeur</label>
+              <input type="text" id="id_email_sender_name" name="email_sender_name" class="text-input"
+                     value="{{ form.email_sender_name.value|default:'' }}"
+                     placeholder="{{ journal.name }}">
+              <div class="field-hint">Affiché dans le champ « De : ». Si vide, le nom de la revue est utilisé.</div>
+              {% if form.email_sender_name.errors %}
+                <div class="form-msg err">{{ form.email_sender_name.errors|join:" " }}</div>
+              {% endif %}
+            </div>
+
+            <div class="field full">
+              <label for="id_email_intro">Introduction email</label>
+              <textarea id="id_email_intro" name="email_intro" class="text-input" rows="3"
+                        placeholder="Paragraphe personnalisé affiché en tête de chaque email…">{{ form.email_intro.value|default:'' }}</textarea>
+              {% if form.email_intro.errors %}
+                <div class="form-msg err">{{ form.email_intro.errors|join:" " }}</div>
+              {% endif %}
+            </div>
+
+            <div class="field">
+              <label for="id_auto_reminder_days">Rappel automatique</label>
+              <div style="display:flex;align-items:center;gap:8px">
+                <input type="number" id="id_auto_reminder_days" name="auto_reminder_days" class="text-input"
+                       style="width:80px"
+                       value="{{ form.auto_reminder_days.value|default:'' }}"
+                       min="1" max="90" placeholder="—">
+                <span style="font-size:13px;color:var(--ink-muted)">jours avant la deadline</span>
+              </div>
+              <div class="field-hint">Laisser vide pour désactiver l'envoi automatique. Un rappel manuel reste toujours possible.</div>
+              {% if form.auto_reminder_days.errors %}
+                <div class="form-msg err">{{ form.auto_reminder_days.errors|join:" " }}</div>
+              {% endif %}
+            </div>
+
+          </div>
+          <div style="margin-top:20px">
+            <button type="submit" class="btn primary">Enregistrer les modifications</button>
+          </div>
+        </div>
+      </div>
+
     </form>
 
     {# ===== Documents ===== #}

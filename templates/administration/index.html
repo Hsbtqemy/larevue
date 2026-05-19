@@ -276,7 +276,9 @@
                     <div class="n">
                       {{ u.get_full_name|default:u.email }}
                       {% if u.is_superuser %}
-                      <span class="superuser-pill">{% icon "lock" 9 cls="icon" %} superuser</span>
+                      <span class="role-pill superuser-pill">{% icon "lock" 9 cls="icon" %} superuser</span>
+                      {% elif u.is_reviewer %}
+                      <span class="role-pill reviewer-pill">{% icon "users" 9 cls="icon" %} relecteur·ice</span>
                       {% endif %}
                       {% if u.must_change_password %}
                       <span class="badge warn no-dot" style="font-size:10.5px;padding:1px 7px">mdp temp.</span>

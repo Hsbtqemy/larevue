@@ -116,7 +116,7 @@ class JournalDashboardView(JournalMemberRequiredMixin, TemplateView):
                 state=ReviewRequest.State.SENT,
                 article__issue__in=active_issues,
             )
-            .select_related("article", "article__issue")
+            .select_related("article", "article__issue", "reviewer")
             .order_by("deadline")
         )
 
@@ -188,6 +188,7 @@ class JournalDashboardView(JournalMemberRequiredMixin, TemplateView):
         ctx.update({
             "journal": journal,
             "active_issues": active_issues,
+            "sent_reviews": all_sent,
             "watch_items": watch_items,
             "late_count": len(watch_items),
             "upcoming_deadlines": upcoming[:10],

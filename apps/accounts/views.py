@@ -14,9 +14,11 @@ from django.views import View
 
 from apps.accounts.forms import ProfilePasswordForm, ReviewerActivateForm, ReviewerInviteForm, ReviewerSubmitForm
 from apps.accounts.tokens import load_invitation_token, make_invitation_token
-from apps.core.mail import send_review_received_editors, send_review_received_reviewer, send_reviewer_invitation
+from apps.contacts.models import Contact
+from apps.core.mail import send_review_received_editors, send_review_received_reviewer, send_reviewer_added, send_reviewer_invitation
 from apps.core.mixins import JournalMemberRequiredMixin
 from apps.issues.models import Issue
+from apps.reviews.models import ReviewRequest
 
 User = get_user_model()
 
@@ -36,15 +38,43 @@ def _memberships_for(user):
     )
 
 
+def _ensure_contact(journal, email, first_name, last_name, user):
+    contact = Contact.objects.filter(email=email, journal=journal).first()
+    if not contact:
+        Contact.objects.create(
+            journal=journal, email=email,
+            first_name=first_name, last_name=last_name, user=user,
+        )
+    elif contact.user_id is None:
+        contact.user = user
+        contact.save(update_fields=["user"])
+
+
+def _reviews_for(user):
+    active_states = {ReviewRequest.State.ASSIGNED, ReviewRequest.State.SENT}
+    all_reviews = list(
+        ReviewRequest.objects.filter(reviewer__user=user)
+        .select_related("article", "article__issue", "article__issue__journal", "article_version")
+        .order_by("deadline")
+    )
+    return (
+        [r for r in all_reviews if r.state in active_states],
+        [r for r in all_reviews if r.state not in active_states],
+    )
+
+
 class ProfileView(LoginRequiredMixin, View):
     template_name = "accounts/profile.html"
 
     def get(self, request):
+        reviews_active, reviews_done = _reviews_for(request.user)
         return render(request, self.template_name, {
             "patch_url": reverse("accounts:profile_patch"),
             "pw_form": ProfilePasswordForm(request.user),
             "pw_success": request.GET.get("pw") == "ok",
             "memberships": _memberships_for(request.user),
+            "reviews_active": reviews_active,
+            "reviews_done": reviews_done,
         })
 
 
@@ -76,13 +106,19 @@ class ProfilePatchView(LoginRequiredMixin, View):
 
 
 class ProfilePasswordView(LoginRequiredMixin, View):
-    def get(self, request):
-        return render(request, ProfileView.template_name, {
+    def _ctx(self, request, **extra):
+        reviews_active, reviews_done = _reviews_for(request.user)
+        return {
             "patch_url": reverse("accounts:profile_patch"),
-            "pw_form": ProfilePasswordForm(request.user),
-            "pw_open": True,
             "memberships": _memberships_for(request.user),
-        })
+            "reviews_active": reviews_active,
+            "reviews_done": reviews_done,
+            **extra,
+        }
+
+    def get(self, request):
+        return render(request, ProfileView.template_name,
+                      self._ctx(request, pw_form=ProfilePasswordForm(request.user), pw_open=True))
 
     def post(self, request):
         form = ProfilePasswordForm(request.user, request.POST)
@@ -92,12 +128,8 @@ class ProfilePasswordView(LoginRequiredMixin, View):
             request.user.save()
             update_session_auth_hash(request, request.user)
             return redirect(reverse("accounts:profile") + "?pw=ok")
-        return render(request, ProfileView.template_name, {
-            "patch_url": reverse("accounts:profile_patch"),
-            "pw_form": form,
-            "pw_open": True,
-            "memberships": _memberships_for(request.user),
-        })
+        return render(request, ProfileView.template_name,
+                      self._ctx(request, pw_form=form, pw_open=True))
 
 
 class ReviewerInviteView(JournalMemberRequiredMixin, View):
@@ -117,35 +149,42 @@ class ReviewerInviteView(JournalMemberRequiredMixin, View):
             return render(request, self.template_name, {"form": form, "contact_search_url": contact_search_url})
 
         email = form.cleaned_data["email"]
+        first_name = form.cleaned_data["first_name"]
+        last_name = form.cleaned_data["last_name"]
         existing = User.objects.filter(email=email).first()
 
         if existing and existing.is_active:
-            msg = "Cette adresse appartient déjà à un compte éditeur." if not existing.is_reviewer else "Ce relecteur possède déjà un compte actif."
-            form.add_error("email", msg)
-            return render(request, self.template_name, {"form": form})
+            if existing.is_reviewer:
+                form.add_error("email", "Ce relecteur possède déjà un compte actif.")
+                return render(request, self.template_name, {"form": form, "contact_search_url": contact_search_url})
+            _ensure_contact(request.journal, email, first_name, last_name, existing)
+            send_reviewer_added(
+                email=email,
+                reviewer_name=existing.get_full_name() or email,
+                journal_name=request.journal.name,
+                profile_url=request.build_absolute_uri(reverse("accounts:profile")),
+                journal=request.journal,
+            )
+            messages.success(request, f"{existing.get_full_name() or email} a déjà un compte Edito. Une notification lui a été envoyée.")
+            return redirect(request.path)
 
         if existing:
             user = existing
-            user.first_name = form.cleaned_data["first_name"]
-            user.last_name = form.cleaned_data["last_name"]
+            user.first_name = first_name
+            user.last_name = last_name
             user.save(update_fields=["first_name", "last_name"])
         else:
             user = User(
                 email=email,
-                first_name=form.cleaned_data["first_name"],
-                last_name=form.cleaned_data["last_name"],
+                first_name=first_name,
+                last_name=last_name,
                 is_reviewer=True,
                 is_active=False,
             )
             user.set_unusable_password()
             user.save()
 
-        # Lier au Contact si l'email correspond
-        from apps.contacts.models import Contact
-        contact = Contact.objects.filter(email=email, journal=request.journal).first()
-        if contact and contact.user_id is None:
-            contact.user = user
-            contact.save(update_fields=["user"])
+        _ensure_contact(request.journal, email, first_name, last_name, user)
 
         token = make_invitation_token(user.pk)
         activation_url = request.build_absolute_uri(
@@ -205,17 +244,7 @@ class ReviewerDashboardView(LoginRequiredMixin, View):
         return super().dispatch(request, *args, **kwargs)
 
     def get(self, request):
-        from apps.reviews.models import ReviewRequest
-        all_reviews = list(
-            ReviewRequest.objects.filter(reviewer__user=request.user)
-            .select_related(
-                "article", "article__issue", "article__issue__journal",
-                "article_version",
-            )
-        )
-        active_states = {ReviewRequest.State.ASSIGNED, ReviewRequest.State.SENT}
-        active_reviews = [r for r in all_reviews if r.state in active_states]
-        done_reviews = [r for r in all_reviews if r.state not in active_states]
+        active_reviews, done_reviews = _reviews_for(request.user)
         return render(request, self.template_name, {
             "active_reviews": active_reviews,
             "done_reviews": done_reviews,
@@ -226,7 +255,6 @@ class ReviewerReviewSubmitView(LoginRequiredMixin, View):
     template_name = "accounts/reviewer_review_submit.html"
 
     def _get_review(self, request, pk):
-        from apps.reviews.models import ReviewRequest
         try:
             review = ReviewRequest.objects.select_related(
                 "article", "article__issue", "article__issue__journal",

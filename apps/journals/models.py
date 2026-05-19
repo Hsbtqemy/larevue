@@ -66,6 +66,12 @@ class Journal(BaseModel):
         verbose_name="Introduction email",
         help_text="Paragraphe personnalisé inséré en tête de chaque email envoyé aux relecteurs.",
     )
+    auto_reminder_days = models.PositiveSmallIntegerField(
+        null=True,
+        blank=True,
+        verbose_name="Rappel automatique (jours avant deadline)",
+        help_text="Si renseigné, un rappel est envoyé automatiquement X jours avant la deadline. Laisser vide pour désactiver.",
+    )
 
     class Meta:
         verbose_name = "Revue"

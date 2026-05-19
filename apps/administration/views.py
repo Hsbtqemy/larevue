@@ -15,6 +15,7 @@ from apps.administration.forms import (
     UserQuickCreateForm,
 )
 from apps.articles.models import Article
+from apps.core.mail import reviewer_dashboard_url
 from apps.core.mixins import SuperuserRequiredMixin
 from apps.core.utils import generate_temp_password
 from apps.issues.models import Issue
@@ -328,17 +329,25 @@ def _review_with_deadline_context(journal):
         "reviewer_name": "Marie Dupont",
         "article_title": _sample_article_title(journal),
         "deadline": "30/06/2026",
-        "dashboard_url": settings.SITE_URL + reverse("accounts:reviewer_dashboard"),
+        "dashboard_url": reviewer_dashboard_url(),
     }
 
 
 _EMAIL_TYPES = {
     "invitation": {
-        "label": "Invitation relecteur·ice",
+        "label": "Invitation relecteur·ice (nouveau compte)",
         "context": lambda journal: {
             "journal_name": journal.name,
             "reviewer_name": "Marie Dupont",
             "activation_url": "https://example.com/activer/token-exemple",
+        },
+    },
+    "reviewer_added": {
+        "label": "Notification relecteur·ice (compte existant)",
+        "context": lambda journal: {
+            "journal_name": journal.name,
+            "reviewer_name": "Marie Dupont",
+            "profile_url": settings.SITE_URL + reverse("accounts:profile"),
         },
     },
     "review_assigned": {

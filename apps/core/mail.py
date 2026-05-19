@@ -42,8 +42,34 @@ def send_reviewer_invitation(
     )
 
 
-def _reviewer_dashboard_url() -> str:
+def send_reviewer_added(
+    email: str, reviewer_name: str, journal_name: str, profile_url: str, *, journal=None
+) -> None:
+    try:
+        send_template_email(
+            to=email,
+            subject=f"Vous avez été ajouté·e comme relecteur·ice — {journal_name}",
+            template_base="reviewer_added",
+            context={
+                "journal_name": journal_name,
+                "reviewer_name": reviewer_name,
+                "profile_url": profile_url,
+            },
+            journal=journal,
+        )
+    except Exception:
+        logger.exception("send_reviewer_added failed for %s", email)
+
+
+def reviewer_dashboard_url() -> str:
     return settings.SITE_URL + reverse("accounts:reviewer_dashboard")
+
+
+def _reviewer_url(reviewer) -> str:
+    """Reviewer portal for pure reviewers; profile page for editor-reviewers."""
+    if reviewer.user_id and not reviewer.user.is_reviewer:
+        return settings.SITE_URL + reverse("accounts:profile")
+    return reviewer_dashboard_url()
 
 
 def _article_url(review) -> str:
@@ -70,7 +96,7 @@ def send_review_assigned(review) -> None:
                 "journal_name": journal.name,
                 "article_title": review.article.title,
                 "deadline": review.deadline.strftime("%d/%m/%Y"),
-                "dashboard_url": _reviewer_dashboard_url(),
+                "dashboard_url": _reviewer_url(reviewer),
             },
             journal=journal,
         )
@@ -115,7 +141,7 @@ def send_review_reminder(review) -> None:
                 "journal_name": journal.name,
                 "article_title": review.article.title,
                 "deadline": deadline,
-                "dashboard_url": _reviewer_dashboard_url(),
+                "dashboard_url": _reviewer_url(reviewer),
             },
             journal=journal,
         )
