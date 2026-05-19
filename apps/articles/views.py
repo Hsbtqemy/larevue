@@ -19,6 +19,7 @@ from apps.articles.forms import (
 from apps.articles.models import Article, ArticleVersion, InternalNote
 from apps.articles.utils import oob_counters_html
 from apps.contacts.models import Contact
+from apps.core.mail import send_review_assigned, send_review_received_editors, send_review_received_reviewer
 from apps.core.mixins import JournalMemberRequiredMixin, JournalOwnedObjectMixin
 from apps.core.utils import actor_name, create_audit_note, file_response
 from apps.core.views import JournalOwnedCreateView, JournalOwnedPatchView, JournalOwnedTransitionView, compute_transitions
@@ -610,6 +611,7 @@ class ReviewRequestSendView(_ReviewRequestMixin, JournalMemberRequiredMixin, Vie
         review.state = ReviewRequest.State.SENT
         review.sent_at = timezone.now()
         review.save(update_fields=["state", "sent_at"])
+        send_review_assigned(review)
 
         create_audit_note(
             article=article, author=request.user,
@@ -664,6 +666,8 @@ class ReviewRequestReceiveView(_ReviewRequestMixin, JournalMemberRequiredMixin, 
         review.state = ReviewRequest.State.RECEIVED
         review.received_at = timezone.now()
         review.save()
+        send_review_received_reviewer(review)
+        send_review_received_editors(review)
 
         verdict_label = review.get_verdict_display()
         create_audit_note(

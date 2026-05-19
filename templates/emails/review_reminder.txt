@@ -9,5 +9,5 @@ Ceci est un rappel concernant la relecture que vous avez acceptée pour {{ journ
 
 Si vous avez déjà déposé votre relecture, merci d'ignorer ce message.
 
-Déposer ma relecture : {{ site_url }}
+Déposer ma relecture : {{ dashboard_url }}
 {% endblock %}

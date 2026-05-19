@@ -13,5 +13,5 @@ Instructions : {{ instructions }}
 
 Vous trouverez la version à relire dans votre espace relecteur.
 
-Accéder à ma relecture : {{ site_url }}
+Accéder à ma relecture : {{ dashboard_url }}
 {% endblock %}

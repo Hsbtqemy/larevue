@@ -14,7 +14,7 @@ from django.views import View
 
 from apps.accounts.forms import ProfilePasswordForm, ReviewerActivateForm, ReviewerInviteForm, ReviewerSubmitForm
 from apps.accounts.tokens import load_invitation_token, make_invitation_token
-from apps.core.mail import send_reviewer_invitation
+from apps.core.mail import send_review_received_editors, send_review_received_reviewer, send_reviewer_invitation
 from apps.core.mixins import JournalMemberRequiredMixin
 from apps.issues.models import Issue
 
@@ -256,5 +256,7 @@ class ReviewerReviewSubmitView(LoginRequiredMixin, View):
         review.state = ReviewRequest.State.RECEIVED
         review.received_at = timezone.now()
         review.save(update_fields=["received_file", "verdict", "state", "received_at"])
+        send_review_received_reviewer(review)
+        send_review_received_editors(review)
         messages.success(request, "Votre relecture a bien été déposée. Merci !")
         return redirect("accounts:reviewer_dashboard")
