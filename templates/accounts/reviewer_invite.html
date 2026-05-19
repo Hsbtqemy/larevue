@@ -32,13 +32,46 @@
       {% endfor %}
     {% endif %}
 
-    <form method="post">
+    <form method="post" x-data="{
+      query: '{{ form.first_name.value|default:'' }} {{ form.last_name.value|default:'' }}'.trim(),
+      results: [],
+      open: false,
+      async search() {
+        if (this.query.length < 2) { this.results = []; this.open = false; return; }
+        const res = await fetch('{{ contact_search_url }}?q=' + encodeURIComponent(this.query));
+        const data = await res.json();
+        this.results = data.results;
+        this.open = this.results.length > 0;
+      },
+      select(r) {
+        document.getElementById('id_email').value = r.email;
+        document.getElementById('id_first_name').value = r.first_name;
+        document.getElementById('id_last_name').value = r.last_name;
+        this.query = r.name;
+        this.open = false;
+      }
+    }">
       {% csrf_token %}
       <div style="display:flex;flex-direction:column;gap:16px">
 
         {% if form.non_field_errors %}
           <div class="inline-edit-error">{{ form.non_field_errors }}</div>
         {% endif %}
+
+        <div style="position:relative">
+          <label class="label">Rechercher dans les contacts</label>
+          <input class="input" type="text" placeholder="Nom, prénom…" autocomplete="off"
+                 x-model="query" @input.debounce.250ms="search()" @keydown.escape="open=false">
+          <div x-show="open" x-cloak @click.outside="open=false"
+               style="position:absolute;top:100%;left:0;right:0;z-index:50;background:var(--surface);border:1px solid var(--line);border-radius:8px;margin-top:4px;box-shadow:var(--shadow-md)">
+            <template x-for="r in results" :key="r.id">
+              <button type="button" @click="select(r)" class="popover-item" style="width:100%;display:flex;flex-direction:column;align-items:flex-start;gap:1px">
+                <span x-text="r.name" style="font-weight:500"></span>
+                <span x-text="r.email" style="font-size:12px;color:var(--ink-muted)"></span>
+              </button>
+            </template>
+          </div>
+        </div>
 
         <div>
           <label class="label" for="id_email">Adresse e-mail</label>

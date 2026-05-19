@@ -104,12 +104,17 @@ class ReviewerInviteView(JournalMemberRequiredMixin, View):
     template_name = "accounts/reviewer_invite.html"
 
     def get(self, request, slug):
-        return render(request, self.template_name, {"form": ReviewerInviteForm()})
+        contact_search_url = reverse("contacts:search", kwargs={"slug": slug})
+        return render(request, self.template_name, {
+            "form": ReviewerInviteForm(),
+            "contact_search_url": contact_search_url,
+        })
 
     def post(self, request, slug):
         form = ReviewerInviteForm(request.POST)
+        contact_search_url = reverse("contacts:search", kwargs={"slug": slug})
         if not form.is_valid():
-            return render(request, self.template_name, {"form": form})
+            return render(request, self.template_name, {"form": form, "contact_search_url": contact_search_url})
 
         email = form.cleaned_data["email"]
         existing = User.objects.filter(email=email).first()

@@ -132,7 +132,8 @@ class ContactSearchAPIView(JournalMemberRequiredMixin, View):
             contacts = contacts.filter(usual_roles__contains=[role])
 
         results = [
-            {"id": c.pk, "name": c.full_name, "affiliation": c.affiliation}
+            {"id": c.pk, "name": c.full_name, "affiliation": c.affiliation,
+             "email": c.email, "first_name": c.first_name, "last_name": c.last_name}
             for c in contacts.order_by("last_name", "first_name")[:10]
         ]
         return JsonResponse({"results": results})
