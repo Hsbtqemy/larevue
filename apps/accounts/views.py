@@ -9,9 +9,10 @@ from django.db.models import Count, Q
 from django.http import JsonResponse
 from django.shortcuts import redirect, render
 from django.urls import reverse
+from django.utils import timezone
 from django.views import View
 
-from apps.accounts.forms import ProfilePasswordForm, ReviewerActivateForm, ReviewerInviteForm
+from apps.accounts.forms import ProfilePasswordForm, ReviewerActivateForm, ReviewerInviteForm, ReviewerSubmitForm
 from apps.accounts.tokens import load_invitation_token, make_invitation_token
 from apps.core.mail import send_reviewer_invitation
 from apps.core.mixins import JournalMemberRequiredMixin
@@ -113,12 +114,9 @@ class ReviewerInviteView(JournalMemberRequiredMixin, View):
         email = form.cleaned_data["email"]
         existing = User.objects.filter(email=email).first()
 
-        if existing and existing.is_active and not existing.is_reviewer:
-            form.add_error("email", "Cette adresse appartient déjà à un compte éditeur.")
-            return render(request, self.template_name, {"form": form})
-
         if existing and existing.is_active:
-            form.add_error("email", "Ce relecteur possède déjà un compte actif.")
+            msg = "Cette adresse appartient déjà à un compte éditeur." if not existing.is_reviewer else "Ce relecteur possède déjà un compte actif."
+            form.add_error("email", msg)
             return render(request, self.template_name, {"form": form})
 
         if existing:
@@ -203,7 +201,60 @@ class ReviewerDashboardView(LoginRequiredMixin, View):
 
     def get(self, request):
         from apps.reviews.models import ReviewRequest
-        reviews = ReviewRequest.objects.filter(
-            reviewer__user=request.user
-        ).select_related("article", "article__issue", "article__issue__journal")
-        return render(request, self.template_name, {"reviews": reviews})
+        all_reviews = list(
+            ReviewRequest.objects.filter(reviewer__user=request.user)
+            .select_related(
+                "article", "article__issue", "article__issue__journal",
+                "article_version",
+            )
+        )
+        active_states = {ReviewRequest.State.ASSIGNED, ReviewRequest.State.SENT}
+        active_reviews = [r for r in all_reviews if r.state in active_states]
+        done_reviews = [r for r in all_reviews if r.state not in active_states]
+        return render(request, self.template_name, {
+            "active_reviews": active_reviews,
+            "done_reviews": done_reviews,
+        })
+
+
+class ReviewerReviewSubmitView(LoginRequiredMixin, View):
+    template_name = "accounts/reviewer_review_submit.html"
+
+    def _get_review(self, request, pk):
+        from apps.reviews.models import ReviewRequest
+        try:
+            review = ReviewRequest.objects.select_related(
+                "article", "article__issue", "article__issue__journal",
+                "article_version", "reviewer",
+            ).get(pk=pk)
+        except ReviewRequest.DoesNotExist:
+            return None
+        if review.reviewer_id is None or review.reviewer.user_id != request.user.pk:
+            return None
+        if review.state != ReviewRequest.State.SENT:
+            return None
+        return review
+
+    def get(self, request, pk):
+        review = self._get_review(request, pk)
+        if review is None:
+            return redirect("accounts:reviewer_dashboard")
+        return render(request, self.template_name, {
+            "review": review,
+            "form": ReviewerSubmitForm(),
+        })
+
+    def post(self, request, pk):
+        review = self._get_review(request, pk)
+        if review is None:
+            return redirect("accounts:reviewer_dashboard")
+        form = ReviewerSubmitForm(request.POST, request.FILES)
+        if not form.is_valid():
+            return render(request, self.template_name, {"review": review, "form": form})
+        review.received_file = form.cleaned_data["received_file"]
+        review.verdict = form.cleaned_data["verdict"]
+        review.state = ReviewRequest.State.RECEIVED
+        review.received_at = timezone.now()
+        review.save(update_fields=["received_file", "verdict", "state", "received_at"])
+        messages.success(request, "Votre relecture a bien été déposée. Merci !")
+        return redirect("accounts:reviewer_dashboard")

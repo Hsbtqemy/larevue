@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Déposer ma relecture — Edito{% endblock %}
+{% block body_class %}{% endblock %}
+
+{% block extra_head %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Inter+Tight:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{% static 'css/edito.css' %}?v=20260506a">
+{% endblock %}
+
+{% block content %}
+<div style="min-height:100vh;background:var(--bg)">
+  <nav style="display:flex;align-items:center;gap:16px;padding:14px 24px;border-bottom:1px solid var(--line);background:var(--surface)">
+    <a href="{% url 'accounts:reviewer_dashboard' %}" style="font-size:14px;font-weight:600;color:var(--ink);text-decoration:none">← Retour</a>
+    <span style="font-size:13px;color:var(--ink-muted)">Déposer ma relecture</span>
+  </nav>
+
+  <main style="max-width:560px;margin:48px auto;padding:0 24px 64px">
+
+    <div style="font-size:12px;color:var(--ink-muted);margin-bottom:4px">
+      {{ review.article.issue.journal.name }} · N°{{ review.article.issue.number }}
+    </div>
+    <h1 class="display" style="font-size:24px;margin:0 0 4px;line-height:1.3">{{ review.article.title }}</h1>
+    <p class="muted" style="margin:0 0 32px;font-size:14px">Date limite : {{ review.deadline|date:"d/m/Y" }}</p>
+
+    <form method="post" enctype="multipart/form-data">
+      {% csrf_token %}
+      <div style="display:flex;flex-direction:column;gap:20px">
+
+        {% if form.non_field_errors %}
+          <div class="inline-edit-error">{{ form.non_field_errors }}</div>
+        {% endif %}
+
+        <div>
+          <label class="label" for="id_received_file">Fichier de relecture</label>
+          <p class="muted" style="font-size:12px;margin:0 0 6px">Format PDF ou Word (.doc, .docx)</p>
+          <input class="input" type="file" name="received_file" id="id_received_file"
+                 accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                 required>
+          {% if form.received_file.errors %}
+            <p class="small muted" style="color:var(--tone-error-ink);margin-top:4px">{{ form.received_file.errors.0 }}</p>
+          {% endif %}
+        </div>
+
+        <div>
+          <label class="label">Verdict</label>
+          <div style="display:flex;flex-direction:column;gap:8px;margin-top:4px">
+            {% for value, label in form.fields.verdict.choices %}
+              <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:14px">
+                <input type="radio" name="verdict" value="{{ value }}"
+                       {% if form.verdict.value == value %}checked{% endif %}
+                       style="accent-color:var(--ink);width:16px;height:16px;flex-shrink:0">
+                {{ label }}
+              </label>
+            {% endfor %}
+          </div>
+          {% if form.verdict.errors %}
+            <p class="small muted" style="color:var(--tone-error-ink);margin-top:6px">{{ form.verdict.errors.0 }}</p>
+          {% endif %}
+        </div>
+
+        <div style="display:flex;align-items:center;gap:12px;padding-top:4px">
+          <button type="submit" class="btn primary">Déposer ma relecture</button>
+          <a href="{% url 'accounts:reviewer_dashboard' %}" class="btn ghost">Annuler</a>
+        </div>
+
+      </div>
+    </form>
+  </main>
+</div>
+{% endblock %}

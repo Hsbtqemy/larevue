@@ -1,6 +1,8 @@
 from django import forms
 from django.contrib.auth.password_validation import validate_password
 
+from apps.reviews.models import ReviewRequest
+
 
 class ProfilePasswordForm(forms.Form):
     current_password = forms.CharField(
@@ -72,3 +74,14 @@ class ReviewerActivateForm(forms.Form):
         if p1 and p2 and p1 != p2:
             self.add_error("password_confirm", "Les deux mots de passe ne correspondent pas.")
         return cleaned
+
+
+class ReviewerSubmitForm(forms.Form):
+    received_file = forms.FileField(
+        label="Fichier de relecture",
+        help_text="Format PDF ou Word accepté.",
+    )
+    verdict = forms.ChoiceField(
+        label="Verdict",
+        choices=ReviewRequest.Verdict.choices,
+    )
