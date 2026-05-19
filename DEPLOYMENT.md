@@ -298,6 +298,27 @@ sudo tail -f /var/log/nginx/error.log      # erreurs nginx
 sudo journalctl -u edito -f                # journal systemd
 ```
 
+## Rappels automatiques relecteurs
+
+La commande `send_review_reminders` envoie un rappel email aux relecteurs dont la deadline approche et qui n'ont pas encore déposé leur relecture. Elle est idempotente : chaque relecture ne reçoit qu'un seul rappel (champ `reminder_sent_at`).
+
+**Configurer le cron** (à ajouter avec `sudo -u edito crontab -e`) :
+
+```
+# Rappels relecteurs — tous les jours à 8h, 3 jours avant la deadline
+0 8 * * * DJANGO_SETTINGS_MODULE=config.settings.production /home/edito/venv/bin/python /home/edito/editorial-tool/manage.py send_review_reminders >> /home/edito/logs/reminders.log 2>&1
+```
+
+**Options :**
+
+```bash
+# Tester sans envoyer
+python manage.py send_review_reminders --dry-run
+
+# Rappel 7 jours avant au lieu de 3
+python manage.py send_review_reminders --days 7
+```
+
 ## Sauvegarde automatique (Backblaze B2)
 
 Backup quotidien à 2h30 via cron, configuré sur l'utilisateur `edito`.

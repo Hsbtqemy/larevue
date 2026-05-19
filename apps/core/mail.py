@@ -89,6 +89,29 @@ def send_review_received_reviewer(review) -> None:
         logger.exception("send_review_received_reviewer failed for review %s", review.pk)
 
 
+def send_review_reminder(review) -> None:
+    reviewer = review.reviewer
+    if not reviewer or not reviewer.email:
+        return
+    journal = review.article.issue.journal
+    deadline = review.deadline.strftime("%d/%m/%Y")
+    try:
+        send_template_email(
+            to=reviewer.email,
+            subject=f"Rappel : relecture à déposer avant le {deadline} — {journal.name}",
+            template_base="review_reminder",
+            context={
+                "reviewer_name": review.reviewer_name_snapshot,
+                "journal_name": journal.name,
+                "article_title": review.article.title,
+                "deadline": deadline,
+                "dashboard_url": _reviewer_dashboard_url(),
+            },
+        )
+    except Exception:
+        logger.exception("send_review_reminder failed for review %s", review.pk)
+
+
 def send_review_received_editors(review) -> None:
     from apps.journals.models import Membership
 

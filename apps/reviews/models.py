@@ -53,6 +53,7 @@ class ReviewRequest(BaseModel):
         verbose_name="Fichier de relecture",
     )
     received_at = models.DateTimeField(blank=True, null=True, verbose_name="Reçue le")
+    reminder_sent_at = models.DateTimeField(blank=True, null=True, verbose_name="Rappel envoyé le")
     verdict = models.CharField(
         max_length=20,
         choices=Verdict.choices,
