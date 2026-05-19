@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="chaleureuse">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hors ligne — Outil éditorial</title>
+  {% load static %}
+  <link rel="stylesheet" href="{% static 'css/edito.css' %}">
+  <style>
+    body { display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; background: var(--bg); color: var(--ink); font-family: var(--font-sans); }
+    .offline-card { text-align: center; padding: 48px 32px; max-width: 360px; }
+    .offline-icon { font-size: 48px; margin-bottom: 16px; }
+    h1 { font-size: 20px; font-weight: 600; margin: 0 0 8px; }
+    p { color: var(--ink-muted); font-size: 14px; margin: 0 0 24px; line-height: 1.6; }
+  </style>
+</head>
+<body>
+  <div class="offline-card">
+    <div class="offline-icon">📡</div>
+    <h1>Pas de connexion</h1>
+    <p>L'outil éditorial nécessite une connexion internet. Réessayez dès que vous êtes connecté.</p>
+    <button class="btn" onclick="window.location.reload()">Réessayer</button>
+  </div>
+</body>
+</html>

@@ -29,6 +29,10 @@
   </script>
   <style>[x-cloak]{display:none !important}</style>
   {% load static %}
+  <link rel="manifest" href="{% static 'manifest.json' %}">
+  <meta name="theme-color" content="#2d231a">
+  <link rel="apple-touch-icon" href="{% static 'icons/icon-180.png' %}">
+  <link rel="icon" type="image/png" sizes="32x32" href="{% static 'icons/favicon-32.png' %}">
   <link rel="stylesheet" href="{% static 'css/tailwind.css' %}">
   <script defer src="{% static 'js/edito.js' %}?v=20260506a"></script>
   <script defer src="{% static 'js/alpine.min.js' %}"></script>
