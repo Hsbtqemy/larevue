@@ -55,13 +55,15 @@ class MustChangePasswordMiddleware:
 _REVIEWER_ALLOWED_PREFIXES = (
     "/accounts/",
     "/inviter/",
+    "/reviewer/",
+    "/relecture/",
     "/admin/",
     "/static/",
     "/media/",
     "/sw.js",
     "/offline/",
 )
-_REVIEWER_DASHBOARD = "/accounts/reviewer/"
+_REVIEWER_DASHBOARD = "/reviewer/"
 
 
 class ReviewerRedirectMiddleware:

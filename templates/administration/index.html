@@ -364,6 +364,23 @@
     </section>
 
   </div>
+
+    {# ========== OUTILS ========== #}
+    <section class="admin-section" style="margin-top:32px">
+      <header class="admin-section-head" style="margin-bottom:16px">
+        <div>
+          <h2>Outils</h2>
+          <div class="admin-section-sub">Utilitaires de vérification et de configuration.</div>
+        </div>
+      </header>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <a href="{% url 'administration:email_preview' %}" class="btn sm">
+          {% icon "mail" 13 %} Aperçu des emails automatiques
+        </a>
+      </div>
+    </section>
+
+  </div>
   </main>
 </div>
 {% endblock %}

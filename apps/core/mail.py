@@ -8,12 +8,20 @@ from django.urls import reverse
 logger = logging.getLogger(__name__)
 
 
-def send_template_email(to: str, subject: str, template_base: str, context: dict) -> None:
+def send_template_email(
+    to: str, subject: str, template_base: str, context: dict, *, journal=None
+) -> None:
     """Envoie un email HTML + texte brut à partir d'un nom de template de base."""
     context.setdefault("site_url", settings.SITE_URL)
+    context.setdefault("email_intro", journal.email_intro if journal else "")
+    if journal:
+        sender_name = journal.email_sender_name or journal.name
+        from_email = f"{sender_name} <{settings.DEFAULT_FROM_EMAIL}>"
+    else:
+        from_email = settings.DEFAULT_FROM_EMAIL
     txt = render_to_string(f"emails/{template_base}.txt", context)
     html = render_to_string(f"emails/{template_base}.html", context)
-    msg = EmailMultiAlternatives(subject, txt, settings.DEFAULT_FROM_EMAIL, [to])
+    msg = EmailMultiAlternatives(subject, txt, from_email, [to])
     msg.attach_alternative(html, "text/html")
     msg.send()
 
@@ -64,6 +72,7 @@ def send_review_assigned(review) -> None:
                 "deadline": review.deadline.strftime("%d/%m/%Y"),
                 "dashboard_url": _reviewer_dashboard_url(),
             },
+            journal=journal,
         )
     except Exception:
         logger.exception("send_review_assigned failed for review %s", review.pk)
@@ -84,6 +93,7 @@ def send_review_received_reviewer(review) -> None:
                 "journal_name": journal.name,
                 "article_title": review.article.title,
             },
+            journal=journal,
         )
     except Exception:
         logger.exception("send_review_received_reviewer failed for review %s", review.pk)
@@ -107,6 +117,7 @@ def send_review_reminder(review) -> None:
                 "deadline": deadline,
                 "dashboard_url": _reviewer_dashboard_url(),
             },
+            journal=journal,
         )
     except Exception:
         logger.exception("send_review_reminder failed for review %s", review.pk)
@@ -133,6 +144,7 @@ def send_review_received_editors(review) -> None:
                     "reviewer_name": review.reviewer_name_snapshot,
                     "review_url": review_url,
                 },
+                journal=journal,
             )
         except Exception:
             logger.exception("send_review_received_editors failed for user %s review %s", user.pk, review.pk)

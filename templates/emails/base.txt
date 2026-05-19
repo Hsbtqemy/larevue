@@ -1,6 +1,9 @@
 {{ journal_name }} — Outil éditorial
 ----------------------------------------
-
+{% if email_intro %}
+{{ email_intro }}
+----------------------------------------
+{% endif %}
 {% block body %}{% endblock %}
 
 --

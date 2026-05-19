@@ -55,6 +55,17 @@ class Journal(BaseModel):
         null=True, blank=True, verbose_name="Année de fondation",
     )
     website = models.URLField(max_length=300, blank=True, verbose_name="Site web")
+    email_sender_name = models.CharField(
+        max_length=200,
+        blank=True,
+        verbose_name="Nom d'expéditeur email",
+        help_text="Affiché dans le champ « De : » des emails. Si vide, le nom de la revue est utilisé.",
+    )
+    email_intro = models.TextField(
+        blank=True,
+        verbose_name="Introduction email",
+        help_text="Paragraphe personnalisé inséré en tête de chaque email envoyé aux relecteurs.",
+    )
 
     class Meta:
         verbose_name = "Revue"

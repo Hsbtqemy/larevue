@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% load static edito %}
+
+{% block title %}Aperçu des emails — Administration — Edito{% endblock %}
+
+{% block extra_head %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter+Tight:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{% static 'css/edito.css' %}?v=20260428a">
+{% endblock %}
+
+{% block body_class %}{% endblock %}
+{% block content %}
+<div class="app-shell" data-accent="{{ journal.accent_color|default:'slate' }}">
+  {% include "partials/_sidebar.html" with sidebar_active="admin" %}
+  <main class="main">
+  <div style="max-width:960px;margin:0 auto;padding:32px 24px 60px">
+
+    <div style="margin-bottom:28px">
+      <a href="{% url 'administration:index' %}" class="btn sm" style="margin-bottom:16px;display:inline-flex">
+        {% icon "back" 13 %} Administration
+      </a>
+      <h1 style="font-family:var(--font-display);font-size:24px;font-weight:500;margin:0 0 4px">Aperçu des emails</h1>
+      <div style="font-size:14px;color:var(--ink-muted)">Prévisualisez les emails automatiques envoyés aux relecteurs·ices, selon la revue concernée.</div>
+    </div>
+
+    <div class="profile-section" style="margin-bottom:20px">
+      <div class="profile-section-head" style="margin-bottom:16px">
+        <h2 style="font-family:var(--font-ui);font-size:15px;font-weight:600">Sélectionner un email</h2>
+      </div>
+      <form method="get" style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end">
+        <div class="form-field" style="flex:1;min-width:200px;margin:0">
+          <label class="form-label">Revue</label>
+          <select name="journal" class="text-input" style="padding-right:32px">
+            <option value="">— Choisir une revue —</option>
+            {% for j in journals %}
+            <option value="{{ j.slug }}" {% if selected_journal and selected_journal.slug == j.slug %}selected{% endif %}>{{ j.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-field" style="flex:1;min-width:200px;margin:0">
+          <label class="form-label">Type d'email</label>
+          <select name="type" class="text-input" style="padding-right:32px">
+            <option value="">— Choisir un type —</option>
+            {% for key, def in email_types.items %}
+            <option value="{{ key }}" {% if selected_type == key %}selected{% endif %}>{{ def.label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <button type="submit" class="btn primary sm" style="flex-shrink:0;margin-bottom:1px">Prévisualiser</button>
+      </form>
+    </div>
+
+    {% if html_preview %}
+    <div class="profile-section">
+      <div class="profile-section-head" style="margin-bottom:16px;display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <h2 style="font-family:var(--font-ui);font-size:15px;font-weight:600;margin:0 0 2px">
+            {{ selected_label }}
+            <span style="font-weight:400;color:var(--ink-muted)">— {{ selected_journal.name }}</span>
+          </h2>
+          <div style="font-size:12px;color:var(--ink-muted)">Rendu avec les données réelles de la revue.</div>
+        </div>
+      </div>
+      <div style="border:1px solid var(--line);border-radius:8px;overflow:hidden">
+        <iframe srcdoc="{{ html_preview|force_escape }}"
+                style="width:100%;min-height:600px;border:none;display:block"
+                title="Aperçu de l'email"></iframe>
+      </div>
+    </div>
+    {% elif selected_journal or selected_type %}
+    <div class="profile-section">
+      <div class="admin-empty">Sélectionnez une revue et un type d'email pour afficher l'aperçu.</div>
+    </div>
+    {% endif %}
+
+  </div>
+  </main>
+</div>
+{% endblock %}

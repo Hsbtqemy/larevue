@@ -1,8 +1,10 @@
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.db.models import Count, Prefetch, Q
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.template.loader import render_to_string
 from django.urls import reverse
 from django.views import View
 
@@ -12,6 +14,7 @@ from apps.administration.forms import (
     UserEditForm,
     UserQuickCreateForm,
 )
+from apps.articles.models import Article
 from apps.core.mixins import SuperuserRequiredMixin
 from apps.core.utils import generate_temp_password
 from apps.issues.models import Issue
@@ -312,3 +315,87 @@ class JournalDeleteView(SuperuserRequiredMixin, View):
         journal = get_object_or_404(Journal, slug=slug)
         journal.delete()
         return JsonResponse({"redirect_url": reverse("administration:index")})
+
+
+def _sample_article_title(journal):
+    article = Article.objects.filter(issue__journal=journal).first()
+    return article.title if article else "Titre d'article exemple"
+
+
+def _review_with_deadline_context(journal):
+    return {
+        "journal_name": journal.name,
+        "reviewer_name": "Marie Dupont",
+        "article_title": _sample_article_title(journal),
+        "deadline": "30/06/2026",
+        "dashboard_url": "https://example.com/accounts/reviewer/",
+    }
+
+
+_EMAIL_TYPES = {
+    "invitation": {
+        "label": "Invitation relecteur·ice",
+        "context": lambda journal: {
+            "journal_name": journal.name,
+            "reviewer_name": "Marie Dupont",
+            "activation_url": "https://example.com/activer/token-exemple",
+        },
+    },
+    "review_assigned": {
+        "label": "Article envoyé au relecteur",
+        "context": _review_with_deadline_context,
+    },
+    "review_reminder": {
+        "label": "Rappel avant deadline",
+        "context": _review_with_deadline_context,
+    },
+    "review_received_reviewer": {
+        "label": "Confirmation de dépôt (relecteur)",
+        "context": lambda journal: {
+            "journal_name": journal.name,
+            "reviewer_name": "Marie Dupont",
+            "article_title": _sample_article_title(journal),
+        },
+    },
+    "review_received_editors": {
+        "label": "Notification de dépôt (éditeurs)",
+        "context": lambda journal: {
+            "journal_name": journal.name,
+            "recipient_name": "Jean Martin",
+            "reviewer_name": "Marie Dupont",
+            "article_title": _sample_article_title(journal),
+            "review_url": "https://example.com/revues/exemple/numeros/1/articles/1/",
+        },
+    },
+}
+
+
+class EmailPreviewView(SuperuserRequiredMixin, View):
+    template_name = "administration/email_preview.html"
+
+    def get(self, request):
+        journals = Journal.objects.order_by("name")
+        selected_journal = None
+        html_preview = None
+        selected_label = ""
+        selected_type = request.GET.get("type", "")
+        slug = request.GET.get("journal", "")
+
+        if slug:
+            selected_journal = get_object_or_404(Journal, slug=slug)
+        if selected_journal and selected_type in _EMAIL_TYPES:
+            email_def = _EMAIL_TYPES[selected_type]
+            selected_label = email_def["label"]
+            context = email_def["context"](selected_journal)
+            context.setdefault("email_intro", selected_journal.email_intro)
+            context.setdefault("site_url", settings.SITE_URL)
+            html_preview = render_to_string(f"emails/{selected_type}.html", context)
+
+        return render(request, self.template_name, {
+            "journals": journals,
+            "email_types": _EMAIL_TYPES,
+            "selected_journal": selected_journal,
+            "selected_type": selected_type,
+            "selected_label": selected_label,
+            "html_preview": html_preview,
+        })

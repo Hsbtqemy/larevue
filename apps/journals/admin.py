@@ -23,6 +23,7 @@ class JournalAdmin(admin.ModelAdmin):
         (None, {"fields": ("name", "slug", "description")}),
         ("Apparence", {"fields": ("logo", "accent_color")}),
         ("Institutionnel", {"fields": ("directors", "publisher", "issn_print", "issn_online", "periodicity", "founded_year", "website")}),
+        ("Emails", {"fields": ("email_sender_name", "email_intro")}),
         ("Métadonnées", {"fields": ("created_at", "updated_at"), "classes": ("collapse",)}),
     )
 

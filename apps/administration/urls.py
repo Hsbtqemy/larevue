@@ -21,4 +21,5 @@ urlpatterns = [
     path("utilisateurs/<int:user_id>/edit/", views.UserEditView.as_view(), name="user_edit"),
     path("utilisateurs/<int:user_id>/toggle-active/", views.UserToggleActiveView.as_view(), name="user_toggle_active"),
     path("revues/<slug:slug>/delete/", views.JournalDeleteView.as_view(), name="journal_delete"),
+    path("emails/preview/", views.EmailPreviewView.as_view(), name="email_preview"),
 ]
