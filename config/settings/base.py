@@ -52,6 +52,7 @@ MIDDLEWARE = [
     "allauth.account.middleware.AccountMiddleware",
     "django_htmx.middleware.HtmxMiddleware",
     "apps.core.middleware.MustChangePasswordMiddleware",
+    "apps.core.middleware.ReviewerRedirectMiddleware",
     "apps.core.middleware.CurrentJournalMiddleware",
 ]
 

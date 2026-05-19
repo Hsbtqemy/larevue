@@ -1,5 +1,6 @@
 import re
 
+from django.shortcuts import redirect
 from django.urls import reverse
 from django.utils.functional import SimpleLazyObject
 
@@ -49,6 +50,40 @@ class MustChangePasswordMiddleware:
 
     def _is_exempt(self, path):
         return any(path.startswith(prefix) for prefix in _MUST_CHANGE_EXEMPT_PREFIXES)
+
+
+_REVIEWER_ALLOWED_PREFIXES = (
+    "/accounts/",
+    "/inviter/",
+    "/admin/",
+    "/static/",
+    "/media/",
+    "/sw.js",
+    "/offline/",
+)
+_REVIEWER_DASHBOARD = "/accounts/reviewer/"
+
+
+class ReviewerRedirectMiddleware:
+    """Restreint les relecteurs aux seules URLs autorisées."""
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        if (
+            request.user.is_authenticated
+            and getattr(request.user, "is_reviewer", False)
+            and not request.user.is_staff
+            and not self._is_allowed(request.path)
+        ):
+            return redirect(_REVIEWER_DASHBOARD)
+        return self.get_response(request)
+
+    def _is_allowed(self, path):
+        return path == _REVIEWER_DASHBOARD or any(
+            path.startswith(p) for p in _REVIEWER_ALLOWED_PREFIXES
+        )
 
 
 class CurrentJournalMiddleware:

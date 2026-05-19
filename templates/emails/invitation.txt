@@ -4,13 +4,10 @@ Bonjour {{ reviewer_name }},
 
 La rédaction de {{ journal_name }} vous invite à rejoindre son équipe de relecteur·ices.
 
-Vos identifiants de connexion :
-  Adresse e-mail    : {{ email }}
-  Mot de passe      : {{ temp_password }}
+Pour activer votre compte et choisir votre mot de passe, cliquez sur ce lien :
+{{ activation_url }}
 
-Vous serez invité·e à changer votre mot de passe dès votre première connexion.
-
-Accéder à l'outil éditorial : {{ site_url }}
+Ce lien est valable 7 jours.
 
 Si vous n'attendiez pas cet email, vous pouvez l'ignorer en toute sécurité.
 {% endblock %}

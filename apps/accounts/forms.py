@@ -1,4 +1,5 @@
 from django import forms
+from django.contrib.auth.password_validation import validate_password
 
 
 class ProfilePasswordForm(forms.Form):
@@ -39,4 +40,35 @@ class ProfilePasswordForm(forms.Form):
         p2 = cleaned.get("new_password_confirm")
         if p1 and p2 and p1 != p2:
             self.add_error("new_password_confirm", "Les deux mots de passe ne correspondent pas.")
+        return cleaned
+
+
+class ReviewerInviteForm(forms.Form):
+    email = forms.EmailField(label="Adresse e-mail")
+    first_name = forms.CharField(label="Prénom", max_length=150)
+    last_name = forms.CharField(label="Nom", max_length=150)
+
+
+class ReviewerActivateForm(forms.Form):
+    password = forms.CharField(
+        label="Mot de passe",
+        widget=forms.PasswordInput,
+        min_length=8,
+    )
+    password_confirm = forms.CharField(
+        label="Confirmer le mot de passe",
+        widget=forms.PasswordInput,
+    )
+
+    def clean_password(self):
+        pw = self.cleaned_data["password"]
+        validate_password(pw)
+        return pw
+
+    def clean(self):
+        cleaned = super().clean()
+        p1 = cleaned.get("password")
+        p2 = cleaned.get("password_confirm")
+        if p1 and p2 and p1 != p2:
+            self.add_error("password_confirm", "Les deux mots de passe ne correspondent pas.")
         return cleaned

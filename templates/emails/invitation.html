@@ -1,24 +1,18 @@
 {% extends "emails/base.html" %}
 {% block subject %}Invitation à rejoindre l'équipe de relecture — {{ journal_name }}{% endblock %}
 {% block body %}
-<h1 style="margin:0 0 16px;font-size:22px;font-weight:600;color:#2d231a;">Vous êtes invité·e à relire un article</h1>
+<h1 style="margin:0 0 16px;font-size:22px;font-weight:600;color:#2d231a;">Vous êtes invité·e à rejoindre l'équipe de relecture</h1>
 <p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#3d3028;">
   Bonjour {{ reviewer_name }},
 </p>
 <p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#3d3028;">
-  La rédaction de <strong>{{ journal_name }}</strong> vous invite à vous joindre à son équipe de relecteur·ices.
-  Vous trouverez ci-dessous vos identifiants de connexion à l'outil éditorial.
+  La rédaction de <strong>{{ journal_name }}</strong> vous invite à rejoindre son équipe de relecteur·ices.
+  Cliquez sur le bouton ci-dessous pour activer votre compte et choisir votre mot de passe.
 </p>
-<table cellpadding="0" cellspacing="0" style="margin:0 0 24px;background:#faf6ee;border:1px solid #e8e0d0;border-radius:6px;padding:16px 20px;width:100%;">
-  <tr><td style="font-size:13px;color:#8a7060;padding-bottom:6px;">Adresse e-mail</td></tr>
-  <tr><td style="font-size:15px;font-weight:600;color:#2d231a;">{{ email }}</td></tr>
-  <tr><td style="font-size:13px;color:#8a7060;padding-top:12px;padding-bottom:6px;">Mot de passe temporaire</td></tr>
-  <tr><td style="font-size:15px;font-weight:600;color:#2d231a;font-family:monospace;">{{ temp_password }}</td></tr>
-</table>
-<p style="margin:0 0 24px;font-size:14px;line-height:1.6;color:#6b5c4c;">
-  Vous serez invité·e à changer votre mot de passe dès votre première connexion.
+{% include "emails/_cta_button.html" with cta_url=activation_url cta_label="Activer mon compte →" %}
+<p style="margin:0 0 8px;font-size:13px;line-height:1.6;color:#8a7060;">
+  Ce lien est valable 7 jours.
 </p>
-{% include "emails/_cta_button.html" with cta_url=site_url cta_label="Accéder à l'outil éditorial →" %}
 <p style="margin:0;font-size:13px;line-height:1.6;color:#8a7060;">
   Si vous n'attendiez pas cet email, vous pouvez l'ignorer en toute sécurité.
 </p>

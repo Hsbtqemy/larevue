@@ -19,6 +19,11 @@ class User(AbstractUser):
         verbose_name="Doit changer son mot de passe",
         help_text="Forcé à la première connexion après création ou reset par un superuser.",
     )
+    is_reviewer = models.BooleanField(
+        default=False,
+        verbose_name="Relecteur·ice",
+        help_text="Compte à accès limité — peut uniquement déposer ses relectures.",
+    )
 
     objects = UserManager()
 

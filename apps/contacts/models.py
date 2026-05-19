@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.contrib.postgres.fields import ArrayField
 from django.db import models
 
@@ -24,6 +25,14 @@ class Contact(BaseModel):
         blank=True,
         verbose_name="Notes",
         help_text="Spécialités, compétences, contexte de collaboration…",
+    )
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="linked_contacts",
+        verbose_name="Compte relecteur·ice",
     )
     # ArrayField PostgreSQL : simple et suffisant pour un nombre fixe de rôles connus.
     usual_roles = ArrayField(

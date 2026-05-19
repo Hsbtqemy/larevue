@@ -4,6 +4,7 @@ from django.contrib import admin
 from django.urls import include, path
 from django.views.generic import TemplateView
 
+from apps.accounts.views import ReviewerInviteView
 from apps.articles.views import ArticleCreateFromJournalView
 
 
@@ -31,6 +32,7 @@ urlpatterns = [
         ArticleCreateFromJournalView.as_view(),
         name="article_create_from_journal",
     ),
+    path("revues/<slug:slug>/inviter/", ReviewerInviteView.as_view(), name="reviewer_invite"),
     path("revues/<slug:slug>/contacts/", include("apps.contacts.urls")),
     path("administration/", include("apps.administration.urls")),
 ]
