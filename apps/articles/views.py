@@ -338,10 +338,8 @@ class ArticleDetailView(JournalMemberRequiredMixin, DetailView):
             "declined_reviews": declined_reviews,
             "article_count_in_issue": issue.articles.count(),
             "user_journal_count": self.request.user.memberships.count(),
-            "reviewer_search_url": (
-                reverse("contacts:search", kwargs={"slug": journal.slug})
-                + "?role=external_reviewer"
-            ),
+            "reviewer_search_url": reverse("contacts:search", kwargs={"slug": journal.slug}),
+            "reviewer_invite_url": reverse("reviewer_invite", kwargs={"slug": journal.slug}),
             "default_deadline": (
                 timezone.now().date() + timezone.timedelta(days=28)
             ).isoformat(),

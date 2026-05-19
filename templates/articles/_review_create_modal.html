@@ -42,7 +42,10 @@
               </div>
             </div>
           </div>
-          <div class="modal-foot">
+          <div class="modal-foot" style="flex-wrap:wrap;gap:8px">
+            <a href="{{ reviewer_invite_url }}" class="btn ghost sm" style="margin-right:auto;font-size:12.5px">
+              Pas encore de compte ? Inviter
+            </a>
             <button type="button" @click="open = false" class="btn ghost">Annuler</button>
             <button type="submit" class="btn primary">Désigner</button>
           </div>
