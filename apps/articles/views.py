@@ -1,4 +1,5 @@
 from django.contrib import messages
+from django.contrib.auth import get_user_model
 from django.core.exceptions import PermissionDenied
 from django.db import transaction
 from django.db.models import Prefetch
@@ -25,6 +26,8 @@ from apps.core.utils import actor_name, create_audit_note, file_response
 from apps.core.views import JournalOwnedCreateView, JournalOwnedPatchView, JournalOwnedTransitionView, compute_transitions
 from apps.issues.models import Issue
 from apps.reviews.models import ReviewRequest
+
+User = get_user_model()
 
 
 def _check_article_archived(article):
@@ -570,6 +573,11 @@ class ReviewRequestCreateView(_ArticleJournalMixin, JournalMemberRequiredMixin, 
                     return JsonResponse({"error": "Ce contact n'appartient pas à cette revue."}, status=400)
                 reviewer = contact
                 reviewer_name_snapshot = contact.full_name
+                if contact.user_id is None and contact.email:
+                    existing = User.objects.filter(email=contact.email, is_active=True).first()
+                    if existing:
+                        contact.user = existing
+                        contact.save(update_fields=["user"])
             except (Contact.DoesNotExist, ValueError):
                 return JsonResponse({"error": "Relecteur·ice introuvable."}, status=400)
 
