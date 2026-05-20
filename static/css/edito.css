@@ -4151,4 +4151,12 @@ details.documents-section[open] .doc-toggle-chev {
   .form-grid { grid-template-columns: 1fr; }
   .edit-meta-form { grid-template-columns: 1fr; }
   .profile-section { padding: 18px 16px; }
+
+  /* Review card — boutons passent à la ligne */
+  .review-head { flex-wrap: wrap; }
+  .review-head > div { flex-wrap: wrap; }
+
+  /* Timeline — scroll horizontal contenu, pas de débordement global */
+  .main-content { overflow-x: hidden; }
+  .timeline-wrap { margin: 0 -16px; padding-left: 16px; padding-right: 16px; }
 }
