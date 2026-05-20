@@ -2488,6 +2488,12 @@ textarea.text-input {
   font-weight: 400;
   color: var(--ink-faint);
 }
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.form-grid .field.full { grid-column: 1 / -1; }
 .edit-meta-form {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -4137,4 +4143,14 @@ details.documents-section[open] .doc-toggle-chev {
   .article-row .order-col,
   .article-row .type-col,
   .article-row .num-col { display: none; }
+
+  .table { display: block; overflow-x: auto; }
+  .contact-detail { grid-template-columns: 1fr; }
+  .history-row { grid-template-columns: auto 1fr; }
+  .history-issue { display: none; }
+  .article-header-row { flex-direction: column; }
+  .article-zones { grid-template-columns: 1fr; padding: 16px 16px 40px; }
+  .form-grid { grid-template-columns: 1fr; }
+  .edit-meta-form { grid-template-columns: 1fr; }
+  .profile-section { padding: 18px 16px; }
 }
