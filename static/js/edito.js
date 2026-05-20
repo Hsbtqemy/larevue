@@ -19,6 +19,12 @@ document.addEventListener("htmx:configRequest", (e) => {
 
 document.addEventListener("alpine:init", () => {
 
+  Alpine.store("nav", {
+    open: false,
+    toggle() { this.open = !this.open; },
+    close() { if (this.open) this.open = false; },
+  });
+
   Alpine.data("inlineEdit", (value, patchUrl, fieldName, inputType = "text", options = [], requireConfirm = false) => ({
     editing: false,
     confirming: false,

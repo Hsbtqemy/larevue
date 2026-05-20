@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load static %}
+{% load static edito %}
 
 {% block title %}Mes relectures — Edito{% endblock %}
 {% block body_class %}{% endblock %}
@@ -42,13 +42,13 @@
               {% if review.is_overdue %}<span class="badge warn no-dot">En retard</span>{% endif %}
             </div>
 
-            {% if review.state == "sent" %}
+            {% if review.state == review.State.SENT %}
               <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
                 <a href="{{ review.article_version.file.url }}"
                    class="btn sm"
                    download
                    style="display:inline-flex;align-items:center;gap:6px">
-                  <svg class="icon" viewBox="0 0 24 24"><path d="M12 3v12m0 0-4-4m4 4 4-4M3 17v2a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-2"/></svg>
+                  {% icon "download" 14 cls="icon" %}
                   Télécharger l'article (v{{ review.article_version.version_number }})
                 </a>
                 <a href="{% url 'accounts:reviewer_review_submit' pk=review.pk %}" class="btn sm primary">

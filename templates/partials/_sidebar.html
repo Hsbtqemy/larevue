@@ -1,6 +1,32 @@
 {% load edito %}
 {# sidebar_active: "dashboard" | "issues" | "contacts" | "archives" | "journal_edit" | "admin" #}
-<aside class="sidebar">
+<aside class="sidebar" x-data :class="{'sidebar--open': $store.nav.open}">
+
+  {# ===== MOBILE TOPBAR + OVERLAY (téléportés dans <body>) ===== #}
+  <template x-teleport="body">
+    <div class="mobile-topbar">
+      <button class="hamburger-btn"
+              @click="$store.nav.toggle()"
+              :aria-expanded="$store.nav.open.toString()"
+              aria-label="Menu de navigation">
+        <span x-show="!$store.nav.open">{% icon "menu" 22 %}</span>
+        <span x-show="$store.nav.open" x-cloak>{% icon "close" 22 %}</span>
+      </button>
+      <div class="mobile-brand">
+        <div class="brand-mark">É</div>
+        <span class="brand-name">Edito</span>
+      </div>
+      {% if journal %}
+        <span class="mobile-journal-name">{{ journal.name }}</span>
+      {% endif %}
+    </div>
+    <div class="sidebar-overlay"
+         x-show="$store.nav.open"
+         x-cloak
+         x-transition.opacity
+         @click="$store.nav.close()"
+         aria-hidden="true"></div>
+  </template>
 
   <div class="sidebar-brand">
     <div class="brand-mark">É</div>
@@ -29,7 +55,7 @@
              class="popover-item{% if j.pk == journal.pk %} on{% endif %}"
              style="text-decoration:none"
              role="menuitem"
-             @click="close()">
+             @click="close(); $store.nav.close()">
             <span style="display:inline-block;width:10px;height:10px;border-radius:50%;flex-shrink:0;background:var(--accent-{{ j.accent_color }})"></span>
             <span style="flex:1">{{ j.name }}</span>
             {% if j.pk == journal.pk %}{% icon "check" 14 %}{% endif %}
@@ -51,37 +77,41 @@
   <nav class="nav">
     {% if journal %}
     {% if sidebar_active == "dashboard" %}
-      <button class="nav-item active" type="button">
+      <button class="nav-item active" type="button" @click="$store.nav.close()">
         {% icon "home" 17 cls="icon" %}
         Tableau de bord
       </button>
     {% else %}
-      <a href="{% url 'journal_dashboard' slug=journal.slug %}" class="nav-item" style="text-decoration:none">
+      <a href="{% url 'journal_dashboard' slug=journal.slug %}" class="nav-item" style="text-decoration:none" @click="$store.nav.close()">
         {% icon "home" 17 cls="icon" %}
         Tableau de bord
       </a>
     {% endif %}
     <a href="{% url 'issues:list' slug=journal.slug %}"
        class="nav-item{% if sidebar_active == 'issues' %} active{% endif %}"
-       style="text-decoration:none">
+       style="text-decoration:none"
+       @click="$store.nav.close()">
       {% icon "file" 17 cls="icon" %}
       Numéros en cours
     </a>
     <a href="{% url 'contacts:list' slug=journal.slug %}"
        class="nav-item{% if sidebar_active == 'contacts' %} active{% endif %}"
-       style="text-decoration:none">
+       style="text-decoration:none"
+       @click="$store.nav.close()">
       {% icon "users" 17 cls="icon" %}
       Contacts
     </a>
     <a href="{% url 'journal_archives' slug=journal.slug %}"
        class="nav-item{% if sidebar_active == 'archives' %} active{% endif %}"
-       style="text-decoration:none">
+       style="text-decoration:none"
+       @click="$store.nav.close()">
       {% icon "archive" 17 cls="icon" %}
       Archives
     </a>
     <a href="{% url 'journal_edit' slug=journal.slug %}"
        class="nav-item{% if sidebar_active == 'journal_edit' %} active{% endif %}"
-       style="text-decoration:none">
+       style="text-decoration:none"
+       @click="$store.nav.close()">
       {% icon "edit" 17 cls="icon" %}
       Modifier la revue
     </a>
@@ -90,7 +120,8 @@
     <div class="nav-sep" aria-hidden="true"><span>Superuser</span></div>
     <a href="{% url 'administration:index' %}"
        class="nav-item nav-item-admin{% if sidebar_active == 'admin' %} active{% endif %}"
-       style="text-decoration:none">
+       style="text-decoration:none"
+       @click="$store.nav.close()">
       {% icon "lock" 17 cls="icon" %}
       Administration
     </a>
@@ -102,7 +133,7 @@
     <div class="sidebar-user-info">
       <div class="n">{{ request.user.get_full_name }}</div>
       <div class="e">{{ request.user.email }}</div>
-      <a href="{% url 'accounts:profile' %}" class="sidebar-user-profile-link">Mon profil</a>
+      <a href="{% url 'accounts:profile' %}" class="sidebar-user-profile-link" @click="$store.nav.close()">Mon profil</a>
     </div>
     <form method="post" action="{% url 'account_logout' %}" style="margin-left:auto;flex-shrink:0">
       {% csrf_token %}
