@@ -13,7 +13,7 @@
 {% endblock %}
 
 {% block content %}
-<div class="app-shell">
+<div class="app-shell"{% if journal %} data-accent="{{ journal.accent_color }}"{% endif %}>
 
   {# ===== SIDEBAR ===== #}
   {% include "partials/_sidebar.html" with sidebar_active="mes_relectures" %}
