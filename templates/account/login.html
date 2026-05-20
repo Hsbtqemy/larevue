@@ -22,7 +22,8 @@
           Adresse e-mail
         </label>
         <input
-          type="email"
+          type="text"
+          inputmode="email"
           name="{{ form.login.html_name }}"
           id="{{ form.login.id_for_label }}"
           value="{{ form.login.value|default:'' }}"
