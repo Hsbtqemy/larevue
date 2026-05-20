@@ -90,7 +90,6 @@ class ProfileView(LoginRequiredMixin, View):
             "pw_form": ProfilePasswordForm(request.user),
             "pw_success": request.GET.get("pw") == "ok",
             "memberships": _memberships_for(request.user),
-            "reviews_by_journal": _reviews_by_journal(request.user),
         })
 
 
@@ -126,7 +125,6 @@ class ProfilePasswordView(LoginRequiredMixin, View):
         return {
             "patch_url": reverse("accounts:profile_patch"),
             "memberships": _memberships_for(request.user),
-            "reviews_by_journal": _reviews_by_journal(request.user),
             **extra,
         }
 
@@ -144,6 +142,20 @@ class ProfilePasswordView(LoginRequiredMixin, View):
             return redirect(reverse("accounts:profile") + "?pw=ok")
         return render(request, ProfileView.template_name,
                       self._ctx(request, pw_form=form, pw_open=True))
+
+
+class MesRelecturesView(LoginRequiredMixin, View):
+    template_name = "accounts/mes_relectures.html"
+
+    def dispatch(self, request, *args, **kwargs):
+        if request.user.is_authenticated and getattr(request.user, "is_reviewer", False):
+            return redirect("accounts:reviewer_dashboard")
+        return super().dispatch(request, *args, **kwargs)
+
+    def get(self, request):
+        return render(request, self.template_name, {
+            "reviews_by_journal": _reviews_by_journal(request.user),
+        })
 
 
 class ReviewerInviteView(JournalMemberRequiredMixin, View):

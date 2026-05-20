@@ -33,6 +33,7 @@
     <div class="brand-name">Edito</div>
   </div>
 
+  {% if journal %}
   {% if user_journals|length > 1 %}
   <div class="revue-switcher"
        x-data="revueSwitcher()"
@@ -72,6 +73,7 @@
       <span class="revue-name">{{ journal.name }}</span>
     </div>
   </div>
+  {% endif %}
   {% endif %}
 
   <nav class="nav">
@@ -116,9 +118,9 @@
       Modifier la revue
     </a>
     {% endif %}
-    <div class="nav-sep" aria-hidden="true"></div>
-    <a href="{% url 'accounts:profile' %}#mes-relectures"
-       class="nav-item"
+    {% if journal %}<div class="nav-sep" aria-hidden="true"></div>{% endif %}
+    <a href="{% url 'accounts:mes_relectures' %}"
+       class="nav-item{% if sidebar_active == 'mes_relectures' %} active{% endif %}"
        style="text-decoration:none"
        @click="$store.nav.close()">
       {% icon "eye" 17 cls="icon" %}

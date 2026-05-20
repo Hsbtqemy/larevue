@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% load static edito %}
+
+{% block title %}Mes relectures — Edito{% endblock %}
+
+{% block body_class %}{% endblock %}
+
+{% block extra_head %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter+Tight:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{% static 'css/edito.css' %}?v=20260520a">
+{% endblock %}
+
+{% block content %}
+<div class="app-shell">
+
+  {# ===== SIDEBAR ===== #}
+  {% include "partials/_sidebar.html" with sidebar_active="mes_relectures" %}
+
+  {# ===== MAIN ===== #}
+  <main class="main">
+
+    <div class="main-content">
+      <div class="section">
+
+        <h1 style="font-family:var(--font-display);font-size:22px;font-weight:500;margin:0 0 28px">Mes relectures</h1>
+
+        {% if reviews_by_journal %}
+          {% for group in reviews_by_journal %}
+          <div{% if not forloop.last %} style="margin-bottom:36px"{% endif %}>
+
+            <div style="font-size:12px;font-weight:600;color:var(--ink-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:12px">
+              {{ group.journal.name }}
+            </div>
+
+            {% if group.active %}
+            <ul class="my-revues-list">
+              {% for r in group.active %}
+              <li class="my-revue-row">
+                <div style="flex:1;min-width:0">
+                  <div class="n" style="white-space:normal">{{ r.article.title }}</div>
+                  <div style="font-size:12px;color:var(--ink-muted);margin-top:2px">avant le {{ r.deadline|date:"d/m/Y" }}</div>
+                </div>
+                {% if r.state == r.State.SENT %}
+                <a href="{% url 'accounts:reviewer_review_submit' pk=r.pk %}"
+                   class="btn primary sm" style="flex-shrink:0">Déposer</a>
+                {% else %}
+                <span class="badge warn no-dot" style="font-size:12px;flex-shrink:0">En attente</span>
+                {% endif %}
+              </li>
+              {% endfor %}
+            </ul>
+            {% endif %}
+
+            {% if group.done %}
+            <div{% if group.active %} style="margin-top:16px"{% endif %}>
+              <div style="font-size:11px;font-weight:600;color:var(--ink-faint);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">Historique</div>
+              <ul class="my-revues-list">
+                {% for r in group.done %}
+                <li class="my-revue-row">
+                  <div style="flex:1;min-width:0">
+                    <div class="n" style="white-space:normal;color:var(--ink-muted)">{{ r.article.title }}</div>
+                    <div style="font-size:12px;color:var(--ink-faint);margin-top:2px">{{ r.deadline|date:"d/m/Y" }}</div>
+                  </div>
+                  {% if r.state == r.State.RECEIVED %}
+                  <span class="badge done no-dot" style="font-size:12px;flex-shrink:0">Déposée</span>
+                  {% elif r.state == r.State.DECLINED %}
+                  <span class="badge refused no-dot" style="font-size:12px;flex-shrink:0">Déclinée</span>
+                  {% endif %}
+                </li>
+                {% endfor %}
+              </ul>
+            </div>
+            {% endif %}
+
+          </div>
+          {% endfor %}
+        {% else %}
+        <p style="font-size:14px;color:var(--ink-muted)">Aucune relecture en cours.</p>
+        {% endif %}
+
+      </div>
+    </div>
+
+  </main>
+
+</div>
+{% endblock %}

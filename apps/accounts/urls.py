@@ -6,6 +6,7 @@ app_name = "accounts"
 
 urlpatterns = [
     path("profil/", views.ProfileView.as_view(), name="profile"),
+    path("profil/relectures/", views.MesRelecturesView.as_view(), name="mes_relectures"),
     path("profil/patch/", views.ProfilePatchView.as_view(), name="profile_patch"),
     path("profil/password/", views.ProfilePasswordView.as_view(), name="profile_password"),
     path("inviter/<str:token>/activer/", views.ReviewerActivateView.as_view(), name="reviewer_activate"),
