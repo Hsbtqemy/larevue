@@ -13,6 +13,7 @@
 {% endblock %}
 
 {% block content %}
+{% with journal=user_journals.0 %}
 <div class="app-shell"{% if journal %} data-accent="{{ journal.accent_color }}"{% endif %}>
 
   {# ===== SIDEBAR ===== #}
@@ -86,4 +87,5 @@
   </main>
 
 </div>
+{% endwith %}
 {% endblock %}

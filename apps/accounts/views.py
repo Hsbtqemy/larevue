@@ -153,9 +153,7 @@ class MesRelecturesView(LoginRequiredMixin, View):
         return super().dispatch(request, *args, **kwargs)
 
     def get(self, request):
-        membership = request.user.memberships.select_related("journal").first()
         return render(request, self.template_name, {
-            "journal": membership.journal if membership else None,
             "reviews_by_journal": _reviews_by_journal(request.user),
         })
 
