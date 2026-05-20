@@ -12,6 +12,8 @@ class ReviewRequest(BaseModel):
         RECEIVED = "received", "Reçue"
         DECLINED = "declined", "Refusée"
 
+    ACTIVE_STATES = {State.ASSIGNED, State.SENT}
+
     class Verdict(models.TextChoices):
         FAVORABLE = "favorable", "Favorable"
         NEEDS_REVISION = "needs_revision", "Révision requise"

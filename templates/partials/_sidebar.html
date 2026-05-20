@@ -116,6 +116,14 @@
       Modifier la revue
     </a>
     {% endif %}
+    <div class="nav-sep" aria-hidden="true"></div>
+    <a href="{% url 'accounts:profile' %}#mes-relectures"
+       class="nav-item"
+       style="text-decoration:none"
+       @click="$store.nav.close()">
+      {% icon "eye" 17 cls="icon" %}
+      Mes relectures
+    </a>
     {% if request.user.is_superuser %}
     <div class="nav-sep" aria-hidden="true"><span>Superuser</span></div>
     <a href="{% url 'administration:index' %}"

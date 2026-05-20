@@ -50,31 +50,47 @@ def _ensure_contact(journal, email, first_name, last_name, user):
         contact.save(update_fields=["user"])
 
 
-def _reviews_for(user):
-    active_states = {ReviewRequest.State.ASSIGNED, ReviewRequest.State.SENT}
-    all_reviews = list(
-        ReviewRequest.objects.filter(reviewer__user=user)
-        .select_related("article", "article__issue", "article__issue__journal", "article_version")
-        .order_by("deadline")
-    )
+def _reviews_qs(user):
     return (
-        [r for r in all_reviews if r.state in active_states],
-        [r for r in all_reviews if r.state not in active_states],
+        ReviewRequest.objects.filter(reviewer__user=user)
+        .select_related("article", "article__issue", "article__issue__journal")
     )
+
+
+def _reviews_for(user):
+    all_reviews = list(_reviews_qs(user).select_related("article_version").order_by("deadline"))
+    return (
+        [r for r in all_reviews if r.state in ReviewRequest.ACTIVE_STATES],
+        [r for r in all_reviews if r.state not in ReviewRequest.ACTIVE_STATES],
+    )
+
+
+def _reviews_by_journal(user):
+    all_reviews = list(
+        _reviews_qs(user).order_by("article__issue__journal__name", "deadline")
+    )
+    journals = {}
+    for r in all_reviews:
+        j = r.article.issue.journal
+        if j.pk not in journals:
+            journals[j.pk] = {"journal": j, "active": [], "done": []}
+        if r.state in ReviewRequest.ACTIVE_STATES:
+            journals[j.pk]["active"].append(r)
+        else:
+            journals[j.pk]["done"].append(r)
+    return list(journals.values())
 
 
 class ProfileView(LoginRequiredMixin, View):
     template_name = "accounts/profile.html"
 
     def get(self, request):
-        reviews_active, reviews_done = _reviews_for(request.user)
         return render(request, self.template_name, {
             "patch_url": reverse("accounts:profile_patch"),
             "pw_form": ProfilePasswordForm(request.user),
             "pw_success": request.GET.get("pw") == "ok",
             "memberships": _memberships_for(request.user),
-            "reviews_active": reviews_active,
-            "reviews_done": reviews_done,
+            "reviews_by_journal": _reviews_by_journal(request.user),
         })
 
 
@@ -107,12 +123,10 @@ class ProfilePatchView(LoginRequiredMixin, View):
 
 class ProfilePasswordView(LoginRequiredMixin, View):
     def _ctx(self, request, **extra):
-        reviews_active, reviews_done = _reviews_for(request.user)
         return {
             "patch_url": reverse("accounts:profile_patch"),
             "memberships": _memberships_for(request.user),
-            "reviews_active": reviews_active,
-            "reviews_done": reviews_done,
+            "reviews_by_journal": _reviews_by_journal(request.user),
             **extra,
         }
 
