@@ -100,7 +100,8 @@
             <template x-if="editing && !confirming">
               <div class="inline-edit">
                 <input x-ref="inputText"
-                       type="email"
+                       type="text"
+                       inputmode="email"
                        x-model="draft"
                        @blur="commit()"
                        @keydown.enter.prevent="commit()"
