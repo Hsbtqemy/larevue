@@ -4043,8 +4043,6 @@ details.documents-section[open] .doc-toggle-chev {
 }
 
 /* ===== Mobile layout (< 768px) — sidebar drawer ===== */
-.mobile-topbar { display: none; }
-
 @media (max-width: 767px) {
   .app-shell {
     grid-template-columns: 1fr;
