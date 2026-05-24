@@ -2239,6 +2239,14 @@ hr.sep {
   background: var(--bg-sunken); border-radius: var(--radius-md);
 }
 .my-revue-row .n { font-weight: 500; color: var(--ink); font-size: 14px; }
+.home-journal-card {
+  display: flex; align-items: center; gap: 12px;
+  padding: 14px 16px;
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--radius); transition: border-color 120ms, background 120ms;
+}
+.home-journal-card:hover { border-color: var(--line-strong); background: var(--bg-sunken); }
+.home-journal-card .icon { color: var(--ink-faint); transform: rotate(-90deg); }
 .role-chip {
   font-size: 11px; padding: 2px 8px; border-radius: 100px;
   background: var(--tone-active-bg); color: var(--tone-active-ink); font-weight: 500;

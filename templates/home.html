@@ -1,39 +1,71 @@
 {% extends "base.html" %}
+{% load static edito %}
 
-{% block title %}Mes revues — Outil éditorial{% endblock %}
+{% block title %}Mes revues — Edito{% endblock %}
+
+{% block body_class %}{% endblock %}
+
+{% block extra_head %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter+Tight:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{% static 'css/edito.css' %}?v=20260524a">
+{% endblock %}
 
 {% block content %}
-<div class="mx-auto max-w-lg px-4 py-12 space-y-8">
+<div style="min-height:100vh;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 24px">
 
-  <div class="flex items-center justify-between">
-    <h1 class="text-2xl font-semibold text-gray-900">Mes revues</h1>
-    <form method="post" action="{% url 'account_logout' %}">
-      {% csrf_token %}
-      <button type="submit" class="text-sm text-gray-500 underline hover:text-gray-700">
-        Se déconnecter
-      </button>
-    </form>
+  <div style="width:100%;max-width:400px">
+
+    {# ===== BRAND ===== #}
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:40px">
+      <div class="brand-mark" style="width:36px;height:36px;font-size:18px;border-radius:10px;flex-shrink:0">É</div>
+      <span style="font-family:var(--font-display);font-size:18px;font-weight:500;color:var(--ink)">Edito</span>
+    </div>
+
+    {# ===== HEADING ===== #}
+    <h1 style="font-family:var(--font-display);font-size:22px;font-weight:500;color:var(--ink);margin:0 0 4px">
+      Bonjour {{ request.user.first_name|default:request.user.get_full_name }} !
+    </h1>
+    <p style="font-size:14px;color:var(--ink-muted);margin:0 0 28px">
+      Choisissez une revue pour continuer.
+    </p>
+
+    {# ===== JOURNAL LIST ===== #}
+    {% if journals %}
+    <div style="display:flex;flex-direction:column;gap:8px">
+      {% for journal in journals %}
+      <a href="{% url 'journal_dashboard' slug=journal.slug %}"
+         class="home-journal-card"
+         style="text-decoration:none">
+        <span class="revue-dot" style="background:var(--accent-{{ journal.accent_color }});width:12px;height:12px;border-radius:50%;flex-shrink:0"></span>
+        <span style="flex:1;font-size:15px;font-weight:500;color:var(--ink)">{{ journal.name }}</span>
+        {% icon "chevron" 16 cls="icon" %}
+      </a>
+      {% endfor %}
+    </div>
+    {% else %}
+    <p style="font-size:14px;color:var(--ink-muted);background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:16px 20px;margin:0">
+      Vous n'appartenez à aucune revue. Contactez l'administrateur·ice pour être ajouté·e.
+    </p>
+    {% endif %}
+
+    {# ===== FOOTER ===== #}
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:36px">
+      <a href="{% url 'accounts:profile' %}" style="font-size:13px;color:var(--ink-muted);text-decoration:none">
+        Mon profil
+      </a>
+      <form method="post" action="{% url 'account_logout' %}">
+        {% csrf_token %}
+        <button type="submit" style="background:none;border:none;padding:0;font-size:13px;color:var(--ink-muted);cursor:pointer;font-family:inherit">
+          Se déconnecter
+        </button>
+      </form>
+    </div>
+
   </div>
 
-  {% if journals %}
-    <ul class="space-y-2">
-      {% for journal in journals %}
-        <li>
-          <a
-            href="{% url 'journal_dashboard' slug=journal.slug %}"
-            class="flex items-center justify-between rounded-lg border border-gray-200 bg-white px-4 py-3 shadow-sm hover:border-gray-400 transition-colors"
-          >
-            <span class="font-medium text-gray-900">{{ journal.name }}</span>
-            <span class="text-gray-400">→</span>
-          </a>
-        </li>
-      {% endfor %}
-    </ul>
-  {% else %}
-    <p class="text-gray-600">
-      Tu n'appartiens à aucune revue. Contacte l'administrateur·ice pour être ajouté·e.
-    </p>
-  {% endif %}
+  {% include "partials/_prefs_button.html" %}
 
 </div>
 {% endblock %}
