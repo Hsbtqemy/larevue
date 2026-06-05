@@ -44,7 +44,7 @@
 
             {% if review.state == review.State.SENT %}
               <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-                <a href="{{ review.article_version.file.url }}"
+                <a href="{% url 'accounts:reviewer_article_download' pk=review.pk %}"
                    class="btn sm"
                    download
                    style="display:inline-flex;align-items:center;gap:6px">

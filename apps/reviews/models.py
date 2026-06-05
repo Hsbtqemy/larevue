@@ -62,6 +62,12 @@ class ReviewRequest(BaseModel):
         blank=True,
         verbose_name="Verdict",
     )
+    anonymous_file = models.FileField(
+        upload_to=VersionedUploadTo("reviews/anonymous"),
+        blank=True,
+        null=True,
+        verbose_name="Fichier anonymisé",
+    )
     internal_notes = models.TextField(blank=True, verbose_name="Notes internes")
 
     class Meta:

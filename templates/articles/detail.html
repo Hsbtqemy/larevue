@@ -71,6 +71,26 @@
               </strong>
             </div>
             <div>{% state_badge article %}</div>
+            <div>
+              <span class="muted">À l'aveugle : </span>
+              {% if not is_archived %}
+              <span x-data="{ blind: {{ article.blind_review|yesno:'true,false' }}, busy: false }">
+                <button type="button"
+                        :disabled="busy"
+                        :class="blind ? 'badge active no-dot' : 'badge neutral no-dot'"
+                        style="cursor:pointer;border:none;padding:2px 8px;font-size:11px"
+                        @click="busy=true; fetch('{{ patch_url }}', {
+                          method:'POST',
+                          headers:{'Content-Type':'application/json','X-CSRFToken':'{{ csrf_token }}'},
+                          body:JSON.stringify({field:'blind_review',value:blind?'false':'true'})
+                        }).then(r=>{if(r.ok)blind=!blind;busy=false;})">
+                  <span x-text="blind ? 'Oui' : 'Non'"></span>
+                </button>
+              </span>
+              {% else %}
+              <strong>{{ article.blind_review|yesno:"Oui,Non" }}</strong>
+              {% endif %}
+            </div>
             {% include "articles/_header_counters.html" %}
           </div>
 

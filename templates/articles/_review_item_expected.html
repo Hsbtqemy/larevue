@@ -1,5 +1,6 @@
 {% load edito %}
 {% url 'articles:review_send' slug=journal.slug issue_id=issue.pk article_id=article.pk review_id=review.pk as review_send_url %}
+{% url 'articles:review_anonymous_file' slug=journal.slug issue_id=issue.pk article_id=article.pk review_id=review.pk as review_anon_url %}
 {% url 'articles:review_decline' slug=journal.slug issue_id=issue.pk article_id=article.pk review_id=review.pk as review_decline_url %}
 {% url 'articles:review_receive' slug=journal.slug issue_id=issue.pk article_id=article.pk review_id=review.pk as receive_url %}
 {% url 'articles:review_delete' slug=journal.slug issue_id=issue.pk article_id=article.pk review_id=review.pk as review_delete_url %}
@@ -27,6 +28,9 @@
           <button hx-post="{{ review_send_url }}"
                   hx-target="#review-active-{{ review.pk }}"
                   hx-swap="outerHTML"
+                  {% if article.blind_review and not review.anonymous_file %}
+                  hx-confirm="Aucun fichier anonymisé n'a été téléversé. Envoyer quand même le fichier original ?"
+                  {% endif %}
                   type="button"
                   class="btn ghost sm">
             Envoyer au relecteur
@@ -76,6 +80,41 @@
       {% endif %}
     </div>
   </div>
+
+  {% if article.blind_review %}
+  <div class="review-blind-row">
+    {% if review.anonymous_file %}
+      <span style="display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--ink-muted)">
+        {% icon "check" 12 %} Fichier anonymisé
+      </span>
+      <a href="{{ review.anonymous_file.url }}" download class="btn ghost sm" style="font-size:12px">{% icon "download" 12 %}</a>
+      {% if not is_archived %}
+      <button hx-delete="{{ review_anon_url }}"
+              hx-target="#review-active-{{ review.pk }}"
+              hx-swap="outerHTML"
+              type="button" class="btn ghost sm" style="font-size:12px" title="Supprimer le fichier anonymisé">
+        {% icon "trash" 12 %}
+      </button>
+      {% endif %}
+    {% else %}
+      <span style="display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--tone-warn-ink)">
+        {% icon "warn" 13 %} À l'aveugle — téléversez une version sans nom d'auteur
+      </span>
+      {% if not is_archived %}
+      <form hx-post="{{ review_anon_url }}"
+            hx-target="#review-active-{{ review.pk }}"
+            hx-swap="outerHTML"
+            hx-encoding="multipart/form-data"
+            style="display:inline-flex;align-items:center;gap:6px">
+        {% csrf_token %}
+        <input type="file" name="anonymous_file" accept=".pdf,.doc,.docx" required
+               style="font-size:12px;max-width:180px">
+        <button type="submit" class="btn ghost sm" style="font-size:12px;flex-shrink:0">Téléverser</button>
+      </form>
+      {% endif %}
+    {% endif %}
+  </div>
+  {% endif %}
 
   <div class="review-card-meta">
     <span>Deadline :

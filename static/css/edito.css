@@ -1188,6 +1188,13 @@ label {
   flex-wrap: wrap;
 }
 .review-card-meta .sep { color: var(--ink-faint); }
+.review-blind-row {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  margin-top: 8px; padding: 8px 10px;
+  background: var(--tone-warn-bg); border-radius: var(--radius-md);
+  font-size: 12px;
+}
+.review-blind-row:has(> span > svg) { background: var(--bg-sunken); }
 .review-file {
   margin-top: 10px;
   padding: 8px 12px;

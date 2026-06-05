@@ -361,7 +361,7 @@ class ArticleDetailView(JournalMemberRequiredMixin, DetailView):
 
 
 class ArticlePatchView(_ArticleJournalMixin, JournalOwnedPatchView):
-    ALLOWED_FIELDS = {"title", "author", "author_name_override", "article_type", "abstract", "order"}
+    ALLOWED_FIELDS = {"title", "author", "author_name_override", "article_type", "abstract", "blind_review", "order"}
     AUDIT_FIELDS = {"title", "author", "article_type"}
     FULL_CLEAN_EXCLUDE = ["state"]
 
@@ -369,6 +369,8 @@ class ArticlePatchView(_ArticleJournalMixin, JournalOwnedPatchView):
         return self._check_archived(obj)
 
     def resolve_field_value(self, field_name, raw_value, field_obj):
+        if field_name == "blind_review":
+            return raw_value in ("true", "1", "yes")
         if field_name == "author":
             if not raw_value:
                 return None
@@ -744,6 +746,30 @@ class ReviewRequestReminderView(_ReviewRequestMixin, JournalMemberRequiredMixin,
             )
         else:
             fragment = render_to_string("articles/_review_item_expected.html", _review_card_ctx(review, request), request=request)
+        return HttpResponse(fragment)
+
+
+class ReviewRequestAnonymousFileView(_ReviewRequestMixin, JournalMemberRequiredMixin, View):
+    def post(self, request, issue_id, article_id, review_id, **kwargs):
+        review = self.get_object_or_404()
+        guard = self._check_archived(review.article)
+        if guard:
+            return guard
+        f = request.FILES.get("anonymous_file")
+        if not f:
+            return JsonResponse({"error": "Aucun fichier fourni."}, status=400)
+        review.anonymous_file = f
+        review.save(update_fields=["anonymous_file"])
+        fragment = render_to_string("articles/_review_item_expected.html", _review_card_ctx(review, request), request=request)
+        return HttpResponse(fragment)
+
+    def delete(self, request, issue_id, article_id, review_id, **kwargs):
+        review = self.get_object_or_404()
+        guard = self._check_archived(review.article)
+        if guard:
+            return guard
+        review.anonymous_file.delete(save=True)
+        fragment = render_to_string("articles/_review_item_expected.html", _review_card_ctx(review, request), request=request)
         return HttpResponse(fragment)
 
 

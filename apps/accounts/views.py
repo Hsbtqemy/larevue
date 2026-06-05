@@ -6,8 +6,8 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core import signing
 from django.core.exceptions import ValidationError
 from django.db.models import Count, Q
-from django.http import JsonResponse
-from django.shortcuts import redirect, render
+from django.http import Http404, JsonResponse
+from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
 from django.views import View
@@ -17,6 +17,7 @@ from apps.accounts.tokens import load_invitation_token, make_invitation_token
 from apps.contacts.models import Contact
 from apps.core.mail import send_review_received_editors, send_review_received_reviewer, send_review_resubmitted_editors, send_reviewer_added, send_reviewer_invitation
 from apps.core.mixins import JournalMemberRequiredMixin
+from apps.core.utils import file_response
 from apps.issues.models import Issue
 from apps.reviews.models import ReviewRequest
 
@@ -142,6 +143,19 @@ class ProfilePasswordView(LoginRequiredMixin, View):
             return redirect(reverse("accounts:profile") + "?pw=ok")
         return render(request, ProfileView.template_name,
                       self._ctx(request, pw_form=form, pw_open=True))
+
+
+class ReviewerArticleDownloadView(LoginRequiredMixin, View):
+    def get(self, request, pk):
+        review = get_object_or_404(
+            ReviewRequest.objects.select_related("article", "article_version", "reviewer__user"),
+            pk=pk,
+        )
+        if review.reviewer_id is None or review.reviewer.user_id != request.user.pk:
+            raise Http404
+        if review.article.blind_review and review.anonymous_file:
+            return file_response(review.anonymous_file)
+        return file_response(review.article_version.file)
 
 
 class MesRelecturesView(LoginRequiredMixin, View):
