@@ -6,7 +6,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core import signing
 from django.core.exceptions import ValidationError
 from django.db.models import Count, Q
-from django.http import Http404, JsonResponse
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
@@ -148,11 +148,10 @@ class ProfilePasswordView(LoginRequiredMixin, View):
 class ReviewerArticleDownloadView(LoginRequiredMixin, View):
     def get(self, request, pk):
         review = get_object_or_404(
-            ReviewRequest.objects.select_related("article", "article_version", "reviewer__user"),
+            ReviewRequest.objects.select_related("article", "article_version"),
             pk=pk,
+            reviewer__user=request.user,
         )
-        if review.reviewer_id is None or review.reviewer.user_id != request.user.pk:
-            raise Http404
         if review.article.blind_review and review.anonymous_file:
             return file_response(review.anonymous_file)
         return file_response(review.article_version.file)

@@ -369,8 +369,6 @@ class ArticlePatchView(_ArticleJournalMixin, JournalOwnedPatchView):
         return self._check_archived(obj)
 
     def resolve_field_value(self, field_name, raw_value, field_obj):
-        if field_name == "blind_review":
-            return raw_value in ("true", "1", "yes")
         if field_name == "author":
             if not raw_value:
                 return None
@@ -768,6 +766,8 @@ class ReviewRequestAnonymousFileView(_ReviewRequestMixin, JournalMemberRequiredM
         guard = self._check_archived(review.article)
         if guard:
             return guard
+        if not review.anonymous_file:
+            return JsonResponse({"error": "Aucun fichier à supprimer."}, status=404)
         review.anonymous_file.delete(save=True)
         fragment = render_to_string("articles/_review_item_expected.html", _review_card_ctx(review, request), request=request)
         return HttpResponse(fragment)

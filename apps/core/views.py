@@ -1,7 +1,7 @@
 import json
 
 from django.core.exceptions import ValidationError
-from django.db import IntegrityError
+from django.db import IntegrityError, models as db_models
 from django.http import JsonResponse
 from django.shortcuts import redirect, render
 from django.views import View
@@ -111,6 +111,8 @@ class JournalOwnedPatchView(JournalOwnedObjectMixin, JournalMemberRequiredMixin,
     def resolve_field_value(self, field_name, raw_value, field_obj):
         if field_obj.null and raw_value == "":
             return None
+        if isinstance(field_obj, db_models.BooleanField):
+            return raw_value in ("true", "1", "yes")
         return raw_value
 
     def create_audit_note(self, obj, field_name, old_value, new_value, field_obj):
