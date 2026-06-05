@@ -292,6 +292,9 @@
                   <input type="checkbox" name="blind_review"{% if issue.blind_review %} checked{% endif %}>
                   Relecture à l'aveugle
                 </label>
+                <template x-if="fieldErrors('blind_review').length">
+                  <div class="form-msg err" x-text="fieldErrors('blind_review').join(' ')"></div>
+                </template>
               </div>
               <template x-if="fieldErrors('__all__').length">
                 <div class="field full">
