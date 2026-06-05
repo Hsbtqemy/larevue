@@ -361,7 +361,7 @@ class ArticleDetailView(JournalMemberRequiredMixin, DetailView):
 
 
 class ArticlePatchView(_ArticleJournalMixin, JournalOwnedPatchView):
-    ALLOWED_FIELDS = {"title", "author", "author_name_override", "article_type", "abstract", "blind_review", "order"}
+    ALLOWED_FIELDS = {"title", "author", "author_name_override", "article_type", "abstract", "order"}
     AUDIT_FIELDS = {"title", "author", "article_type"}
     FULL_CLEAN_EXCLUDE = ["state"]
 

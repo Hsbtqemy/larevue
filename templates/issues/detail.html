@@ -287,6 +287,12 @@
                   <div class="form-msg err" x-text="fieldErrors('description').join(' ')"></div>
                 </template>
               </div>
+              <div class="field full">
+                <label class="check-label">
+                  <input type="checkbox" name="blind_review"{% if issue.blind_review %} checked{% endif %}>
+                  Relecture à l'aveugle
+                </label>
+              </div>
               <template x-if="fieldErrors('__all__').length">
                 <div class="field full">
                   <div class="form-msg err" x-text="fieldErrors('__all__').join(' ')"></div>

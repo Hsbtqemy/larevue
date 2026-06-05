@@ -148,11 +148,11 @@ class ProfilePasswordView(LoginRequiredMixin, View):
 class ReviewerArticleDownloadView(LoginRequiredMixin, View):
     def get(self, request, pk):
         review = get_object_or_404(
-            ReviewRequest.objects.select_related("article", "article_version"),
+            ReviewRequest.objects.select_related("article__issue", "article_version"),
             pk=pk,
             reviewer__user=request.user,
         )
-        if review.article.blind_review and review.anonymous_file:
+        if review.article.issue.blind_review and review.anonymous_file:
             return file_response(review.anonymous_file)
         return file_response(review.article_version.file)
 

@@ -28,7 +28,7 @@
           <button hx-post="{{ review_send_url }}"
                   hx-target="#review-active-{{ review.pk }}"
                   hx-swap="outerHTML"
-                  {% if article.blind_review and not review.anonymous_file %}
+                  {% if article.issue.blind_review and not review.anonymous_file %}
                   hx-confirm="Aucun fichier anonymisé n'a été téléversé. Envoyer quand même le fichier original ?"
                   {% endif %}
                   type="button"
@@ -81,7 +81,7 @@
     </div>
   </div>
 
-  {% if article.blind_review %}
+  {% if article.issue.blind_review %}
   <div class="review-blind-row">
     {% if review.anonymous_file %}
       <span style="display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--ink-muted)">

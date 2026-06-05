@@ -7,7 +7,7 @@ from apps.issues.models import Issue, IssueDocument
 class IssueEditForm(forms.ModelForm):
     class Meta:
         model = Issue
-        fields = ["number", "thematic_title", "editor_name", "planned_publication_date", "description"]
+        fields = ["number", "thematic_title", "editor_name", "planned_publication_date", "description", "blind_review"]
         widgets = {
             "planned_publication_date": forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
             "description": forms.Textarea(attrs={"rows": 4}),
@@ -22,7 +22,7 @@ class IssueCreateForm(forms.ModelForm):
         model = Issue
         fields = [
             "number", "thematic_title", "description", "editor_name",
-            "planned_publication_date", "deadline_articles",
+            "planned_publication_date", "deadline_articles", "blind_review",
         ]
         widgets = {
             "planned_publication_date": forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),

@@ -53,7 +53,6 @@ class Article(BaseModel):
         verbose_name="Type",
     )
     abstract = models.TextField(blank=True, verbose_name="Résumé")
-    blind_review = models.BooleanField(default=False, verbose_name="Relecture à l'aveugle")
     order = models.PositiveIntegerField(default=0, verbose_name="Ordre dans le numéro")
     state = FSMField(
         default=State.PENDING,

@@ -98,6 +98,7 @@ class Issue(BaseModel):
     refused_at = models.DateTimeField(
         null=True, blank=True, verbose_name="Date de refus"
     )
+    blind_review = models.BooleanField(default=False, verbose_name="Relecture à l'aveugle")
     cover_image = models.ImageField(
         upload_to="issues/covers/", blank=True, null=True, verbose_name="Image de couverture"
     )
