@@ -38,13 +38,15 @@ document.addEventListener('DOMContentLoaded', function () {
   function reorderAllArticles() {
     if (!articleReorderUrl) return;
     var items = [];
+    var globalOrder = 0;
     container.querySelectorAll('.article-list').forEach(function (list) {
       var sid = list.dataset.sectionId;
       var sectionId = sid ? parseInt(sid, 10) : null;
       list.querySelectorAll('.article-row').forEach(function (row, idx) {
+        globalOrder++;
         var num = row.querySelector('.order-num');
         if (num) num.textContent = idx + 1;
-        items.push({ id: parseInt(row.dataset.articleId, 10), order: idx + 1, section_id: sectionId });
+        items.push({ id: parseInt(row.dataset.articleId, 10), order: globalOrder, section_id: sectionId });
       });
     });
     if (!items.length) return;
@@ -554,10 +556,9 @@ document.addEventListener('DOMContentLoaded', function () {
                   {% endif %}
                 </div>
                 <div class="article-list" data-section-id="{{ section.pk }}">
+                  <div class="section-drop-zone"{% if section.articles_list %} style="display:none"{% endif %}>Glisser un article ici</div>
                   {% for article in section.articles_list %}
                     {% include "issues/_article_row.html" %}
-                  {% empty %}
-                    <div class="section-drop-zone">Glisser un article ici</div>
                   {% endfor %}
                 </div>
               </div>
@@ -571,12 +572,11 @@ document.addEventListener('DOMContentLoaded', function () {
                 </div>
               {% endif %}
               <div class="article-list" data-section-id="">
+                {% if sections %}
+                  <div class="section-drop-zone section-drop-zone-muted"{% if ungrouped_articles %} style="display:none"{% endif %}>Glisser un article ici</div>
+                {% endif %}
                 {% for article in ungrouped_articles %}
                   {% include "issues/_article_row.html" %}
-                {% empty %}
-                  {% if sections %}
-                    <div class="section-drop-zone section-drop-zone-muted">Glisser un article ici</div>
-                  {% endif %}
                 {% endfor %}
               </div>
             </div>
