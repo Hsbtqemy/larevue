@@ -1,3 +1,5 @@
+import json
+
 from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.core.exceptions import PermissionDenied
@@ -425,6 +427,54 @@ class ArticleEditView(_ArticleJournalMixin, JournalMemberRequiredMixin, View):
             for field, errs in form.errors.as_data().items()
         }
         return JsonResponse({"errors": errors}, status=400)
+
+
+class ArticleReorderView(JournalMemberRequiredMixin, View):
+    raise_exception = True
+
+    def post(self, request, issue_id, **kwargs):
+        try:
+            issue = Issue.objects.get(pk=issue_id, journal=request.journal)
+        except Issue.DoesNotExist:
+            raise Http404
+
+        if issue.state in Issue.ARCHIVED_STATES:
+            return JsonResponse({"error": "Ce numéro est archivé."}, status=403)
+
+        try:
+            data = json.loads(request.body)
+        except (json.JSONDecodeError, ValueError):
+            return JsonResponse({"error": "JSON invalide."}, status=400)
+
+        if not isinstance(data, list) or not data:
+            return JsonResponse({"error": "Format invalide."}, status=400)
+
+        try:
+            order_map = {int(item["id"]): int(item["order"]) for item in data}
+        except (KeyError, ValueError, TypeError):
+            return JsonResponse({"error": "Format invalide."}, status=400)
+
+        if len(order_map) != len(data):
+            return JsonResponse({"error": "Format invalide."}, status=400)
+
+        orders = list(order_map.values())
+        if len(set(orders)) != len(orders):
+            return JsonResponse({"error": "Format invalide."}, status=400)
+
+        if any(v <= 0 for v in orders):
+            return JsonResponse({"error": "La position doit être un entier positif."}, status=400)
+
+        articles = list(Article.objects.filter(issue=issue))
+        if set(order_map.keys()) != {a.pk for a in articles}:
+            return JsonResponse({"error": "Articles introuvables."}, status=400)
+
+        now = timezone.now()
+        for article in articles:
+            article.order = order_map[article.pk]
+            article.updated_at = now
+        Article.objects.bulk_update(articles, ["order", "updated_at"])
+
+        return JsonResponse({"ok": True})
 
 
 class ArticleDeleteView(_ArticleJournalMixin, JournalMemberRequiredMixin, View):

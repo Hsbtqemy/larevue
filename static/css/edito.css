@@ -970,6 +970,11 @@ label {
   border-radius: 3px;
 }
 .article-row .reorder-btn:hover { color: var(--ink); background: var(--bg-sunken); }
+.article-row .drag-handle { cursor: grab; }
+.article-row .drag-handle:active { cursor: grabbing; }
+.article-row .drag-grip { color: var(--ink-faint); display: flex; }
+.article-row .drag-handle:hover .drag-grip { color: var(--ink-muted); }
+.article-row.sortable-ghost { opacity: 0.45; background: var(--surface-2); }
 .article-row .title-col { min-width: 0; }
 .article-row .title-col .t {
   font-weight: 500;

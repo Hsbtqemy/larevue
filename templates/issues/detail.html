@@ -10,6 +10,37 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter+Tight:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="{% static 'css/edito.css' %}?v=20260524a">
+<script defer src="{% static 'js/sortable.min.js' %}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  var list = document.querySelector('.article-list[data-reorder-url]');
+  if (!list) return;
+  new Sortable(list, {
+    animation: 150,
+    handle: '.drag-handle',
+    draggable: '.article-row',
+    ghostClass: 'sortable-ghost',
+    onEnd: function (evt) {
+      if (evt.oldIndex === evt.newIndex) return;
+      var rows = list.querySelectorAll('.article-row');
+      var items = Array.from(rows).map(function (row, idx) {
+        var num = row.querySelector('.order-num');
+        if (num) num.textContent = idx + 1;
+        return { id: parseInt(row.dataset.articleId, 10), order: idx + 1 };
+      });
+      fetch(list.dataset.reorderUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
+        body: JSON.stringify(items),
+      }).then(function (r) {
+        if (!r.ok) location.reload();
+      }).catch(function () {
+        location.reload();
+      });
+    },
+  });
+});
+</script>
 {% endblock %}
 
 {% block content %}
@@ -396,7 +427,7 @@
         </div>
 
         {% if articles %}
-          <div class="article-list">
+          <div class="article-list"{% if is_editable %} data-reorder-url="{% url 'articles:reorder' slug=journal.slug issue_id=issue.pk %}"{% endif %}>
             <div class="article-list-head">
               <div></div>
               <div>Titre</div>
@@ -407,13 +438,20 @@
               <div></div>
             </div>
             {% for article in articles %}
-              {% url 'articles:patch' slug=journal.slug issue_id=issue.pk article_id=article.pk as article_patch_url %}
               <a href="{% url 'articles:detail' slug=journal.slug issue_id=issue.pk article_id=article.pk %}"
                  class="article-row" style="text-decoration:none"
+                 data-article-id="{{ article.pk }}"
                  onclick="if(event.target.closest('.order-col'))event.preventDefault()">
-                <div class="order-col" title="Modifier la position">
-                  {% inline_editable "order" article article_patch_url input_type="number" %}
-                </div>
+                {% if is_editable %}
+                  <div class="order-col drag-handle" title="Glisser pour réordonner">
+                    {% icon "grip" 14 cls="drag-grip" %}
+                    <span class="order-num">{{ article.order }}</span>
+                  </div>
+                {% else %}
+                  <div class="order-col" title="Position">
+                    <span class="order-num">{{ article.order }}</span>
+                  </div>
+                {% endif %}
                 <div class="title-col">
                   <div class="t">{{ article.title }}</div>
                   <div class="s">{{ article.displayed_author_name|default:"—" }}</div>
