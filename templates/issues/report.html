@@ -149,6 +149,20 @@
     .doc-name { font-weight: 500; }
     .doc-desc { color: #555; font-size: 9pt; margin-top: 1pt; }
 
+    /* ── Article sections (groupes) ── */
+    .article-section-header td {
+      font-size: 8pt;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #888;
+      background: #f6f6f6;
+      padding: 5pt 6pt 5pt 0;
+      border-top: 1px solid #ccc;
+      border-bottom: 1px solid #ccc;
+    }
+    .article-section-label { font-size: 10.5pt; font-weight: 600; margin-bottom: 4pt; margin-top: 14pt; color: #444; }
+
     /* ── Utilities ── */
     .empty { color: #aaa; font-style: italic; font-size: 9pt; }
     .muted { color: #666; }
@@ -204,9 +218,31 @@
         </tr>
       </thead>
       <tbody>
-        {% for a in articles %}
+        {% for s in sections %}
+          <tr class="article-section-header">
+            <td colspan="6">{{ s.title }}</td>
+          </tr>
+          {% for a in s.articles_list %}
+            <tr>
+              <td class="muted">{{ a.order }}</td>
+              <td>{{ a.title }}</td>
+              <td>{{ a.displayed_author_name }}</td>
+              <td>{{ a.get_article_type_display }}</td>
+              <td><span class="badge {{ a.state }}">{{ a.get_state_display }}</span></td>
+              <td style="text-align:center">
+                {% if a.reviews_total %}{{ a.reviews_received }}/{{ a.reviews_total }}{% else %}—{% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        {% endfor %}
+        {% if sections and ungrouped_articles %}
+          <tr class="article-section-header">
+            <td colspan="6">Articles non classés</td>
+          </tr>
+        {% endif %}
+        {% for a in ungrouped_articles %}
           <tr>
-            <td class="muted">{{ forloop.counter }}</td>
+            <td class="muted">{{ a.order }}</td>
             <td>{{ a.title }}</td>
             <td>{{ a.displayed_author_name }}</td>
             <td>{{ a.get_article_type_display }}</td>
@@ -227,62 +263,17 @@
 {% if options.include_articles_detail and articles %}
   <div class="section page-break">
     <div class="section-title">Détail des articles</div>
-    {% for a in articles %}
-      <div class="article-block">
-        <div class="article-block-head">
-          <div>
-            <span class="article-num">{{ forloop.counter }}.</span>
-            <strong>{{ a.title }}</strong>
-            <span class="muted" style="font-size:9pt;margin-left:5pt">— {{ a.displayed_author_name }}</span>
-          </div>
-          <span class="badge {{ a.state }}">{{ a.get_state_display }}</span>
-        </div>
 
-        {% if a.abstract %}
-          <p class="article-abstract">{{ a.abstract }}</p>
-        {% endif %}
-
-        {% if a.all_versions %}
-          <h3>Versions ({{ a.all_versions|length }})</h3>
-          <ul class="sub-list">
-            {% for v in a.all_versions %}
-              <li>
-                <span class="sub-label">Version {{ v.version_number }}</span>
-                <span class="muted">{{ v.created_at|date:"d/m/Y" }}</span>
-                {% if v.uploaded_by %}<span class="muted">— {{ v.uploaded_by.get_full_name }}</span>{% endif %}
-              </li>
-            {% endfor %}
-          </ul>
-        {% endif %}
-
-        {% if options.include_reviews_detail and a.reviews %}
-          <h3>Relectures ({{ a.reviews|length }})</h3>
-          <ul class="sub-list">
-            {% for rr in a.reviews %}
-              <li>
-                <span class="sub-label">{{ rr.reviewer_name_snapshot }}</span>
-                <span class="muted">deadline {{ rr.deadline|date:"d/m/Y" }}</span>
-                {% if rr.state == rr.State.RECEIVED %}
-                  <span class="muted">— reçue{% if rr.received_at %} le {{ rr.received_at|date:"d/m/Y" }}{% endif %}</span>
-                  {% if rr.verdict == rr.Verdict.FAVORABLE %}<span class="verdict-F">Favorable</span>
-                  {% elif rr.verdict == rr.Verdict.NEEDS_REVISION %}<span class="verdict-R">Révision requise</span>
-                  {% elif rr.verdict == rr.Verdict.UNFAVORABLE %}<span class="verdict-U">Défavorable</span>
-                  {% endif %}
-                {% else %}
-                  <span class="muted">(attendue)</span>
-                {% endif %}
-              </li>
-            {% endfor %}
-          </ul>
-        {% elif options.include_reviews_detail %}
-          <p class="empty">Aucune relecture.</p>
-        {% elif a.reviews_total %}
-          <p class="muted" style="font-size:9pt">
-            {{ a.reviews_received }} relecture{{ a.reviews_received|pluralize }} reçue{{ a.reviews_received|pluralize }} sur {{ a.reviews_total }}.
-          </p>
-        {% endif %}
-      </div>
+    {% for s in sections %}
+      <p class="article-section-label">{{ s.title }}</p>
+      {% include "issues/_report_article_detail.html" with article_list=s.articles_list %}
     {% endfor %}
+
+    {% if sections and ungrouped_articles %}
+      <p class="article-section-label" style="color:#aaa">Articles non classés</p>
+    {% endif %}
+    {% include "issues/_report_article_detail.html" with article_list=ungrouped_articles %}
+
   </div>
 {% endif %}
 

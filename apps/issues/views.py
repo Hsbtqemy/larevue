@@ -513,6 +513,7 @@ def _build_report_context(request, issue, options):
 
     articles = list(
         issue.articles
+        .select_related("section")
         .prefetch_related(*prefetch)
         .order_by("order", "created_at")
     )
@@ -523,6 +524,14 @@ def _build_report_context(request, issue, options):
         a.reviews_total = len(rrs)
         if options["include_articles_detail"]:
             a.all_versions = list(a.versions.all())
+
+    sections = list(issue.sections.all())
+    _by_section = {}
+    for a in articles:
+        _by_section.setdefault(a.section_id, []).append(a)
+    for s in sections:
+        s.articles_list = _by_section.get(s.pk, [])
+    ungrouped_articles = _by_section.get(None, [])
 
     issue_notes = (
         list(issue.internal_notes.select_related("author"))
@@ -543,6 +552,8 @@ def _build_report_context(request, issue, options):
         "journal": request.journal,
         "issue": issue,
         "articles": articles,
+        "sections": sections,
+        "ungrouped_articles": ungrouped_articles,
         "issue_notes": issue_notes,
         "documents": documents,
         "deadlines": deadlines,
