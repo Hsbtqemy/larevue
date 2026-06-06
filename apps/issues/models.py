@@ -216,6 +216,30 @@ class Issue(BaseModel):
         pass
 
 
+class Section(BaseModel):
+    issue = models.ForeignKey(
+        Issue,
+        on_delete=models.CASCADE,
+        related_name="sections",
+        verbose_name="Numéro",
+    )
+    title = models.CharField(max_length=200, verbose_name="Titre")
+    order = models.PositiveIntegerField(default=0, verbose_name="Ordre")
+
+    class Meta:
+        ordering = ["order", "created_at"]
+        verbose_name = "Section"
+        verbose_name_plural = "Sections"
+
+    def __str__(self):
+        return self.title
+
+    @classmethod
+    def next_order(cls, issue):
+        from django.db.models import Max
+        return (cls.objects.filter(issue=issue).aggregate(m=Max("order"))["m"] or 0) + 1
+
+
 class IssueDocument(models.Model):
     issue = models.ForeignKey(
         Issue,

@@ -1,0 +1,35 @@
+{% load static edito %}
+<a href="{% url 'articles:detail' slug=journal.slug issue_id=issue.pk article_id=article.pk %}"
+   class="article-row" style="text-decoration:none"
+   data-article-id="{{ article.pk }}"
+   onclick="if(event.target.closest('.order-col'))event.preventDefault()">
+  {% if is_editable %}
+    <div class="order-col drag-handle" title="Glisser pour réordonner">
+      {% icon "grip" 14 cls="drag-grip" %}
+      <span class="order-num">{{ article.order }}</span>
+    </div>
+  {% else %}
+    <div class="order-col" title="Position">
+      <span class="order-num">{{ article.order }}</span>
+    </div>
+  {% endif %}
+  <div class="title-col">
+    <div class="t">{{ article.title }}</div>
+    <div class="s">{{ article.displayed_author_name|default:"—" }}</div>
+  </div>
+  <div class="type-col">{{ article.get_article_type_display }}</div>
+  <div class="num-col">
+    {% if article.latest_version %}
+      <strong>v{{ article.latest_version.version_number }}</strong>
+    {% else %}
+      <strong>—</strong>
+    {% endif %}
+    <div class="lbl">Fichier</div>
+  </div>
+  <div class="num-col">
+    <strong>{{ article.reviews_received }}/{{ article.reviews_total }}</strong>
+    <div class="lbl">Reçues</div>
+  </div>
+  <div class="state-col">{% state_badge article %}</div>
+  <div class="chev">{% icon "chevronR" 14 %}</div>
+</a>

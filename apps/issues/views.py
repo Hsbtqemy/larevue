@@ -1,4 +1,5 @@
 import datetime
+import json
 
 from django.contrib import messages
 from django.core.exceptions import ValidationError
@@ -17,7 +18,7 @@ from apps.core.mixins import JournalMemberRequiredMixin, JournalOwnedObjectMixin
 from apps.core.utils import actor_name, create_audit_note, file_response, html_or_pdf_response
 from apps.core.views import JournalOwnedCreateView, JournalOwnedPatchView, JournalOwnedTransitionView, compute_transitions
 from apps.issues.forms import IssueCreateForm, IssueDocumentForm, IssueEditForm
-from apps.issues.models import Issue, IssueDocument
+from apps.issues.models import Issue, IssueDocument, Section
 from apps.reviews.models import ReviewRequest
 
 
@@ -247,6 +248,7 @@ class IssueDetailView(JournalOwnedObjectMixin, JournalMemberRequiredMixin, Templ
 
         articles = list(
             issue.articles
+            .select_related("section")
             .prefetch_related("versions", "review_requests")
             .order_by("order", "created_at")
         )
@@ -256,6 +258,14 @@ class IssueDetailView(JournalOwnedObjectMixin, JournalMemberRequiredMixin, Templ
             rrs = list(a.review_requests.all())
             a.reviews_received = sum(1 for r in rrs if r.state == ReviewRequest.State.RECEIVED)
             a.reviews_total = len(rrs)
+
+        sections = list(issue.sections.all())
+        _by_section = {}
+        for a in articles:
+            _by_section.setdefault(a.section_id, []).append(a)
+        for s in sections:
+            s.articles_list = _by_section.get(s.pk, [])
+        ungrouped_articles = _by_section.get(None, [])
 
         member_names = [
             m.user.get_full_name() or m.user.email
@@ -280,10 +290,19 @@ class IssueDetailView(JournalOwnedObjectMixin, JournalMemberRequiredMixin, Templ
                 "issues:document_delete", kwargs={**_doc_kw, "doc_id": doc.pk}
             )
 
+        _sec_kw = {"slug": journal.slug, "issue_id": issue.pk}
+        for s in sections:
+            s.patch_url = reverse("issues:section_patch", kwargs={**_sec_kw, "section_id": s.pk})
+            s.delete_url = reverse("issues:section_delete", kwargs={**_sec_kw, "section_id": s.pk})
+
         ctx.update({
             "issue": issue,
             "journal": journal,
             "articles": articles,
+            "sections": sections,
+            "ungrouped_articles": ungrouped_articles,
+            "section_create_url": reverse("issues:section_create", kwargs=_sec_kw) if is_editable else None,
+            "section_reorder_url": reverse("issues:section_reorder", kwargs=_sec_kw) if is_editable else None,
             "documents": documents,
             "doc_create_url": reverse("issues:document_create", kwargs=_doc_kw),
             "doc_section_title": "Documents du numéro",
@@ -551,3 +570,111 @@ class IssueReportView(JournalOwnedObjectMixin, JournalMemberRequiredMixin, View)
 
         filename = f"rapport_{ctx['journal'].slug}_n{issue.number}_{ctx['generated_at'].date()}.pdf"
         return html_or_pdf_response(html, filename=filename)
+
+
+# ── Section views ────────────────────────────────────────────────────────────
+
+class _SectionIssueMixin:
+    raise_exception = True
+
+    def _get_editable_issue(self, request, issue_id):
+        try:
+            issue = Issue.objects.get(pk=issue_id, journal=request.journal)
+        except Issue.DoesNotExist:
+            raise Http404
+        if issue.state in Issue.ARCHIVED_STATES:
+            return None, JsonResponse({"error": "Ce numéro est archivé."}, status=403)
+        return issue, None
+
+    def _get_section(self, issue, section_id):
+        try:
+            return Section.objects.get(pk=section_id, issue=issue)
+        except Section.DoesNotExist:
+            raise Http404
+
+
+class SectionCreateView(_SectionIssueMixin, JournalMemberRequiredMixin, View):
+    def post(self, request, issue_id, **kwargs):
+        issue, err = self._get_editable_issue(request, issue_id)
+        if err:
+            return err
+        section = Section.objects.create(
+            issue=issue,
+            title="Nouvelle section",
+            order=Section.next_order(issue),
+        )
+        _kw = {"slug": request.journal.slug, "issue_id": issue_id, "section_id": section.pk}
+        return JsonResponse({
+            "ok": True,
+            "id": section.pk,
+            "title": section.title,
+            "patch_url": reverse("issues:section_patch", kwargs=_kw),
+            "delete_url": reverse("issues:section_delete", kwargs=_kw),
+        })
+
+
+class SectionPatchView(_SectionIssueMixin, JournalMemberRequiredMixin, View):
+    def post(self, request, issue_id, section_id, **kwargs):
+        issue, err = self._get_editable_issue(request, issue_id)
+        if err:
+            return err
+        section = self._get_section(issue, section_id)
+        try:
+            data = json.loads(request.body)
+            # Compatible avec le format {field, value} de inlineEdit Alpine
+            if "field" in data:
+                if data["field"] != "title":
+                    return JsonResponse({"error": "Champ invalide."}, status=400)
+                title = str(data.get("value", "")).strip()
+            else:
+                title = str(data.get("title", "")).strip()
+        except (json.JSONDecodeError, TypeError):
+            return JsonResponse({"error": "JSON invalide."}, status=400)
+        if not title:
+            return JsonResponse({"error": "Le titre ne peut pas être vide."}, status=400)
+        section.title = title[:200]
+        section.updated_at = timezone.now()
+        section.save(update_fields=["title", "updated_at"])
+        return JsonResponse({"ok": True, "value": section.title})
+
+
+class SectionDeleteView(_SectionIssueMixin, JournalMemberRequiredMixin, View):
+    def post(self, request, issue_id, section_id, **kwargs):
+        issue, err = self._get_editable_issue(request, issue_id)
+        if err:
+            return err
+        section = self._get_section(issue, section_id)
+        Article.objects.filter(section=section).update(section=None)
+        section.delete()
+        return JsonResponse({"ok": True})
+
+
+class SectionReorderView(_SectionIssueMixin, JournalMemberRequiredMixin, View):
+    def post(self, request, issue_id, **kwargs):
+        issue, err = self._get_editable_issue(request, issue_id)
+        if err:
+            return err
+        try:
+            data = json.loads(request.body)
+        except (json.JSONDecodeError, ValueError):
+            return JsonResponse({"error": "JSON invalide."}, status=400)
+        if not isinstance(data, list) or not data:
+            return JsonResponse({"error": "Format invalide."}, status=400)
+        try:
+            order_map = {int(item["id"]): int(item["order"]) for item in data}
+        except (KeyError, ValueError, TypeError):
+            return JsonResponse({"error": "Format invalide."}, status=400)
+        if len(order_map) != len(data):
+            return JsonResponse({"error": "Format invalide."}, status=400)
+        orders = list(order_map.values())
+        if len(set(orders)) != len(orders) or any(v <= 0 for v in orders):
+            return JsonResponse({"error": "Format invalide."}, status=400)
+        sections = list(Section.objects.filter(issue=issue))
+        if set(order_map.keys()) != {s.pk for s in sections}:
+            return JsonResponse({"error": "Sections introuvables."}, status=400)
+        now = timezone.now()
+        for section in sections:
+            section.order = order_map[section.pk]
+            section.updated_at = now
+        Section.objects.bulk_update(sections, ["order", "updated_at"])
+        return JsonResponse({"ok": True})

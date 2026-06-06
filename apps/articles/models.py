@@ -53,6 +53,14 @@ class Article(BaseModel):
         verbose_name="Type",
     )
     abstract = models.TextField(blank=True, verbose_name="Résumé")
+    section = models.ForeignKey(
+        "issues.Section",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="articles",
+        verbose_name="Section",
+    )
     order = models.PositiveIntegerField(default=0, verbose_name="Ordre dans le numéro")
     state = FSMField(
         default=State.PENDING,

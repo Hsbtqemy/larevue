@@ -451,6 +451,10 @@ class ArticleReorderView(JournalMemberRequiredMixin, View):
 
         try:
             order_map = {int(item["id"]): int(item["order"]) for item in data}
+            section_map = {
+                int(item["id"]): (int(item["section_id"]) if item.get("section_id") is not None else None)
+                for item in data
+            }
         except (KeyError, ValueError, TypeError):
             return JsonResponse({"error": "Format invalide."}, status=400)
 
@@ -464,6 +468,13 @@ class ArticleReorderView(JournalMemberRequiredMixin, View):
         if any(v <= 0 for v in orders):
             return JsonResponse({"error": "La position doit être un entier positif."}, status=400)
 
+        section_ids = {sid for sid in section_map.values() if sid is not None}
+        if section_ids:
+            from apps.issues.models import Section
+            valid_ids = set(Section.objects.filter(issue=issue, pk__in=section_ids).values_list("pk", flat=True))
+            if valid_ids != section_ids:
+                return JsonResponse({"error": "Section introuvable."}, status=400)
+
         articles = list(Article.objects.filter(issue=issue))
         if set(order_map.keys()) != {a.pk for a in articles}:
             return JsonResponse({"error": "Articles introuvables."}, status=400)
@@ -471,8 +482,9 @@ class ArticleReorderView(JournalMemberRequiredMixin, View):
         now = timezone.now()
         for article in articles:
             article.order = order_map[article.pk]
+            article.section_id = section_map[article.pk]
             article.updated_at = now
-        Article.objects.bulk_update(articles, ["order", "updated_at"])
+        Article.objects.bulk_update(articles, ["order", "section_id", "updated_at"])
 
         return JsonResponse({"ok": True})
 

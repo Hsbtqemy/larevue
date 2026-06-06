@@ -1047,6 +1047,91 @@ label {
 .article-list-head .t-center { text-align: center; }
 .article-list-head .t-right { text-align: right; }
 
+/* ---------- Section panels ---------- */
+.section-container { display: flex; flex-direction: column; }
+
+.section-panel { border-bottom: 1px solid var(--line); }
+.section-panel:last-child { border-bottom: none; }
+
+.section-panel-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--line);
+}
+
+.section-drag-handle {
+  cursor: grab;
+  color: var(--ink-faint);
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+.section-drag-handle:active { cursor: grabbing; }
+.section-drag-handle:hover { color: var(--ink-muted); }
+.section-panel.sortable-ghost { opacity: 0.45; background: var(--surface-2); }
+
+.section-title-wrap { display: flex; align-items: center; flex: 1; min-width: 0; }
+.section-title {
+  font-size: 11.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-muted);
+  cursor: text;
+  padding: 2px 4px;
+  border-radius: 3px;
+  flex: 1;
+}
+.section-title-wrap .section-title:hover { background: var(--surface-3); color: var(--ink); }
+.section-title-input {
+  font-size: 11.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--accent);
+  border-radius: 3px;
+  padding: 2px 6px;
+  flex: 1;
+  min-width: 0;
+  outline: none;
+}
+.section-panel-header-ungrouped .section-title {
+  color: var(--ink-faint);
+  cursor: default;
+}
+.section-panel-header-ungrouped .section-title:hover { background: transparent; color: var(--ink-faint); }
+
+.section-delete-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  background: none;
+  border: none;
+  border-radius: 4px;
+  color: var(--ink-faint);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.section-delete-btn:hover { background: var(--error-bg, #fef2f2); color: var(--error, #dc2626); }
+
+.section-drop-zone {
+  padding: 14px 18px;
+  font-size: 12px;
+  color: var(--ink-faint);
+  text-align: center;
+  border: 1.5px dashed var(--line);
+  border-radius: 5px;
+  margin: 8px 14px;
+}
+.section-drop-zone-muted { opacity: 0.55; }
+
 /* ---------- Article detail (écran 4) ---------- */
 .article-detail-header {
   padding: 28px 40px 20px;
