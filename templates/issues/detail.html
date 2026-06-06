@@ -538,12 +538,12 @@ document.addEventListener('DOMContentLoaded', function () {
                   {% if is_editable %}
                     <span x-data="inlineEdit('{{ section.title|escapejs }}', '{{ section.patch_url }}', 'title')"
                           class="section-title-wrap">
-                      <span x-show="!editing" class="section-title" x-text="current"
-                            @click="editing = true; $nextTick(() => $refs.inp.select())"></span>
-                      <input x-cloak x-show="editing" x-ref="inp" x-model="draft"
+                      <span x-show="!editing" class="section-title" x-text="draft"
+                            @click="startEdit()"></span>
+                      <input x-cloak x-show="editing" x-ref="inputText" x-model="draft"
                              type="text" class="section-title-input"
                              @blur="commit()" @keydown.enter.prevent="commit()"
-                             @keydown.escape.prevent="editing = false; draft = current" />
+                             @keydown.escape.prevent="cancel()" />
                     </span>
                     <button class="section-delete-btn" data-delete-url="{{ section.delete_url }}"
                             title="Supprimer la section">
