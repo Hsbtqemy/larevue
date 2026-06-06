@@ -47,6 +47,7 @@ document.addEventListener('DOMContentLoaded', function () {
         items.push({ id: parseInt(row.dataset.articleId, 10), order: idx + 1, section_id: sectionId });
       });
     });
+    if (!items.length) return;
     postJson(articleReorderUrl, items);
   }
 

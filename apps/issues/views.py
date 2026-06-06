@@ -593,9 +593,8 @@ class _SectionIssueMixin:
             issue = Issue.objects.get(pk=issue_id, journal=request.journal)
         except Issue.DoesNotExist:
             raise Http404
-        if issue.state in Issue.ARCHIVED_STATES:
-            return None, JsonResponse({"error": "Ce numéro est archivé."}, status=403)
-        return issue, None
+        err = _check_issue_archived(issue)
+        return (None, err) if err else (issue, None)
 
     def _get_section(self, issue, section_id):
         try:
@@ -655,7 +654,7 @@ class SectionDeleteView(_SectionIssueMixin, JournalMemberRequiredMixin, View):
         if err:
             return err
         section = self._get_section(issue, section_id)
-        Article.objects.filter(section=section).update(section=None)
+        Article.all_objects.filter(section=section).update(section=None, updated_at=timezone.now())
         section.delete()
         return JsonResponse({"ok": True})
 

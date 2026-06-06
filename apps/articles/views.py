@@ -449,10 +449,13 @@ class ArticleReorderView(JournalMemberRequiredMixin, View):
         if not isinstance(data, list) or not data:
             return JsonResponse({"error": "Format invalide."}, status=400)
 
+        if any("section_id" not in item for item in data):
+            return JsonResponse({"error": "Format invalide."}, status=400)
+
         try:
             order_map = {int(item["id"]): int(item["order"]) for item in data}
             section_map = {
-                int(item["id"]): (int(item["section_id"]) if item.get("section_id") is not None else None)
+                int(item["id"]): (int(item["section_id"]) if item["section_id"] is not None else None)
                 for item in data
             }
         except (KeyError, ValueError, TypeError):

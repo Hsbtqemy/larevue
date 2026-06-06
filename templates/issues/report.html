@@ -219,6 +219,7 @@
       </thead>
       <tbody>
         {% for s in sections %}
+          {% if s.articles_list %}
           <tr class="article-section-header">
             <td colspan="6">{{ s.title }}</td>
           </tr>
@@ -234,6 +235,7 @@
               </td>
             </tr>
           {% endfor %}
+          {% endif %}
         {% endfor %}
         {% if sections and ungrouped_articles %}
           <tr class="article-section-header">
@@ -265,8 +267,10 @@
     <div class="section-title">Détail des articles</div>
 
     {% for s in sections %}
+      {% if s.articles_list %}
       <p class="article-section-label">{{ s.title }}</p>
       {% include "issues/_report_article_detail.html" with article_list=s.articles_list %}
+      {% endif %}
     {% endfor %}
 
     {% if sections and ungrouped_articles %}
