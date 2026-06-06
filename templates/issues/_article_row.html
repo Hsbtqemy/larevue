@@ -6,11 +6,11 @@
   {% if is_editable %}
     <div class="order-col drag-handle" title="Glisser pour réordonner">
       {% icon "grip" 14 cls="drag-grip" %}
-      <span class="order-num">{{ article.order }}</span>
+      <span class="order-num">{{ forloop.counter }}</span>
     </div>
   {% else %}
     <div class="order-col" title="Position">
-      <span class="order-num">{{ article.order }}</span>
+      <span class="order-num">{{ forloop.counter }}</span>
     </div>
   {% endif %}
   <div class="title-col">
