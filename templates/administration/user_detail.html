@@ -81,9 +81,9 @@
               <div x-show="open" x-cloak class="modal-backdrop"
                    @click.self="open = false" @keydown.escape.window="open = false"
                    x-transition.opacity>
-                <div class="modal" role="dialog" aria-modal="true" style="max-width:460px">
+                <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title-user-edit" style="max-width:460px" x-trap="open">
                   <div class="modal-head">
-                    <h3>Modifier le profil</h3>
+                    <h3 id="modal-title-user-edit">Modifier le profil</h3>
                   </div>
                   <div class="modal-body">
                     <div class="field">
@@ -136,9 +136,9 @@
             </button>
             <template x-teleport="body">
               <div x-show="open" x-cloak class="modal-backdrop" @click.self="open = false" @keydown.escape.window="open = false" x-transition.opacity>
-                <div class="modal" role="dialog" aria-modal="true" style="max-width:420px">
+                <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title-reset-pwd" style="max-width:420px" x-trap="open">
                   <div class="modal-head">
-                    <h3>Réinitialiser le mot de passe ?</h3>
+                    <h3 id="modal-title-reset-pwd">Réinitialiser le mot de passe ?</h3>
                     <div class="sub">Un nouveau mot de passe temporaire sera généré. {{ target_user.first_name|default:"L'utilisateur·ice" }} devra le changer à sa prochaine connexion.</div>
                   </div>
                   <div class="modal-foot">

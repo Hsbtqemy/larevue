@@ -234,9 +234,9 @@ document.addEventListener('DOMContentLoaded', function () {
                  @click.self="close()"
                  @keydown.escape.window="close()"
                  x-transition.opacity>
-              <div class="modal" role="dialog" aria-modal="true">
+              <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title-report" x-trap="open">
                 <div class="modal-head">
-                  <h3>Générer le rapport</h3>
+                  <h3 id="modal-title-report">Générer le rapport</h3>
                   <div class="sub">N°{{ issue.number }} — {{ issue.thematic_title }}</div>
                 </div>
                 <div class="modal-body">
@@ -275,11 +275,13 @@ document.addEventListener('DOMContentLoaded', function () {
         {% endfor %}
         {% if transitions.advanced %}
           <div x-data="{ advOpen: false }" style="position:relative">
-            <button type="button" class="btn ghost sm" @click="advOpen = !advOpen">
+            <button type="button" class="btn ghost sm" @click="advOpen = !advOpen"
+                    aria-haspopup="menu" :aria-expanded="advOpen.toString()">
               {% icon "dots" 14 cls="icon" %} Actions avancées
             </button>
             <div x-show="advOpen"
                  @click.outside="advOpen = false"
+                 role="menu"
                  style="position:absolute;right:0;top:calc(100% + 4px);z-index:50;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-md);padding:4px;min-width:220px;box-shadow:0 4px 16px rgba(0,0,0,.08)">
               {% for spec in transitions.advanced %}
                 {% include "partials/_transition_confirm_modal.html" with spec=spec transition_url=transition_url dropdown=True %}
@@ -303,9 +305,9 @@ document.addEventListener('DOMContentLoaded', function () {
                    @click.self="close()"
                    @keydown.escape.window="close()"
                    x-transition.opacity>
-                <div class="modal" role="dialog" aria-modal="true">
+                <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title-delete-issue" x-trap="open">
                   <div class="modal-head">
-                    <h3>Supprimer ce numéro ?</h3>
+                    <h3 id="modal-title-delete-issue">Supprimer ce numéro ?</h3>
                     <div class="sub">Cette action est définitive. Les articles et relectures associés seront perdus.</div>
                   </div>
                   <div class="modal-body">
@@ -313,7 +315,7 @@ document.addEventListener('DOMContentLoaded', function () {
                       Vous êtes sur le point de supprimer <strong>N°{{ issue.number }} — {{ issue.thematic_title }}</strong>.
                     </p>
                     <div style="display:flex;flex-direction:column;gap:6px">
-                      <label style="font-size:12px;color:var(--ink-faint);text-transform:uppercase;letter-spacing:.06em;font-weight:500">
+                      <label style="font-size:12px;color:var(--ink-muted);text-transform:uppercase;letter-spacing:.06em;font-weight:500">
                         Pour confirmer, tapez
                         <code style="background:var(--bg-sunken);padding:1px 6px;border-radius:3px;font-size:11px">{{ issue.thematic_title }}</code>
                         ci-dessous :
@@ -352,9 +354,9 @@ document.addEventListener('DOMContentLoaded', function () {
          @click.self="close()"
          @keydown.escape.window="close()"
          style="display:none">
-      <div class="modal">
+      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title-issue-edit" x-trap="open">
         <div class="modal-head">
-          <h3>Modifier les métadonnées</h3>
+          <h3 id="modal-title-issue-edit">Modifier les métadonnées</h3>
           <div class="sub">N°{{ issue.number }} — {{ issue.thematic_title }}</div>
         </div>
         <div class="modal-body">
@@ -541,7 +543,10 @@ document.addEventListener('DOMContentLoaded', function () {
                     <span x-data="inlineEdit('{{ section.title|escapejs }}', '{{ section.patch_url }}', 'title')"
                           class="section-title-wrap">
                       <span x-show="!editing" class="section-title" x-text="draft"
-                            @click="startEdit()"></span>
+                            role="button" tabindex="0"
+                            @click="startEdit()"
+                            @keydown.enter.prevent="startEdit()"
+                            @keydown.space.prevent="startEdit()"></span>
                       <input x-cloak x-show="editing" x-ref="inputText" x-model="draft"
                              type="text" class="section-title-input"
                              @blur="commit()" @keydown.enter.prevent="commit()"

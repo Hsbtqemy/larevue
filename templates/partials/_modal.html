@@ -10,7 +10,7 @@
        @click.self="open = false"
        @keydown.escape.window="open = false"
        x-transition.opacity>
-    <div class="modal{% if large %} lg{% endif %}" role="dialog" aria-modal="true" aria-labelledby="modal-title-{{ modal_id }}">
+    <div class="modal{% if large %} lg{% endif %}" role="dialog" aria-modal="true" aria-labelledby="modal-title-{{ modal_id }}" x-trap="open">
       <div class="modal-head">
         <h3 id="modal-title-{{ modal_id }}">{{ title }}</h3>
         {% if subtitle %}<div class="sub">{{ subtitle }}</div>{% endif %}

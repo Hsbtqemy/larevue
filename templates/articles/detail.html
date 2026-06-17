@@ -98,11 +98,13 @@
           {% endfor %}
           {% if transitions.advanced %}
             <div x-data="{ advOpen: false }" style="position:relative">
-              <button type="button" class="btn ghost sm" @click="advOpen = !advOpen">
+              <button type="button" class="btn ghost sm" @click="advOpen = !advOpen"
+                      aria-label="Actions avancées" aria-haspopup="menu" :aria-expanded="advOpen.toString()">
                 {% icon "dots" 14 cls="icon" %}
               </button>
               <div x-show="advOpen"
                    @click.outside="advOpen = false"
+                   role="menu"
                    style="position:absolute;right:0;top:calc(100% + 4px);z-index:50;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-md);padding:4px;min-width:220px;box-shadow:0 4px 16px rgba(0,0,0,.08)">
                 {% for spec in transitions.advanced %}
                   {% include "partials/_transition_confirm_modal.html" with spec=spec transition_url=transition_url dropdown=True %}
@@ -116,7 +118,7 @@
             <button type="button" class="btn ghost sm" @click="openModal()">
               {% icon "edit" 14 cls="icon" %} Modifier
             </button>
-            {% include "partials/_confirm_delete.html" with delete_url=delete_url title="Supprimer cet article ?" require_typing=article.title message="L'article, ses versions et ses relectures seront supprimés définitivement du numéro." trigger_label="" trigger_cls="btn danger-ghost sm" confirm_label="Supprimer l'article" %}
+            {% include "partials/_confirm_delete.html" with delete_url=delete_url title="Supprimer cet article ?" require_typing=article.title message="L'article, ses versions et ses relectures seront supprimés définitivement du numéro." trigger_label="" trigger_aria_label="Supprimer l'article" trigger_cls="btn danger-ghost sm" confirm_label="Supprimer l'article" %}
           {% endif %}
 
         </div>
@@ -131,9 +133,9 @@
          @click.self="close()"
          @keydown.escape.window="close()"
          style="display:none">
-      <div class="modal">
+      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title-article-edit" x-trap="open">
         <div class="modal-head">
-          <h3>Modifier les métadonnées</h3>
+          <h3 id="modal-title-article-edit">Modifier les métadonnées</h3>
           <div class="sub">{{ article.title }}</div>
         </div>
         <div class="modal-body">
@@ -148,8 +150,8 @@
                 </template>
               </div>
               <div class="field">
-                <label>Auteur·ice</label>
-                {% include "partials/_contact_autocomplete.html" with search_url=author_search_url id_field="author_id" name_field="author_name" initial_id=article_author_initial_id initial_name=article_author_initial_name placeholder="Nom ou affiliation…" %}
+                <label for="author-name-input">Auteur·ice</label>
+                {% include "partials/_contact_autocomplete.html" with search_url=author_search_url id_field="author_id" name_field="author_name" input_id="author-name-input" initial_id=article_author_initial_id initial_name=article_author_initial_name placeholder="Nom ou affiliation…" %}
               </div>
               <div class="field">
                 <label for="em-type">Type</label>

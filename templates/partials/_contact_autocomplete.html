@@ -6,6 +6,7 @@
 
   <input type="text"
          name="{{ name_field }}"
+         {% if input_id %}id="{{ input_id }}"{% endif %}
          x-model="query"
          @blur="onBlur()"
          @keydown.escape="open = false"

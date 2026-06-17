@@ -192,9 +192,9 @@
           </button>
           <template x-teleport="body">
             <div x-show="open" x-cloak class="modal-backdrop" @click.self="close()" @keydown.escape.window="close()" x-transition.opacity>
-              <div class="modal" role="dialog" aria-modal="true" style="max-width:440px">
+              <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title-quick-create" style="max-width:440px" x-trap="open">
                 <div class="modal-head">
-                  <h3>Créer un compte et ajouter</h3>
+                  <h3 id="modal-title-quick-create">Créer un compte et ajouter</h3>
                   <div class="sub">Un mot de passe temporaire sera généré automatiquement.</div>
                 </div>
                 <div class="modal-body">

@@ -22,23 +22,23 @@
          @click.self="open = false"
          @keydown.escape.window="open = false"
          x-transition.opacity>
-      <div class="modal" role="dialog" aria-modal="true">
+      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title-review-create" x-trap="open">
         <form id="review-create-form"
               hx-post="{{ review_create_url }}"
               hx-target="#reviews-active-list"
               hx-swap="afterbegin">
           {% csrf_token %}
           <div class="modal-head">
-            <h3>Désigner un relecteur·ice</h3>
+            <h3 id="modal-title-review-create">Désigner un relecteur·ice</h3>
           </div>
           <div class="modal-body">
             <div class="edit-meta-form">
               <div class="field full">
-                <label>Relecteur·ice *</label>
-                {% include "partials/_contact_autocomplete.html" with search_url=reviewer_search_url id_field="reviewer_id" name_field="reviewer_name" initial_id="" initial_name="" placeholder="Nom ou affiliation…" create_url="" %}</div>
+                <label for="reviewer-name-input">Relecteur·ice *</label>
+                {% include "partials/_contact_autocomplete.html" with search_url=reviewer_search_url id_field="reviewer_id" name_field="reviewer_name" input_id="reviewer-name-input" initial_id="" initial_name="" placeholder="Nom ou affiliation…" create_url="" %}</div>
               <div class="field">
-                <label>Date limite *</label>
-                <input type="date" name="deadline" class="text-input" value="{{ default_deadline }}" required>
+                <label for="review-deadline">Date limite *</label>
+                <input type="date" id="review-deadline" name="deadline" class="text-input" value="{{ default_deadline }}" required>
               </div>
             </div>
           </div>

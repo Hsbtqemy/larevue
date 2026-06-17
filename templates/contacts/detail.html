@@ -88,7 +88,7 @@
               </div>
 
               <div style="margin-top:12px;display:flex;justify-content:center">
-                {% include "partials/_confirm_delete.html" with delete_url=delete_url title="Supprimer ce contact ?" require_typing=contact.full_name message="Les articles associés conserveront le nom mais ne seront plus liés au contact." trigger_label="" trigger_cls="btn danger-ghost sm" confirm_label="Supprimer le contact" %}
+                {% include "partials/_confirm_delete.html" with delete_url=delete_url title="Supprimer ce contact ?" require_typing=contact.full_name message="Les articles associés conserveront le nom mais ne seront plus liés au contact." trigger_label="" trigger_aria_label="Supprimer le contact" trigger_cls="btn danger-ghost sm" confirm_label="Supprimer le contact" %}
               </div>
             </div>
 
@@ -148,9 +148,9 @@
                  @click.self="close()"
                  @keydown.escape.window="close()"
                  x-transition.opacity>
-              <div class="modal" role="dialog" aria-modal="true">
+              <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title-contact-edit" x-trap="open">
                 <div class="modal-head">
-                  <h3>Modifier le contact</h3>
+                  <h3 id="modal-title-contact-edit">Modifier le contact</h3>
                 </div>
                 <div class="modal-body">
                   <form x-ref="editForm" @submit.prevent="submit($refs.editForm)">

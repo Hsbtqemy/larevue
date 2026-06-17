@@ -14,21 +14,21 @@
          @click.self="open = false"
          @keydown.escape.window="open = false"
          x-transition.opacity>
-      <div class="modal" role="dialog" aria-modal="true">
+      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title-version-upload" x-trap="open">
         <form method="post" action="{{ upload_url }}" enctype="multipart/form-data">
           {% csrf_token %}
           <div class="modal-head">
-            <h3>{{ heading }}</h3>
+            <h3 id="modal-title-version-upload">{{ heading }}</h3>
           </div>
           <div class="modal-body">
             <div class="edit-meta-form">
               <div class="field full">
-                <label>Fichier <span class="req">*</span></label>
-                <input type="file" name="file" required style="font-size:13px">
+                <label for="version-file">Fichier <span class="req">*</span></label>
+                <input type="file" id="version-file" name="file" required style="font-size:13px">
               </div>
               <div class="field full">
-                <label>Description <span class="faint">(optionnel)</span></label>
-                <textarea name="comment" class="text-input" rows="3" placeholder="Note de version, changements apportés…"></textarea>
+                <label for="version-comment">Description <span class="faint">(optionnel)</span></label>
+                <textarea id="version-comment" name="comment" class="text-input" rows="3" placeholder="Note de version, changements apportés…"></textarea>
               </div>
             </div>
           </div>

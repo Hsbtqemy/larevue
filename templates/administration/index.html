@@ -36,9 +36,9 @@
           </button>
           <template x-teleport="body">
             <div x-show="open" x-cloak class="modal-backdrop" @click.self="close()" @keydown.escape.window="close()" x-transition.opacity>
-              <div class="modal" role="dialog" aria-modal="true" style="max-width:480px">
+              <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title-journal-create" style="max-width:480px" x-trap="open">
                 <div class="modal-head">
-                  <h3>Créer une revue</h3>
+                  <h3 id="modal-title-journal-create">Créer une revue</h3>
                   <div class="sub">Une nouvelle revue avec ses propres membres et numéros.</div>
                 </div>
                 <div class="modal-body">
@@ -180,9 +180,9 @@
           </button>
           <template x-teleport="body">
             <div x-show="open" x-cloak class="modal-backdrop" @click.self="close()" @keydown.escape.window="close()" x-transition.opacity>
-              <div class="modal" role="dialog" aria-modal="true" style="max-width:460px">
+              <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title-user-create" style="max-width:460px" x-trap="open">
                 <div class="modal-head">
-                  <h3>Créer un utilisateur</h3>
+                  <h3 id="modal-title-user-create">Créer un utilisateur</h3>
                   <div class="sub">Un mot de passe temporaire sera généré automatiquement.</div>
                 </div>
                 <div class="modal-body">

@@ -2363,7 +2363,8 @@ hr.sep {
   background: transparent; border: none; cursor: pointer;
   transition: background 80ms;
 }
-.autocomplete-item:hover, .autocomplete-item:focus { background: var(--surface-2); outline: none; }
+.autocomplete-item:hover { background: var(--surface-2); }
+.autocomplete-item:focus-visible { background: var(--surface-2); outline: 2px solid var(--ink); outline-offset: -2px; }
 
 .btn.danger { background: var(--tone-refused-bg); color: var(--tone-refused-ink); border-color: transparent; }
 .btn.danger:hover { background: var(--tone-refused-ink); color: var(--surface); }

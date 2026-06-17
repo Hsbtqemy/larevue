@@ -12,7 +12,7 @@
       {% csrf_token %}
 
       {% if form.non_field_errors %}
-        <div class="rounded bg-red-50 p-3 text-sm text-red-700">
+        <div role="alert" class="rounded bg-red-50 p-3 text-sm text-red-700">
           {% for error in form.non_field_errors %}{{ error }}{% endfor %}
         </div>
       {% endif %}
@@ -58,7 +58,7 @@
 
       <button
         type="submit"
-        class="w-full rounded-md bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-700 focus:outline-none"
+        class="w-full rounded-md bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900 focus-visible:ring-offset-2"
       >
         Se connecter
       </button>

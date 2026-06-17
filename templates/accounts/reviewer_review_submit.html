@@ -51,8 +51,8 @@
           {% endif %}
         </div>
 
-        <div>
-          <label class="label">Verdict</label>
+        <fieldset style="border:none;padding:0;margin:0">
+          <legend class="label" style="float:none;width:100%;margin-bottom:4px">Verdict</legend>
           <div style="display:flex;flex-direction:column;gap:8px;margin-top:4px">
             {% for value, label in form.fields.verdict.choices %}
               <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:14px">
@@ -66,7 +66,7 @@
           {% if form.verdict.errors %}
             <p class="small muted" style="color:var(--tone-error-ink);margin-top:6px">{{ form.verdict.errors.0 }}</p>
           {% endif %}
-        </div>
+        </fieldset>
 
         <div style="display:flex;align-items:center;gap:12px;padding-top:4px">
           <button type="submit" class="btn primary">{% if is_resubmission %}Mettre à jour{% else %}Déposer ma relecture{% endif %}</button>
