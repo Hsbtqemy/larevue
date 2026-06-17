@@ -15,9 +15,9 @@
          @click.self="close()"
          @keydown.escape.window="close()"
          x-transition.opacity>
-      <div class="modal" role="dialog" aria-modal="true" aria-label="{{ title|default:'Supprimer cet élément ?' }}" x-trap="open">
+      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="confirm-delete-title" x-trap="open">
         <div class="modal-head">
-          <h3>{{ title|default:"Supprimer cet élément ?" }}</h3>
+          <h3 id="confirm-delete-title">{{ title|default:"Supprimer cet élément ?" }}</h3>
           <div class="sub">Cette action est définitive. Les données associées seront perdues.</div>
         </div>
         <div class="modal-body">
