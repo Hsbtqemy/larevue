@@ -81,12 +81,12 @@
     {% if sidebar_active == "dashboard" %}
       <button class="nav-item active" type="button" @click="$store.nav.close()">
         {% icon "home" 17 cls="icon" %}
-        Tableau de bord
+        <span class="nav-item-label">Tableau de bord</span>
       </button>
     {% else %}
       <a href="{% url 'journal_dashboard' slug=journal.slug %}" class="nav-item" style="text-decoration:none" @click="$store.nav.close()">
         {% icon "home" 17 cls="icon" %}
-        Tableau de bord
+        <span class="nav-item-label">Tableau de bord</span>
       </a>
     {% endif %}
     <a href="{% url 'issues:list' slug=journal.slug %}"
@@ -94,28 +94,28 @@
        style="text-decoration:none"
        @click="$store.nav.close()">
       {% icon "file" 17 cls="icon" %}
-      Numéros en cours
+      <span class="nav-item-label">Numéros en cours</span>
     </a>
     <a href="{% url 'contacts:list' slug=journal.slug %}"
        class="nav-item{% if sidebar_active == 'contacts' %} active{% endif %}"
        style="text-decoration:none"
        @click="$store.nav.close()">
       {% icon "users" 17 cls="icon" %}
-      Contacts
+      <span class="nav-item-label">Contacts</span>
     </a>
     <a href="{% url 'journal_archives' slug=journal.slug %}"
        class="nav-item{% if sidebar_active == 'archives' %} active{% endif %}"
        style="text-decoration:none"
        @click="$store.nav.close()">
       {% icon "archive" 17 cls="icon" %}
-      Archives
+      <span class="nav-item-label">Archives</span>
     </a>
     <a href="{% url 'journal_edit' slug=journal.slug %}"
        class="nav-item{% if sidebar_active == 'journal_edit' %} active{% endif %}"
        style="text-decoration:none"
        @click="$store.nav.close()">
       {% icon "edit" 17 cls="icon" %}
-      Modifier la revue
+      <span class="nav-item-label">Modifier la revue</span>
     </a>
     {% endif %}
     {% if journal %}<div class="nav-sep" aria-hidden="true"></div>{% endif %}
@@ -124,7 +124,7 @@
        style="text-decoration:none"
        @click="$store.nav.close()">
       {% icon "eye" 17 cls="icon" %}
-      Mes relectures
+      <span class="nav-item-label">Mes relectures</span>
     </a>
     {% if request.user.is_superuser %}
     <div class="nav-sep" aria-hidden="true"><span>Superuser</span></div>
@@ -133,14 +133,14 @@
        style="text-decoration:none"
        @click="$store.nav.close()">
       {% icon "lock" 17 cls="icon" %}
-      Administration
+      <span class="nav-item-label">Administration</span>
     </a>
     {% endif %}
   </nav>
 
   <div class="sidebar-user">
     <div class="avatar">{{ request.user.first_name|slice:":1" }}{{ request.user.last_name|slice:":1" }}</div>
-    <div class="sidebar-user-info">
+    <div class="sidebar-user-info" style="min-width:0;flex:1">
       <div class="n">{{ request.user.get_full_name }}</div>
       <div class="e">{{ request.user.email }}</div>
       <a href="{% url 'accounts:profile' %}" class="sidebar-user-profile-link" @click="$store.nav.close()">Mon profil</a>
