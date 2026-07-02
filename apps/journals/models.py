@@ -24,8 +24,20 @@ class Journal(BaseModel):
         ("ochre", "Ocre"),
     ]
 
+    KIND_CHOICES = [
+        ("periodical", "Revue périodique"),
+        ("standalone", "Projet ponctuel"),
+    ]
+
     name = models.CharField(max_length=200, unique=True, verbose_name="Nom")
     slug = models.SlugField(unique=True, verbose_name="Identifiant URL")
+    kind = models.CharField(
+        max_length=20,
+        choices=KIND_CHOICES,
+        default="periodical",
+        verbose_name="Type",
+        help_text="Revue à numéros multiples, ou projet ponctuel (livre, actes).",
+    )
     description = models.TextField(blank=True, verbose_name="Description")
     logo = models.ImageField(
         upload_to="journals/logos/", blank=True, null=True, verbose_name="Logo"
