@@ -50,6 +50,14 @@
     </p>
     {% endif %}
 
+    {# ===== PERSONAL PROJECT CTA ===== #}
+    <a href="{% url 'personal_project_create' %}"
+       class="home-journal-card"
+       style="text-decoration:none;margin-top:16px;border-style:dashed">
+      {% icon "plus" 16 cls="icon" %}
+      <span style="flex:1;font-size:14px;color:var(--ink-muted)">Créer mon projet (livre, actes de colloque…)</span>
+    </a>
+
     {# ===== FOOTER ===== #}
     <div style="display:flex;justify-content:space-between;align-items:center;margin-top:36px">
       <a href="{% url 'accounts:profile' %}" style="font-size:13px;color:var(--ink-muted);text-decoration:none">

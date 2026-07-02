@@ -24,17 +24,16 @@ class Journal(BaseModel):
         ("ochre", "Ocre"),
     ]
 
-    KIND_CHOICES = [
-        ("periodical", "Revue périodique"),
-        ("standalone", "Projet ponctuel"),
-    ]
+    class Kind(models.TextChoices):
+        PERIODICAL = "periodical", "Revue périodique"
+        STANDALONE = "standalone", "Projet ponctuel"
 
     name = models.CharField(max_length=200, unique=True, verbose_name="Nom")
     slug = models.SlugField(unique=True, verbose_name="Identifiant URL")
     kind = models.CharField(
         max_length=20,
-        choices=KIND_CHOICES,
-        default="periodical",
+        choices=Kind.choices,
+        default=Kind.PERIODICAL,
         verbose_name="Type",
         help_text="Revue à numéros multiples, ou projet ponctuel (livre, actes).",
     )

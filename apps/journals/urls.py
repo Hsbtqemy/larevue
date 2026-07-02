@@ -4,6 +4,11 @@ from . import views
 
 urlpatterns = [
     path("", views.HomeView.as_view(), name="home"),
+    path(
+        "projets/creer/",
+        views.PersonalProjectCreateView.as_view(),
+        name="personal_project_create",
+    ),
     path("revues/<slug:slug>/", views.JournalDashboardView.as_view(), name="journal_dashboard"),
     path("revues/<slug:slug>/archives/", views.JournalArchivesView.as_view(), name="journal_archives"),
     path("revues/<slug:slug>/archives/export.csv", views.JournalArchivesExportView.as_view(), name="journal_archives_export"),

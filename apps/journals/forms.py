@@ -19,6 +19,24 @@ class JournalEditForm(forms.ModelForm):
         }
 
 
+class PersonalProjectCreateForm(forms.ModelForm):
+    """Création en libre-service d'un projet ponctuel (livre, actes de colloque).
+
+    Volontairement dépourvu des champs institutionnels d'une revue périodique
+    (ISSN, périodicité, éditeur...) — non pertinents pour un projet à numéro unique.
+    """
+
+    class Meta:
+        model = Journal
+        fields = ["name", "description"]
+        labels = {
+            "name": "Titre du projet",
+        }
+        widgets = {
+            "description": forms.Textarea(attrs={"rows": 3}),
+        }
+
+
 class JournalDocumentForm(forms.ModelForm):
     class Meta:
         model = JournalDocument

@@ -1,8 +1,8 @@
 import pytest
 from django.urls import reverse
 
+from apps.issues.models import Issue
 from apps.journals.models import Journal, Membership
-
 
 # ------------------------------------------------------------------ #
 # HomeView                                                            #
@@ -39,6 +39,60 @@ class TestHomeView:
         content = response.content.decode()
         assert membership.journal.name in content
         assert second_journal.name in content
+
+
+# ------------------------------------------------------------------ #
+# PersonalProjectCreateView                                           #
+# ------------------------------------------------------------------ #
+
+
+@pytest.mark.django_db
+class TestPersonalProjectCreateView:
+    def test_unauthenticated_redirects_to_login(self, client):
+        response = client.get(reverse("personal_project_create"))
+        assert response.status_code == 302
+        assert "/accounts/" in response["Location"]
+
+    def test_get_renders_form(self, client, user):
+        client.force_login(user)
+        response = client.get(reverse("personal_project_create"))
+        assert response.status_code == 200
+
+    def test_valid_post_creates_journal_issue_and_membership(self, client, user):
+        client.force_login(user)
+        response = client.post(
+            reverse("personal_project_create"),
+            {"name": "Actes du colloque 2026", "description": "Textes réunis pour l'événement."},
+        )
+
+        journal = Journal.objects.get(name="Actes du colloque 2026")
+        assert journal.kind == Journal.Kind.STANDALONE
+        assert response.status_code == 302
+        assert response["Location"] == reverse("journal_dashboard", kwargs={"slug": journal.slug})
+
+        issue = Issue.objects.get(journal=journal)
+        assert issue.thematic_title == "Actes du colloque 2026"
+        assert issue.number == "1"
+        assert issue.editor_name == user.get_full_name()
+
+        assert Membership.objects.filter(user=user, journal=journal).exists()
+
+    def test_duplicate_name_shows_form_error_without_creating(self, client, user, journal):
+        client.force_login(user)
+        response = client.post(
+            reverse("personal_project_create"),
+            {"name": journal.name, "description": ""},
+        )
+        assert response.status_code == 200
+        assert "déjà" in response.content.decode()
+        assert Journal.objects.filter(name=journal.name).count() == 1
+
+    def test_missing_name_shows_form_error_without_creating(self, client, user):
+        client.force_login(user)
+        count_before = Journal.objects.count()
+        response = client.post(reverse("personal_project_create"), {"name": "", "description": ""})
+        assert response.status_code == 200
+        assert Journal.objects.count() == count_before
 
 
 # ------------------------------------------------------------------ #
