@@ -57,6 +57,16 @@ class TestAdministrationView:
         response = client.get(reverse("administration:index"))
         assert response.status_code == 200
 
+    def test_personal_projects_listed_separately_from_journals(self, client, superuser, journal):
+        project = Journal.objects.create(name="Actes 2026", kind=Journal.Kind.STANDALONE)
+        client.force_login(superuser)
+        response = client.get(reverse("administration:index"))
+        context = response.context
+        assert journal in context["journals"]
+        assert project not in context["journals"]
+        assert project in context["personal_projects"]
+        assert journal not in context["personal_projects"]
+
 
 # ------------------------------------------------------------------ #
 # JournalCreateView                                                   #

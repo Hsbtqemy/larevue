@@ -81,7 +81,16 @@ class HomeView(LoginRequiredMixin, TemplateView):
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
-        ctx["journals"] = self._get_journals()
+        journals = self._get_journals()
+        ctx["journals"] = journals
+        ctx["journal_groups"] = [
+            (label, group)
+            for label, group in (
+                ("Mes revues", [j for j in journals if j.kind == Journal.Kind.PERIODICAL]),
+                ("Mes projets", [j for j in journals if j.kind == Journal.Kind.STANDALONE]),
+            )
+            if group
+        ]
         return ctx
 
 

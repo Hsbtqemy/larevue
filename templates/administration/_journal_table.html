@@ -1,0 +1,75 @@
+{% load edito %}
+<div class="admin-table-wrap">
+  {% if journal_list %}
+  <table class="admin-table">
+    <thead>
+      <tr>
+        <th class="col-main">{{ first_column_label }}</th>
+        <th class="col-num">Membres</th>
+        <th class="col-num">Numéros</th>
+        <th class="col-date">Créée le</th>
+        <th class="col-actions"></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for j in journal_list %}
+      <tr onclick="window.location.href='{% url 'administration:journal_members' slug=j.slug %}'" style="cursor:pointer">
+        <td class="col-main">
+          <div class="admin-revue-cell">
+            <div class="avatar" style="background:var(--accent-{{ j.accent_color }}-soft);color:var(--accent-{{ j.accent_color }});border-radius:8px;font-size:11px;font-weight:600;flex-shrink:0">
+              {{ j.name|slice:":2"|upper }}
+            </div>
+            <div class="admin-revue-text">
+              <div class="n">{{ j.name }}</div>
+              {% if j.description %}<div class="d">{{ j.description|truncatechars:60 }}</div>{% endif %}
+            </div>
+          </div>
+        </td>
+        <td class="col-num">
+          <div class="num-stack">
+            <span class="num">{{ j.member_count }}</span>
+            <span class="num-sub">{{ j.member_count|pluralize:"personne,personnes" }}</span>
+          </div>
+        </td>
+        <td class="col-num">
+          <div class="num-stack">
+            <span class="num">{{ j.issue_count }}</span>
+            <span class="num-sub">{{ j.active_issue_count }} en cours</span>
+          </div>
+        </td>
+        <td class="col-date" style="color:var(--ink-muted);font-size:13px">{{ j.created_at|date:"d/m/Y" }}</td>
+        <td class="col-actions" onclick="event.stopPropagation()">
+          <div class="row-menu" x-data="kebabMenu()" @keydown.escape.window="close()">
+            <button type="button" class="row-menu-btn" aria-label="Actions"
+                    :aria-expanded="open.toString()" @click.stop="toggle($el)">
+              {% icon "dots" 16 %}
+            </button>
+            <template x-teleport="body">
+              <div class="popover row-menu-pop" x-show="open" x-cloak
+                   :style="`position:fixed;right:${x}px;top:${y}px`"
+                   @click.outside="close()" role="menu">
+                <a href="{% url 'journal_dashboard' slug=j.slug %}"
+                   class="popover-item" style="text-decoration:none" role="menuitem">
+                  {% icon "home" 13 %} <span style="flex:1">Tableau de bord</span>
+                </a>
+                <div class="popover-sep"></div>
+                <a href="{% url 'administration:journal_members' slug=j.slug %}"
+                   class="popover-item" style="text-decoration:none" role="menuitem">
+                  {% icon "users" 13 %} <span style="flex:1">Gérer les membres</span>
+                </a>
+                <a href="{% url 'journal_edit' slug=j.slug %}"
+                   class="popover-item" style="text-decoration:none" role="menuitem">
+                  {% icon "edit" 13 %} <span style="flex:1">Modifier la revue</span>
+                </a>
+              </div>
+            </template>
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="admin-empty">{{ empty_message }}</div>
+  {% endif %}
+</div>

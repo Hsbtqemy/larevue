@@ -33,7 +33,7 @@ class AdministrationView(SuperuserRequiredMixin, View):
 
     def get(self, request):
         archived_states = [s.value for s in Issue.ARCHIVED_STATES]
-        journals = (
+        all_journals = (
             Journal.objects.annotate(
                 member_count=Count("memberships", distinct=True),
                 issue_count=Count("issues", distinct=True),
@@ -45,6 +45,8 @@ class AdministrationView(SuperuserRequiredMixin, View):
             )
             .order_by("name")
         )
+        journals = [j for j in all_journals if j.kind == Journal.Kind.PERIODICAL]
+        personal_projects = [j for j in all_journals if j.kind == Journal.Kind.STANDALONE]
         users = (
             User.objects.annotate(journal_count=Count("memberships", distinct=True))
             .prefetch_related(
@@ -59,6 +61,7 @@ class AdministrationView(SuperuserRequiredMixin, View):
         first = request.user.memberships.select_related("journal").first()
         return render(request, self.template_name, {
             "journals": journals,
+            "personal_projects": personal_projects,
             "users": users,
             "accent_choices": Journal.ACCENT_CHOICES,
             "journal_form": JournalCreateAdminForm(),

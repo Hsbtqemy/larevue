@@ -40,6 +40,15 @@ class TestHomeView:
         assert membership.journal.name in content
         assert second_journal.name in content
 
+    def test_journals_grouped_by_kind(self, client, user, membership, db):
+        project = Journal.objects.create(name="Mon projet", kind=Journal.Kind.STANDALONE)
+        Membership.objects.create(user=user, journal=project)
+        client.force_login(user)
+        response = client.get(reverse("home"))
+        groups = dict(response.context["journal_groups"])
+        assert groups["Mes revues"] == [membership.journal]
+        assert groups["Mes projets"] == [project]
+
 
 # ------------------------------------------------------------------ #
 # PersonalProjectCreateView                                           #
