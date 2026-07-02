@@ -94,8 +94,17 @@ class Journal(BaseModel):
 
     def save(self, *args, **kwargs):
         if not self.slug:
-            self.slug = slugify(self.name)
+            self.slug = self._generate_unique_slug()
         super().save(*args, **kwargs)
+
+    def _generate_unique_slug(self):
+        base = slugify(self.name)
+        slug = base
+        suffix = 2
+        while Journal.objects.exclude(pk=self.pk).filter(slug=slug).exists():
+            slug = f"{base}-{suffix}"
+            suffix += 1
+        return slug
 
 
 class JournalDocument(models.Model):
