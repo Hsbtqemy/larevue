@@ -87,7 +87,8 @@
         </div>
       </div>
 
-      {# ===== Institutionnel ===== #}
+      {# ===== Institutionnel (revues périodiques uniquement) ===== #}
+      {% if journal.kind == journal.Kind.PERIODICAL %}
       <div class="main-content" style="padding-bottom:0">
         <div class="section">
           <div class="section-head">
@@ -170,6 +171,7 @@
           </div>
         </div>
       </div>
+      {% endif %}
 
       {# ===== Emails & relances ===== #}
       <div class="main-content" style="padding-bottom:0" id="emails">
