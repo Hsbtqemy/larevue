@@ -24,8 +24,19 @@ class Journal(BaseModel):
         ("ochre", "Ocre"),
     ]
 
+    class Kind(models.TextChoices):
+        PERIODICAL = "periodical", "Revue périodique"
+        STANDALONE = "standalone", "Projet ponctuel"
+
     name = models.CharField(max_length=200, unique=True, verbose_name="Nom")
     slug = models.SlugField(unique=True, verbose_name="Identifiant URL")
+    kind = models.CharField(
+        max_length=20,
+        choices=Kind.choices,
+        default=Kind.PERIODICAL,
+        verbose_name="Type",
+        help_text="Revue à numéros multiples, ou projet ponctuel (livre, actes).",
+    )
     description = models.TextField(blank=True, verbose_name="Description")
     logo = models.ImageField(
         upload_to="journals/logos/", blank=True, null=True, verbose_name="Logo"
@@ -83,8 +94,51 @@ class Journal(BaseModel):
 
     def save(self, *args, **kwargs):
         if not self.slug:
-            self.slug = slugify(self.name)
+            self.slug = self._generate_unique_slug()
         super().save(*args, **kwargs)
+
+    def _generate_unique_slug(self):
+        base = slugify(self.name)
+        slug = base
+        suffix = 2
+        while Journal.objects.exclude(pk=self.pk).filter(slug=slug).exists():
+            slug = f"{base}-{suffix}"
+            suffix += 1
+        return slug
+
+    @property
+    def standalone_status(self):
+        """Le numéro porteur d'un projet ponctuel (kind=STANDALONE), pour affichage
+        de statut sans champ dédié. None si non pertinent (revue périodique) ou si
+        le projet compte plusieurs numéros (statut ambigu — livre en plusieurs tomes)."""
+        if self.kind != self.Kind.STANDALONE:
+            return None
+        issues = list(self.issues.all())
+        if len(issues) != 1:
+            return None
+        return issues[0]
+
+    @property
+    def noun_the(self):
+        """"le projet" ou "la revue" (complément d'objet direct)."""
+        return "le projet" if self.kind == self.Kind.STANDALONE else "la revue"
+
+    @property
+    def noun_of(self):
+        """"du projet" ou "de la revue" (complément du nom)."""
+        return "du projet" if self.kind == self.Kind.STANDALONE else "de la revue"
+
+    @property
+    def noun_current(self):
+        """"Projet courant" ou "Revue courante" (libellé de la sidebar)."""
+        return "Projet courant" if self.kind == self.Kind.STANDALONE else "Revue courante"
+
+    @staticmethod
+    def split_by_kind(journals):
+        """Partitionne une liste de Journal en (périodiques, projets personnels)."""
+        periodicals = [j for j in journals if j.kind == Journal.Kind.PERIODICAL]
+        standalones = [j for j in journals if j.kind == Journal.Kind.STANDALONE]
+        return periodicals, standalones
 
 
 class JournalDocument(models.Model):

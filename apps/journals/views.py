@@ -2,6 +2,7 @@ import csv
 
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.db import IntegrityError, transaction
 from django.db.models import Count, F, Q
 from django.http import Http404, HttpResponse
 from django.shortcuts import redirect, render
@@ -16,8 +17,8 @@ from apps.core.display import DEADLINE_LABELS, DEADLINE_TYPES, MONTH_ABBR
 from apps.core.mixins import JournalMemberRequiredMixin
 from apps.core.utils import file_response, html_or_pdf_response
 from apps.issues.models import Issue
-from apps.journals.forms import JournalDocumentForm, JournalEditForm
-from apps.journals.models import JournalDocument
+from apps.journals.forms import JournalDocumentForm, JournalEditForm, PersonalProjectCreateForm
+from apps.journals.models import Journal, JournalDocument, Membership
 from apps.reviews.models import ReviewRequest
 
 
@@ -68,7 +69,9 @@ class HomeView(LoginRequiredMixin, TemplateView):
         if not hasattr(self, "_journals"):
             self._journals = [
                 m.journal
-                for m in self.request.user.memberships.select_related("journal").all()
+                for m in self.request.user.memberships.select_related("journal")
+                .prefetch_related("journal__issues")
+                .all()
             ]
         return self._journals
 
@@ -80,8 +83,57 @@ class HomeView(LoginRequiredMixin, TemplateView):
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
-        ctx["journals"] = self._get_journals()
+        journals = self._get_journals()
+        ctx["journals"] = journals
+        periodicals, standalones = Journal.split_by_kind(journals)
+        ctx["journal_groups"] = [
+            (label, group)
+            for label, group in (
+                ("Mes revues", periodicals),
+                ("Mes projets", standalones),
+            )
+            if group
+        ]
         return ctx
+
+
+class PersonalProjectCreateView(LoginRequiredMixin, View):
+    """Création en libre-service d'un projet ponctuel (livre, actes de colloque).
+
+    Contrairement à JournalCreateView (administration, superuser-only), tout
+    utilisateur connecté peut créer son propre projet ici. Crée une Journal
+    (kind=STANDALONE) + son unique Issue + la Membership du créateur en une
+    transaction, sur le même principe que JournalCreateView.
+    """
+
+    template_name = "journals/create_personal_project.html"
+
+    def get(self, request):
+        return render(request, self.template_name, {"form": PersonalProjectCreateForm()})
+
+    def post(self, request):
+        form = PersonalProjectCreateForm(request.POST)
+        if not form.is_valid():
+            return render(request, self.template_name, {"form": form})
+
+        journal = form.save(commit=False)
+        journal.kind = Journal.Kind.STANDALONE
+        try:
+            with transaction.atomic():
+                journal.save()
+                Issue.objects.create(
+                    journal=journal,
+                    number="1",
+                    thematic_title=journal.name,
+                    editor_name=request.user.get_full_name() or request.user.email,
+                )
+                Membership.objects.create(user=request.user, journal=journal)
+        except IntegrityError:
+            form.add_error("name", "Ce nom est déjà utilisé, choisissez-en un autre.")
+            return render(request, self.template_name, {"form": form})
+
+        messages.success(request, "Votre projet a été créé.")
+        return redirect("journal_dashboard", slug=journal.slug)
 
 
 class JournalDashboardView(JournalMemberRequiredMixin, TemplateView):

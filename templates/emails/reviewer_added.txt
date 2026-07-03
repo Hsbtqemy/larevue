@@ -7,5 +7,5 @@ Vos relectures sont accessibles depuis votre profil Edito :
 
 {{ profile_url }}
 
-Si vous n'attendiez pas cet email, contactez l'administrateur·ice de la revue.
+Si vous n'attendiez pas cet email, contactez l'administrateur·ice {% if journal %}{{ journal.noun_of }}{% else %}de la revue{% endif %}.
 {% endblock %}

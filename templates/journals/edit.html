@@ -26,7 +26,7 @@
     <nav class="breadcrumb breadcrumb--bar" aria-label="Fil d'Ariane">
       <a href="{% url 'journal_dashboard' slug=journal.slug %}">{{ journal.name }}</a>
       <span class="sep">{% icon "chevronR" 12 %}</span>
-      <span aria-current="page">Modifier la revue</span>
+      <span aria-current="page">Modifier {{ journal.noun_the }}</span>
     </nav>
 
     <form method="post" enctype="multipart/form-data">
@@ -41,7 +41,7 @@
           <div class="edit-meta-form">
 
             <div class="field full">
-              <label for="id_name">Nom de la revue <span class="req">*</span></label>
+              <label for="id_name">Nom {{ journal.noun_of }} <span class="req">*</span></label>
               <input type="text" id="id_name" name="name" class="text-input"
                      value="{{ form.name.value|default:'' }}" required>
               {% if form.name.errors %}
@@ -87,7 +87,8 @@
         </div>
       </div>
 
-      {# ===== Institutionnel ===== #}
+      {# ===== Institutionnel (revues périodiques uniquement) ===== #}
+      {% if journal.kind == journal.Kind.PERIODICAL %}
       <div class="main-content" style="padding-bottom:0">
         <div class="section">
           <div class="section-head">
@@ -170,6 +171,7 @@
           </div>
         </div>
       </div>
+      {% endif %}
 
       {# ===== Emails & relances ===== #}
       <div class="main-content" style="padding-bottom:0" id="emails">
@@ -184,7 +186,7 @@
               <input type="text" id="id_email_sender_name" name="email_sender_name" class="text-input"
                      value="{{ form.email_sender_name.value|default:'' }}"
                      placeholder="{{ journal.name }}">
-              <div class="field-hint">Affiché dans le champ « De : ». Si vide, le nom de la revue est utilisé.</div>
+              <div class="field-hint">Affiché dans le champ « De : ». Si vide, le nom {{ journal.noun_of }} est utilisé.</div>
               {% if form.email_sender_name.errors %}
                 <div class="form-msg err">{{ form.email_sender_name.errors|join:" " }}</div>
               {% endif %}

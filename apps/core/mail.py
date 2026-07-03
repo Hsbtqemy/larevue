@@ -54,6 +54,7 @@ def send_reviewer_added(
                 "journal_name": journal_name,
                 "reviewer_name": reviewer_name,
                 "profile_url": profile_url,
+                "journal": journal,
             },
             journal=journal,
         )

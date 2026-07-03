@@ -1,7 +1,7 @@
 import pytest
 from django.urls import reverse
 
-from apps.journals.models import Journal
+from apps.journals.models import Journal, Membership
 
 
 def _url(journal):
@@ -14,6 +14,32 @@ class TestJournalEditViewGet:
         client.force_login(user)
         res = client.get(_url(journal))
         assert res.status_code == 200
+
+    def test_institutional_fields_shown_for_periodical(self, client, user, membership, journal):
+        client.force_login(user)
+        res = client.get(_url(journal))
+        assert "Informations institutionnelles" in res.content.decode()
+
+    def test_institutional_fields_hidden_for_standalone_project(self, client, user):
+        project = Journal.objects.create(name="Mon projet", kind=Journal.Kind.STANDALONE)
+        Membership.objects.create(user=user, journal=project)
+        client.force_login(user)
+        res = client.get(_url(project))
+        assert "Informations institutionnelles" not in res.content.decode()
+
+    def test_vocabulary_says_projet_for_standalone(self, client, user):
+        project = Journal.objects.create(name="Mon projet", kind=Journal.Kind.STANDALONE)
+        Membership.objects.create(user=user, journal=project)
+        client.force_login(user)
+        content = client.get(_url(project)).content.decode()
+        assert "Modifier le projet" in content
+        assert "Modifier la revue" not in content
+
+    def test_vocabulary_says_revue_for_periodical(self, client, user, membership, journal):
+        client.force_login(user)
+        content = client.get(_url(journal)).content.decode()
+        assert "Modifier la revue" in content
+        assert "Modifier le projet" not in content
 
     def test_non_member_gets_403(self, client, journal):
         from apps.accounts.models import User

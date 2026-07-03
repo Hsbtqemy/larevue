@@ -31,24 +31,36 @@
       Choisissez une revue pour continuer.
     </p>
 
-    {# ===== JOURNAL LIST ===== #}
-    {% if journals %}
-    <div style="display:flex;flex-direction:column;gap:8px">
-      {% for journal in journals %}
-      <a href="{% url 'journal_dashboard' slug=journal.slug %}"
-         class="home-journal-card"
-         style="text-decoration:none">
-        <span class="revue-dot" style="background:var(--accent-{{ journal.accent_color }});width:12px;height:12px;border-radius:50%;flex-shrink:0"></span>
-        <span style="flex:1;font-size:15px;font-weight:500;color:var(--ink)">{{ journal.name }}</span>
-        {% icon "chevron" 16 cls="icon" %}
-      </a>
+    {# ===== JOURNAL LIST (groupée par type) ===== #}
+    {% if journal_groups %}
+      {% for label, group in journal_groups %}
+      <div class="eyebrow" style="margin-bottom:8px{% if not forloop.first %};margin-top:24px{% endif %}">{{ label }}</div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        {% for journal in group %}
+        <a href="{% url 'journal_dashboard' slug=journal.slug %}"
+           class="home-journal-card"
+           style="text-decoration:none">
+          <span class="revue-dot" style="background:var(--accent-{{ journal.accent_color }});width:12px;height:12px;border-radius:50%;flex-shrink:0"></span>
+          <span style="flex:1;font-size:15px;font-weight:500;color:var(--ink)">{{ journal.name }}</span>
+          {% if journal.standalone_status %}{% state_badge journal.standalone_status %}{% endif %}
+          {% icon "chevron" 16 cls="icon" %}
+        </a>
+        {% endfor %}
+      </div>
       {% endfor %}
-    </div>
     {% else %}
     <p style="font-size:14px;color:var(--ink-muted);background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:16px 20px;margin:0">
       Vous n'appartenez à aucune revue. Contactez l'administrateur·ice pour être ajouté·e.
     </p>
     {% endif %}
+
+    {# ===== PERSONAL PROJECT CTA ===== #}
+    <a href="{% url 'personal_project_create' %}"
+       class="home-journal-card"
+       style="text-decoration:none;margin-top:16px;border-style:dashed">
+      {% icon "plus" 16 cls="icon" %}
+      <span style="flex:1;font-size:14px;color:var(--ink-muted)">Créer mon projet (livre, actes de colloque…)</span>
+    </a>
 
     {# ===== FOOTER ===== #}
     <div style="display:flex;justify-content:space-between;align-items:center;margin-top:36px">
