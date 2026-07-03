@@ -150,11 +150,11 @@
                         </template>
                       </div>
                     </div>
-                    {% if journals %}
+                    {% if assignable_journals %}
                     <div class="form-field">
                       <label class="form-label">Accès aux revues</label>
                       <div class="revue-checkboxes">
-                        {% for j in journals %}
+                        {% for j in assignable_journals %}
                         <label class="revue-checkbox-label" x-data
                                :class="{ checked: $el.querySelector('input').checked }"
                                @change="$el.classList.toggle('checked', $el.querySelector('input').checked)">

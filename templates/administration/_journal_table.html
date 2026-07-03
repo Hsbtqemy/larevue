@@ -59,7 +59,7 @@
                 </a>
                 <a href="{% url 'journal_edit' slug=j.slug %}"
                    class="popover-item" style="text-decoration:none" role="menuitem">
-                  {% icon "edit" 13 %} <span style="flex:1">Modifier la revue</span>
+                  {% icon "edit" 13 %} <span style="flex:1">Modifier {{ j.noun_the }}</span>
                 </a>
               </div>
             </template>

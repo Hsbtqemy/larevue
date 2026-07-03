@@ -46,8 +46,8 @@ class AdministrationView(SuperuserRequiredMixin, View):
             .prefetch_related("issues")
             .order_by("name")
         )
-        journals = [j for j in all_journals if j.kind == Journal.Kind.PERIODICAL]
-        personal_projects = [j for j in all_journals if j.kind == Journal.Kind.STANDALONE]
+        journals, personal_projects = Journal.split_by_kind(all_journals)
+        assignable_journals = journals + personal_projects
         users = (
             User.objects.annotate(journal_count=Count("memberships", distinct=True))
             .prefetch_related(
@@ -63,6 +63,7 @@ class AdministrationView(SuperuserRequiredMixin, View):
         return render(request, self.template_name, {
             "journals": journals,
             "personal_projects": personal_projects,
+            "assignable_journals": assignable_journals,
             "users": users,
             "accent_choices": Journal.ACCENT_CHOICES,
             "journal_form": JournalCreateAdminForm(),
@@ -352,6 +353,7 @@ _EMAIL_TYPES = {
             "journal_name": journal.name,
             "reviewer_name": "Marie Dupont",
             "profile_url": settings.SITE_URL + reverse("accounts:profile"),
+            "journal": journal,
         },
     },
     "review_assigned": {

@@ -69,7 +69,9 @@ class HomeView(LoginRequiredMixin, TemplateView):
         if not hasattr(self, "_journals"):
             self._journals = [
                 m.journal
-                for m in self.request.user.memberships.select_related("journal").all()
+                for m in self.request.user.memberships.select_related("journal")
+                .prefetch_related("journal__issues")
+                .all()
             ]
         return self._journals
 
@@ -83,11 +85,12 @@ class HomeView(LoginRequiredMixin, TemplateView):
         ctx = super().get_context_data(**kwargs)
         journals = self._get_journals()
         ctx["journals"] = journals
+        periodicals, standalones = Journal.split_by_kind(journals)
         ctx["journal_groups"] = [
             (label, group)
             for label, group in (
-                ("Mes revues", [j for j in journals if j.kind == Journal.Kind.PERIODICAL]),
-                ("Mes projets", [j for j in journals if j.kind == Journal.Kind.STANDALONE]),
+                ("Mes revues", periodicals),
+                ("Mes projets", standalones),
             )
             if group
         ]

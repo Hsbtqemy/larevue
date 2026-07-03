@@ -118,6 +118,28 @@ class Journal(BaseModel):
             return None
         return issues[0]
 
+    @property
+    def noun_the(self):
+        """"le projet" ou "la revue" (complément d'objet direct)."""
+        return "le projet" if self.kind == self.Kind.STANDALONE else "la revue"
+
+    @property
+    def noun_of(self):
+        """"du projet" ou "de la revue" (complément du nom)."""
+        return "du projet" if self.kind == self.Kind.STANDALONE else "de la revue"
+
+    @property
+    def noun_current(self):
+        """"Projet courant" ou "Revue courante" (libellé de la sidebar)."""
+        return "Projet courant" if self.kind == self.Kind.STANDALONE else "Revue courante"
+
+    @staticmethod
+    def split_by_kind(journals):
+        """Partitionne une liste de Journal en (périodiques, projets personnels)."""
+        periodicals = [j for j in journals if j.kind == Journal.Kind.PERIODICAL]
+        standalones = [j for j in journals if j.kind == Journal.Kind.STANDALONE]
+        return periodicals, standalones
+
 
 class JournalDocument(models.Model):
     journal = models.ForeignKey(

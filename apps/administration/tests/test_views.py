@@ -78,6 +78,18 @@ class TestAdministrationView:
         response = client.get(reverse("administration:index"))
         assert Issue.State.UNDER_REVIEW.label in response.content.decode()
 
+    def test_personal_projects_still_assignable_at_user_creation(self, client, superuser):
+        project = Journal.objects.create(name="Actes 2026", kind=Journal.Kind.STANDALONE)
+        client.force_login(superuser)
+        response = client.get(reverse("administration:index"))
+        assert project in response.context["assignable_journals"]
+
+    def test_edit_link_says_projet_for_standalone(self, client, superuser):
+        Journal.objects.create(name="Actes 2026", kind=Journal.Kind.STANDALONE)
+        client.force_login(superuser)
+        response = client.get(reverse("administration:index"))
+        assert "Modifier le projet" in response.content.decode()
+
 
 # ------------------------------------------------------------------ #
 # JournalCreateView                                                   #
@@ -534,3 +546,28 @@ class TestUserEditView:
         assert res.status_code == 200
         user.refresh_from_db()
         assert user.is_superuser
+
+
+# ------------------------------------------------------------------ #
+# EmailPreviewView                                                    #
+# ------------------------------------------------------------------ #
+
+
+@pytest.mark.django_db
+class TestEmailPreviewView:
+    def test_reviewer_added_preview_says_projet_for_standalone(self, client, superuser):
+        project = Journal.objects.create(name="Actes 2026", kind=Journal.Kind.STANDALONE)
+        client.force_login(superuser)
+        response = client.get(
+            reverse("administration:email_preview"),
+            {"type": "reviewer_added", "journal": project.slug},
+        )
+        assert "du projet" in response.content.decode()
+
+    def test_reviewer_added_preview_says_revue_for_periodical(self, client, superuser, journal):
+        client.force_login(superuser)
+        response = client.get(
+            reverse("administration:email_preview"),
+            {"type": "reviewer_added", "journal": journal.slug},
+        )
+        assert "de la revue" in response.content.decode()

@@ -59,6 +59,23 @@ class TestJournal:
         )
         assert project.standalone_status is None
 
+    def test_noun_properties_for_periodical(self, journal):
+        assert journal.noun_the == "la revue"
+        assert journal.noun_of == "de la revue"
+        assert journal.noun_current == "Revue courante"
+
+    def test_noun_properties_for_standalone(self, db):
+        project = Journal.objects.create(name="Mon projet", kind=Journal.Kind.STANDALONE)
+        assert project.noun_the == "le projet"
+        assert project.noun_of == "du projet"
+        assert project.noun_current == "Projet courant"
+
+    def test_split_by_kind(self, journal, db):
+        project = Journal.objects.create(name="Mon projet", kind=Journal.Kind.STANDALONE)
+        periodicals, standalones = Journal.split_by_kind([journal, project])
+        assert periodicals == [journal]
+        assert standalones == [project]
+
 
 @pytest.mark.django_db
 class TestMembership:
