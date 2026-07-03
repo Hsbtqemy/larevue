@@ -39,7 +39,7 @@
        x-data="revueSwitcher()"
        @click.outside="close()"
        @keydown.escape.window="close()">
-    <div class="revue-switcher-label">Revue courante</div>
+    <div class="revue-switcher-label">{% if journal.kind == journal.Kind.STANDALONE %}Projet courant{% else %}Revue courante{% endif %}</div>
     <div style="position:relative">
       <button type="button"
               class="revue-switcher-current"
@@ -67,7 +67,7 @@
   </div>
   {% else %}
   <div class="revue-switcher">
-    <div class="revue-switcher-label">Revue courante</div>
+    <div class="revue-switcher-label">{% if journal.kind == journal.Kind.STANDALONE %}Projet courant{% else %}Revue courante{% endif %}</div>
     <div class="revue-switcher-current" style="cursor:default">
       <span class="revue-dot" style="background:var(--accent)"></span>
       <span class="revue-name">{{ journal.name }}</span>
@@ -115,7 +115,7 @@
        style="text-decoration:none"
        @click="$store.nav.close()">
       {% icon "edit" 17 cls="icon" %}
-      <span class="nav-item-label">Modifier la revue</span>
+      <span class="nav-item-label">{% if journal.kind == journal.Kind.STANDALONE %}Modifier le projet{% else %}Modifier la revue{% endif %}</span>
     </a>
     {% endif %}
     {% if journal %}<div class="nav-sep" aria-hidden="true"></div>{% endif %}

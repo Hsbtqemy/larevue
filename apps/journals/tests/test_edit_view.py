@@ -27,6 +27,20 @@ class TestJournalEditViewGet:
         res = client.get(_url(project))
         assert "Informations institutionnelles" not in res.content.decode()
 
+    def test_vocabulary_says_projet_for_standalone(self, client, user):
+        project = Journal.objects.create(name="Mon projet", kind=Journal.Kind.STANDALONE)
+        Membership.objects.create(user=user, journal=project)
+        client.force_login(user)
+        content = client.get(_url(project)).content.decode()
+        assert "Modifier le projet" in content
+        assert "Modifier la revue" not in content
+
+    def test_vocabulary_says_revue_for_periodical(self, client, user, membership, journal):
+        client.force_login(user)
+        content = client.get(_url(journal)).content.decode()
+        assert "Modifier la revue" in content
+        assert "Modifier le projet" not in content
+
     def test_non_member_gets_403(self, client, journal):
         from apps.accounts.models import User
         other = User.objects.create_user(email="other@test.com", password="pass")
