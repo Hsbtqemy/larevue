@@ -11,6 +11,6 @@
 </p>
 {% include "emails/_cta_button.html" with cta_url=profile_url cta_label="Accéder à mon profil →" %}
 <p style="margin:0;font-size:13px;line-height:1.6;color:#8a7060;">
-  Si vous n'attendiez pas cet email, contactez l'administrateur·ice de la revue.
+  Si vous n'attendiez pas cet email, contactez l'administrateur·ice {% if journal and journal.kind == journal.Kind.STANDALONE %}du projet{% else %}de la revue{% endif %}.
 </p>
 {% endblock %}
