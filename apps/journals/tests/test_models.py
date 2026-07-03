@@ -1,6 +1,7 @@
 import pytest
 from django.db import IntegrityError
 
+from apps.issues.models import Issue
 from apps.journals.models import Journal, Membership
 
 
@@ -33,6 +34,30 @@ class TestJournal:
 
     def test_str(self, journal):
         assert str(journal) == "Revue de test"
+
+    def test_standalone_status_none_for_periodical(self, journal, issue):
+        assert journal.standalone_status is None
+
+    def test_standalone_status_returns_sole_issue(self, db):
+        project = Journal.objects.create(name="Mon projet", kind=Journal.Kind.STANDALONE)
+        issue = Issue.objects.create(
+            journal=project, number="1", thematic_title="Mon livre", editor_name="Moi",
+        )
+        assert project.standalone_status == issue
+
+    def test_standalone_status_none_without_issue(self, db):
+        project = Journal.objects.create(name="Mon projet", kind=Journal.Kind.STANDALONE)
+        assert project.standalone_status is None
+
+    def test_standalone_status_none_with_multiple_issues(self, db):
+        project = Journal.objects.create(name="Mon projet", kind=Journal.Kind.STANDALONE)
+        Issue.objects.create(
+            journal=project, number="1", thematic_title="Tome 1", editor_name="Moi",
+        )
+        Issue.objects.create(
+            journal=project, number="2", thematic_title="Tome 2", editor_name="Moi",
+        )
+        assert project.standalone_status is None
 
 
 @pytest.mark.django_db

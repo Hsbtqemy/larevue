@@ -67,6 +67,17 @@ class TestAdministrationView:
         assert project in context["personal_projects"]
         assert journal not in context["personal_projects"]
 
+    def test_personal_project_shows_status_badge(self, client, superuser):
+        from apps.issues.models import Issue
+
+        project = Journal.objects.create(name="Actes 2026", kind=Journal.Kind.STANDALONE)
+        Issue.objects.create(
+            journal=project, number="1", thematic_title="Les actes", editor_name="Moi",
+        )
+        client.force_login(superuser)
+        response = client.get(reverse("administration:index"))
+        assert Issue.State.UNDER_REVIEW.label in response.content.decode()
+
 
 # ------------------------------------------------------------------ #
 # JournalCreateView                                                   #

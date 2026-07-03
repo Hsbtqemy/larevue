@@ -20,7 +20,7 @@
               {{ j.name|slice:":2"|upper }}
             </div>
             <div class="admin-revue-text">
-              <div class="n">{{ j.name }}</div>
+              <div class="n">{{ j.name }} {% if j.standalone_status %}{% state_badge j.standalone_status %}{% endif %}</div>
               {% if j.description %}<div class="d">{{ j.description|truncatechars:60 }}</div>{% endif %}
             </div>
           </div>

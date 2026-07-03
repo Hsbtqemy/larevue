@@ -49,6 +49,17 @@ class TestHomeView:
         assert groups["Mes revues"] == [membership.journal]
         assert groups["Mes projets"] == [project]
 
+    def test_standalone_project_shows_status_badge(self, client, user, membership, db):
+        project = Journal.objects.create(name="Mon projet", kind=Journal.Kind.STANDALONE)
+        Issue.objects.create(
+            journal=project, number="1", thematic_title="Mon livre", editor_name="Moi",
+        )
+        Membership.objects.create(user=user, journal=project)
+        client.force_login(user)
+        response = client.get(reverse("home"))
+        content = response.content.decode()
+        assert Issue.State.UNDER_REVIEW.label in content
+
 
 # ------------------------------------------------------------------ #
 # PersonalProjectCreateView                                           #

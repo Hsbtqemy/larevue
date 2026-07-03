@@ -106,6 +106,18 @@ class Journal(BaseModel):
             suffix += 1
         return slug
 
+    @property
+    def standalone_status(self):
+        """Le numéro porteur d'un projet ponctuel (kind=STANDALONE), pour affichage
+        de statut sans champ dédié. None si non pertinent (revue périodique) ou si
+        le projet compte plusieurs numéros (statut ambigu — livre en plusieurs tomes)."""
+        if self.kind != self.Kind.STANDALONE:
+            return None
+        issues = list(self.issues.all())
+        if len(issues) != 1:
+            return None
+        return issues[0]
+
 
 class JournalDocument(models.Model):
     journal = models.ForeignKey(

@@ -43,6 +43,7 @@ class AdministrationView(SuperuserRequiredMixin, View):
                     distinct=True,
                 ),
             )
+            .prefetch_related("issues")
             .order_by("name")
         )
         journals = [j for j in all_journals if j.kind == Journal.Kind.PERIODICAL]
