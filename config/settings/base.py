@@ -103,6 +103,11 @@ ACCOUNT_SIGNUP_FIELDS = ["email*", "password1*", "password2*"]
 ACCOUNT_LOGIN_METHODS = {"email"}
 ACCOUNT_EMAIL_VERIFICATION = "optional"
 ACCOUNT_ADAPTER = "apps.accounts.adapters.NoSignupAccountAdapter"
+# Application invite-only sans inscription publique : l'anti-énumération n'a pas
+# d'intérêt ici et provoque l'envoi d'un email « Compte inconnu » à toute adresse
+# saisie sur le formulaire de reset (bots), d'où des bounces vers l'expéditeur.
+# Désactivé pour ne plus rien envoyer aux adresses sans compte.
+ACCOUNT_PREVENT_ENUMERATION = False
 LOGIN_REDIRECT_URL = "home"
 ACCOUNT_LOGOUT_REDIRECT_URL = "account_login"
 
